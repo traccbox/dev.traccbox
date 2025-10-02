@@ -53,6 +53,7 @@ const CompanyOnboardingModal: React.FC = () => {
   const countryOptions = countryList().getData();
   const { user, setUser, logout, refreshToken, TOKEN_KEY, token } = useAuth();
   const navigate = useNavigate();
+  console.log("user at onboarding modal:", user);
   const {
     register,
     handleSubmit,
@@ -128,6 +129,7 @@ const CompanyOnboardingModal: React.FC = () => {
         country: data.country,
         logo_url: logoUrl,
       };
+      
       if (user?.id) {
         const response = await updateCompanyInfo(user.id, payload);
         // Axios: response.data is the actual data object
@@ -226,7 +228,7 @@ const CompanyOnboardingModal: React.FC = () => {
           {/* Stepper */}
           <div className="flex items-center justify-center mb-8">
             {steps.map((s, i) => (
-              <React.Fragment key={i}>
+              <>
                 <div
                   className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-white ${
                     i <= step ? "bg-[#3B1CFF]" : "bg-gray-300"
@@ -241,7 +243,7 @@ const CompanyOnboardingModal: React.FC = () => {
                     }`}
                   ></div>
                 )}
-              </React.Fragment>
+              </>
             ))}
           </div>
 

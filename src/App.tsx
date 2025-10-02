@@ -21,6 +21,8 @@ import TeamManagment from "./pages/Dashboard/features/settings/TeamManagment";
 import StaffVerification from "./pages/StaffVerification";
 import TraccBoxStaffPortal from "./pages/TraccBoxStaffPortal";
 import { useEffect } from "react";
+import TaskAssignment from "./pages/Dashboard/features/task/TaskAssignment";
+import ManageTask from "./pages/Dashboard/features/task/ManageTask";
 
 // Dashboard home content as a component
 const DashboardHome = () => (
@@ -38,7 +40,6 @@ const DashboardHome = () => (
 const queryClient = new QueryClient();
 
 const App = () => (
-  
   <AuthProvider>
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
@@ -61,7 +62,15 @@ const App = () => (
                 <Route index element={<DashboardHome />} />
                 <Route path="settings/general" element={<GeneralSettings />} />
                 <Route path="settings/roles" element={<UserRoles />} />
-                <Route path="settings/team" element={<TeamManagment/>} />
+                <Route path="settings/team" element={<TeamManagment />} />
+                <Route
+                  path="field-reps/create-tasks"
+                  element={<TaskAssignment />}
+                />
+                <Route
+                  path="field-reps/manage-task"
+                  element={<ManageTask />}
+                />
               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />

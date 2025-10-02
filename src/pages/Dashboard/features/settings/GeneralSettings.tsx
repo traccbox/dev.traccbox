@@ -20,7 +20,6 @@ const currencies = ["Nigerian Naira (NGN)", "US Dollar (USD)"];
 const GeneralSettings: React.FC = () => {
   const { user } = useAuth();
   const [editMode, setEditMode] = useState(false);
-  // Map user fields to company info fields
   const initialCompany = {
     logo: user?.profile_pic || "",
     name: user?.company_name || "",
@@ -28,11 +27,11 @@ const GeneralSettings: React.FC = () => {
     email: user?.email || "",
     phone: user?.phone_number || "",
     address: user?.address || "",
-    city: "", // Not in user object
-    state: user?.country || "", // Use country for State/Region
-    zip: "", // Not in user object
-    timezone: "Africa/Lagos (WAT)", // Default
-    currency: "Nigerian Naira (NGN)", // Default
+    city: "", 
+    state: user?.country || "", 
+    zip: "", 
+    timezone: "Africa/Lagos (WAT)", 
+    currency: "Nigerian Naira (NGN)", 
   };
   const [company, setCompany] = useState(initialCompany);
   const [editCompany, setEditCompany] = useState(initialCompany);

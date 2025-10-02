@@ -8,8 +8,8 @@ export interface SidebarSubmenu {
 
 export interface SidebarMenuConfig {
   label: string;
-  icon: string; // Icon name, e.g., 'BarChart', 'Users', etc.
-  to?: string; // For direct links (like Dashboard)
+  icon: string;
+  to?: string;
   submenus?: SidebarSubmenu[];
 }
 
@@ -19,14 +19,15 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     icon: "BarChart",
     to: "/dashboard",
   },
+
   {
     label: "Field Sales Reps",
     icon: "Users",
     submenus: [
-      { label: "Manage Reps", to: "/dashboard/field-reps/manage" },
+      { label: "Manage Task", to: "/dashboard/field-reps/manage-task" },
+      { label: "Task Assignment", to: "/dashboard/field-reps/create-tasks" },
       { label: "GPS Logs", to: "/dashboard/field-reps/gps-logs" },
       { label: "Attendance Reports", to: "/dashboard/field-reps/attendance" },
-      { label: "Task Assignment", to: "/dashboard/field-reps/tasks" },
     ],
   },
   {

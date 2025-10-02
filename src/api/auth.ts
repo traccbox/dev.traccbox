@@ -74,30 +74,51 @@ export async function staffLogin(data: StaffLoginRequest) {
 
 // Staff Email Verification with OTP
 export async function verifyStaffEmail(params: { id: string; token: string }) {
-  const res = await api.post<StaffVerifyResponse>(
-    `/verify_email?id=${params.id}&token=${params.token}`
-  );
-  console.log("Staff email verification res==", res);
-  return res.data;
+  try {
+    const res = await api.post<StaffVerifyResponse>(
+      `/verify_email?id=${params.id}&token=${params.token}`
+    );
+    console.log("Staff email verification res==", res);
+    return res.data;
+  } catch (error) {
+    console.log("verifyStaffEmail error", error);
+    throw error;
+  }
 }
 
 export async function resendVerification(data: ResendVerificationRequest) {
-  const res = await api.post(`/resend-verification`, data);
-  return res.data;
+  try {
+    const res = await api.post(`/resend-verification`, data);
+    return res.data;
+  } catch (error) {
+    console.log("resendVerification error", error);
+    throw error;
+  }
 }
 
 export async function verifyEmail(params: VerifyEmailParams) {
-  const res = await api.post(
-    `/companies/verify_email?id=${params.id}&token=${params.token}`
-  );
-  return res.data;
+  console.log("verifyEmail params", params);
+  try {
+    const res = await api.post(
+      `/companies/verify_email?id=${params.id}&token=${params.token}`
+    );
+    return res.data;
+  } catch (error) {
+    console.log("verifyEmail error", error);
+    throw error;
+  }
 }
 
 export async function forgottenPasswordRequest(email: string) {
-  const res = await api.post(`/companies/forgotten_password`, null, {
-    params: { email },
-  });
-  return res.data;
+  try {
+    const res = await api.post(`/companies/forgotten_password`, null, {
+      params: { email },
+    });
+    return res.data;
+  } catch (error) {
+    console.log("forgottenPasswordRequest error", error);
+    throw error;
+  }
 }
 
 export async function forgottenPasswordUpdate(
@@ -105,10 +126,15 @@ export async function forgottenPasswordUpdate(
   reset_token: string,
   password: string
 ) {
-  const res = await api.patch(`/companies/forgotten_password`, null, {
-    params: { email, reset_token, password },
-  });
-  return res.data;
+  try {
+    const res = await api.patch(`/companies/forgotten_password`, null, {
+      params: { email, reset_token, password },
+    });
+    return res.data;
+  } catch (error) {
+    console.log("forgottenPasswordUpdate error", error);
+    throw error;
+  }
 }
 
 export async function updateCompanyInfo(
@@ -122,17 +148,28 @@ export async function updateCompanyInfo(
     logo_url?: string;
   }
 ) {
-  const res = await api.put(`/update/${company_id}`, data);
-  console.log("reeeeee=====", res);
-  return res.data;
+  console.log(company_id, "Data Going to Backend=====", data);
+  try {
+    const res = await api.put(`/update/${company_id}`, data);
+    console.log("reeeeee=====", res);
+    return res.data;
+  } catch (error) {
+    console.log("Update company ERROR response=====", error);
+    throw error;
+  }
 }
 
 export async function getNewToken(refresh_token: string) {
-  const res = await api.post(`${API_BASE}/refresh`, {
-    refresh_token,
-  });
-  console.log("res of New token=====", res);
-  return res.data;
+  try {
+    const res = await api.post(`${API_BASE}/refresh`, {
+      refresh_token,
+    });
+    console.log("res of New token=====", res);
+    return res.data;
+  } catch (error) {
+    console.log("getNewToken ERROR response=====", error);
+    throw error;
+  }
 }
 
 // Staff Management API Functions
@@ -163,6 +200,7 @@ export async function createStaff(data: StaffCreateRequest) {
 
 // Accept staff invitation
 export async function acceptStaffInvitation(data: StaffAcceptRequest) {
+  console.log("Data Going to Backend=====", data);
   try {
     const res = await api.post(
       `/onboarding/staff/accept`,

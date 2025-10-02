@@ -99,8 +99,8 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     setFormError("");
     try {
       await resendVerification({ email });
-      setResendCooldown(30); // 30 seconds cooldown
-      setOtp(["", "", "", ""]); // Reset OTP inputs
+      setResendCooldown(30); 
+      setOtp(["", "", "", ""]); 
       toast.success("Verification code resent successfully!", {
         position: "top-center",
       });
@@ -134,7 +134,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
             Verify your email
           </h2>
           <p className="text-gray-600 text-center mb-6">
-            We've sent a verification code to{" "}
+            We've sent a verification code to000{" "}
             <span className="font-medium text-traccbox-500">{email}</span>
           </p>
           <form className="space-y-6" onSubmit={handleSubmit}>
