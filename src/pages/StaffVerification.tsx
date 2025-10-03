@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { verifyEmail, resendVerification } from "@/api/auth";
+import { verifyEmail, resendVerification, verifyStaffEmail } from "@/api/auth";
 import type { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -70,11 +70,12 @@ const StaffVerification = () => {
     try {
       const otpString = otp.join("");
       if (!id) throw new Error("Missing verification id.");
-      const res = await verifyEmail({ id, token: otpString });
+      console.log("Submitting OTP:", otpString, "for id:", id);
+      const res = await verifyStaffEmail({ id, token: otpString });
       console.log("res==", res);
       toast.success("Email verified successfully!", { position: "top-center" });
 
-      Cookies.set(TOKEN_KEY, res.access_token, { expires: 7 }); // 7 days
+      Cookies.set(TOKEN_KEY, res.access_token, { expires: 7 });
       navigate("/dashboard");
     } catch (error: unknown) {
       let message = "Invalid verification code. Please try again.";

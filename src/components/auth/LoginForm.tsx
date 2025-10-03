@@ -69,65 +69,6 @@ const LoginForm: React.FC = () => {
     }
   };
 
-  // const onStaffSubmit = async (values: StaffLoginFormValues) => {
-  //   try {
-  //     const res = await staffLogin(values.email);
-  //     if (res && res.success) {
-  //       toast.success("Staff login successfully! Please verify your email.", {
-  //         position: "top-center",
-  //       });
-  //       navigate(`/staff-verify?email=${encodeURIComponent(values.email)}`);
-  //     } else {
-  //       throw new Error("Failed to login");
-  //     }
-  //   } catch (error: unknown) {
-  //     console.log("error==", error);
-  //     let message = "Failed to login. Please try again.";
-
-  //     if (
-  //       error &&
-  //       typeof error === "object" &&
-  //       (error as AxiosError).isAxiosError
-  //     ) {
-  //       const axiosError = error as AxiosError<{ detail?: unknown }>;
-
-  //       if (axiosError.response?.status === 422) {
-  //         if (
-  //           axiosError.response.data.detail &&
-  //           Array.isArray(axiosError.response.data.detail)
-  //         ) {
-  //           message = axiosError.response.data.detail
-  //             .map((detail) =>
-  //               typeof detail === "object" && "msg" in detail
-  //                 ? String(detail.msg)
-  //                 : JSON.stringify(detail)
-  //             )
-  //             .join(", ");
-  //         } else {
-  //           message =
-  //             typeof axiosError.response.data.detail === "string"
-  //               ? axiosError.response.data.detail
-  //               : JSON.stringify(axiosError.response.data.detail);
-  //         }
-  //       } else if (axiosError.response?.data?.detail) {
-  //         message =
-  //           typeof axiosError.response.data.detail === "string"
-  //             ? axiosError.response.data.detail
-  //             : JSON.stringify(axiosError.response.data.detail);
-  //       } else {
-  //         message = axiosError.message;
-  //       }
-  //     } else if (error instanceof Error) {
-  //       message = error.message;
-  //     }
-
-  //     setFormError(String(message));
-  //     toast.error(message, { position: "top-center" });
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
   const normalizeErrorDetail = (detail: unknown): string => {
     if (!detail) return "Unknown error occurred";
 
@@ -159,15 +100,14 @@ const LoginForm: React.FC = () => {
     setLoading(true);
     try {
       const res = await staffLogin(values.email);
+      console.log("res==", res);
 
       if (res && res.success) {
         toast.success("Staff login successfully! Please verify your email.", {
           position: "top-center",
         });
         navigate(
-          `/staff-verify?email=${encodeURIComponent(
-            values.email
-          )}&id=${encodeURIComponent("res.id")}`
+          `/staff-verify?email=${encodeURIComponent(values.email)}&id=${res.id}`
         );
       } else {
         throw new Error("Failed to login");

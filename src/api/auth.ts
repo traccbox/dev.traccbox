@@ -64,7 +64,6 @@ export async function staffLogin(data: StaffLoginRequest) {
   try {
     const res = await api.post<StaffLoginResponse>(`/staff/login`, data);
 
-    console.log("Staff login res==", res);
     return res.data;
   } catch (error) {
     console.log("staff auth.ts error", error);
@@ -74,10 +73,9 @@ export async function staffLogin(data: StaffLoginRequest) {
 
 // Staff Email Verification with OTP
 export async function verifyStaffEmail(params: { id: string; token: string }) {
+  console.log("verifyStaffEmail params ,,,,==", params);
   try {
-    const res = await api.post<StaffVerifyResponse>(
-      `/verify_email?id=${params.id}&token=${params.token}`
-    );
+    const res = await api.post<StaffVerifyResponse>(`/staff/verify_email?id=${params.id}&token=${params.token}`);
     console.log("Staff email verification res==", res);
     return res.data;
   } catch (error) {

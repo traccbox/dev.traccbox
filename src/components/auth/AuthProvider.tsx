@@ -36,6 +36,7 @@ interface AuthContextType {
     success: boolean;
     status: number;
     needsVerification: boolean;
+    id?: string | number;
   }>;
 
   logout: () => void;
@@ -116,8 +117,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
       const res = await apiStaffLogin({ email });
-      console.log("Staff login response:", res);
-      return { success: true, status: 200, needsVerification: false };
+      console.log("Staff login response:mm=", res);
+      return { success: true, status: 200, needsVerification: false, id: res.id };
     } catch (err: unknown) {
       const axiosError = err as AxiosError<{ detail?: string }>;
       setError(

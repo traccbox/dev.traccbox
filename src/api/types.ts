@@ -128,9 +128,7 @@ export interface StaffLoginRequest {
 }
 
 export interface StaffLoginResponse {
-  message: string;
-  staff_id?: string;
-  verification_required?: boolean;
+  id?: string | number;
 }
 
 export interface StaffVerifyResponse {
