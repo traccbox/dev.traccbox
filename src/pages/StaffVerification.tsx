@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { verifyEmail, resendVerification, verifyStaffEmail } from "@/api/auth";
+import { verifyStaffEmail, resendStaffVerification } from "@/api/auth";
 import type { AxiosError } from "axios";
 import Cookies from "js-cookie";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -104,10 +104,12 @@ const StaffVerification = () => {
     if (!email || resendCooldown > 0) return;
     setLoading(true);
     setFormError("");
+    
     try {
-      const res = await resendVerification({ email });
-      setResendCooldown(30); // 30 seconds cooldown
-      setOtp(["", "", "", ""]); // Reset OTP inputs
+      const res = await resendStaffVerification({ email });
+      console.log("Resend code response:", res);
+      setResendCooldown(30);
+      setOtp(["", "", "", ""]);
       toast.success("Verification code resent successfully!", {
         position: "top-center",
       });

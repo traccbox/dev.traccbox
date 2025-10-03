@@ -75,11 +75,22 @@ export async function staffLogin(data: StaffLoginRequest) {
 export async function verifyStaffEmail(params: { id: string; token: string }) {
   console.log("verifyStaffEmail params ,,,,==", params);
   try {
-    const res = await api.post<StaffVerifyResponse>(`/staff/verify_email?id=${params.id}&token=${params.token}`);
+    const res = await api.post<StaffVerifyResponse>(
+      `/staff/verify_email?id=${params.id}&token=${params.token}`
+    );
     console.log("Staff email verification res==", res);
     return res.data;
   } catch (error) {
     console.log("verifyStaffEmail error", error);
+    throw error;
+  }
+}
+export async function resendStaffVerification(data: ResendVerificationRequest) {
+  try {
+    const res = await api.post(`/staff/resend-verification`, data);
+    return res.data;
+  } catch (error) {
+    console.log("resendVerification error", error);
     throw error;
   }
 }
@@ -95,7 +106,7 @@ export async function resendVerification(data: ResendVerificationRequest) {
 }
 
 export async function verifyEmail(params: VerifyEmailParams) {
-  console.log("verifyEmail params", params);
+  console.log("verifyEmail params ", params);
   try {
     const res = await api.post(
       `/companies/verify_email?id=${params.id}&token=${params.token}`
