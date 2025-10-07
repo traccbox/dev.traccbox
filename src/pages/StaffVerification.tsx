@@ -104,10 +104,10 @@ const StaffVerification = () => {
     if (!email || resendCooldown > 0) return;
     setLoading(true);
     setFormError("");
-    
+
     try {
       const res = await resendStaffVerification({ email });
-      console.log("Resend code response:", res);
+      console.log("Staff Resend code response:", res);
       setResendCooldown(30);
       setOtp(["", "", "", ""]);
       toast.success("Verification code resent successfully!", {
