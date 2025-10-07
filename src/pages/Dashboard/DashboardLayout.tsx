@@ -10,7 +10,7 @@ const DashboardLayout: React.FC<{ children: React.ReactNode }> = ({
     <div className="flex">
       <Sidebar />
       <main
-        className="flex-1 ml-60 mt-16 p-8 h-[calc(100vh-4rem)] overflow-y-auto"
+        className="flex-1 md:ml-60 mt-16 p-8 h-[calc(100vh-4rem)] overflow-y-auto"
         style={{ minHeight: "calc(100vh - 4rem)" }}
       >
         {children}

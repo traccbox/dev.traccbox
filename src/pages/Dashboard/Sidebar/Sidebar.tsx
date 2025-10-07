@@ -2,11 +2,19 @@ import React, { useState } from "react";
 import { sidebarMenus } from "./menuData";
 import SidebarMenu from "./SidebarMenu";
 import { Link, useLocation } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { LogOut, Menu } from "lucide-react";
+import { useIsMobile } from "../../../hooks/use-mobile";
 
 const Sidebar: React.FC = () => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
   const location = useLocation();
+
+  // Toggle sidebar
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
+  };
 
   // Determine active menu by route
   const getActiveIndex = () => {
@@ -23,42 +31,65 @@ const Sidebar: React.FC = () => {
   const activeIndex = getActiveIndex();
 
   return (
-    <aside className="fixed top-0 left-0 h-full w-64 bg-white shadow flex flex-col py-6 px-2 z-30 border-r">
-      {/* Logo */}
-      <div className="flex items-center gap-2 px-4 mb-8">
-        <img src="/assets/logo.png" alt="TraccBox Logo" className="h-8 " />
-      </div>
-      {/* Menus */}
-      <nav className="flex-1 flex flex-col gap-1 overflow-y-auto hide-scrollbar">
-        {sidebarMenus.map((menu, idx) => (
-          <SidebarMenu
-            key={menu.label}
-            label={menu.label}
-            icon={menu.icon}
-            to={menu.to}
-            submenus={menu.submenus}
-            expanded={expandedIndex === idx}
-            onToggle={() =>
-              setExpandedIndex(expandedIndex === idx ? null : idx)
-            }
-            isActive={activeIndex === idx}
-          />
-        ))}
-      </nav>
-      {/* Upgrade Box */}
-      <div className="mt-8 px-4">
-        <div className="bg-gradient-to-br from-[#7B2FF2] to-[#F357A8] rounded-xl p-3 flex flex-col items-center text-white shadow-lg">
-          <span className="font-semibold text-sm mb-2 text-center">
-            Upgrade to Pro
-            <br />
-            for more Features
-          </span>
-          <button className="mt-2 bg-white text-[#7B2FF2] font-bold rounded-lg px-6 py-2 shadow hover:bg-gray-100 transition text-md">
-            Upgrade
-          </button>
+    <>
+      {/* Mobile Menu Button */}
+      {isMobile && (
+        <button
+          onClick={toggleSidebar}
+          className="fixed top-3 left-4 z-50 p-2 bg-white rounded-lg shadow-md md:hidden"
+        >
+          <Menu size={24} />
+        </button>
+      )}
+      
+      <aside 
+        className={`fixed top-0  left-0 h-full bg-white shadow flex flex-col py-6 px-2 z-40 border-r transition-all duration-300
+          ${isMobile ? (isSidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full') : 'w-64'}`}
+      >
+        {/* Logo */}
+        <div className="flex items-center gap-2 px-4 mb-8">
+          <img src="/assets/logo.png" alt="TraccBox Logo" className="h-8" />
         </div>
-      </div>
-    </aside>
+        {/* Menus */}
+        <nav className="flex-1 flex flex-col gap-1 overflow-y-auto hide-scrollbar">
+          {sidebarMenus.map((menu, idx) => (
+            <SidebarMenu
+              key={menu.label}
+              label={menu.label}
+              icon={menu.icon}
+              to={menu.to}
+              submenus={menu.submenus}
+              expanded={expandedIndex === idx}
+              onToggle={() =>
+                setExpandedIndex(expandedIndex === idx ? null : idx)
+              }
+              isActive={activeIndex === idx}
+            />
+          ))}
+        </nav>
+        {/* Upgrade Box */}
+        <div className="mt-8 px-4">
+          <div className="bg-gradient-to-br from-[#7B2FF2] to-[#F357A8] rounded-xl p-3 flex flex-col items-center text-white shadow-lg">
+            <span className="font-semibold text-sm mb-2 text-center">
+              Upgrade to Pro
+              <br />
+              for more Features
+            </span>
+            <button className="mt-2 bg-white text-[#7B2FF2] font-bold rounded-lg px-6 py-2 shadow hover:bg-gray-100 transition text-md">
+              Upgrade
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Overlay for mobile */}
+      {isMobile && isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-30"
+          onClick={toggleSidebar}
+        />
+      )}
+    </>
   );
 };
 

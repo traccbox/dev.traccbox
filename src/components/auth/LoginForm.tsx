@@ -63,10 +63,12 @@ const LoginForm: React.FC = () => {
   const { login, staffLogin, error } = useAuth();
 
   const onAdminSubmit = async (values: AdminLoginFormValues) => {
+    setLoading(true);
     const success = await login(values.email, values.password);
     if (success) {
       navigate("/dashboard");
     }
+    setLoading(false);
   };
 
   const normalizeErrorDetail = (detail: unknown): string => {

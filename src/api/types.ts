@@ -36,7 +36,6 @@ export interface VerifyEmailParams {
   token: string;
 }
 
-
 // Staff Management Types
 
 export interface CoreDashboardReport {
@@ -122,7 +121,6 @@ export interface StaffAcceptRequest {
   email: string;
 }
 
-
 export interface StaffLoginRequest {
   email: string;
 }
@@ -136,6 +134,8 @@ export interface StaffVerifyResponse {
   access_token?: string;
   refresh_token?: string;
   role: string;
+  accept_invitation: boolean;
+  company_id?: string;
   staff: {
     id: string;
     email: string;

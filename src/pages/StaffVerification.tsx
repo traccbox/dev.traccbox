@@ -63,7 +63,6 @@ const StaffVerification = () => {
     }
   };
 
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -75,16 +74,23 @@ const StaffVerification = () => {
       const res = await verifyStaffEmail({ id, token: otpString });
       console.log("res==9", res);
       toast.success("Email verified successfully!", { position: "top-center" });
-      // accept_invitation: false remember)
-      if (res?.role === "sales"){
-        console.log(res.role)
-        navigate("/sales-rep-demo")
-      }else
-       {
-      Cookies.set(TOKEN_KEY, res.access_token, { expires: 7 });
-      navigate("/dashboard")
-    }
-      
+      // accept_invitation == false user needs to accept invitation first
+      if (res?.accept_invitation === false) {
+        toast.info("Please accept your invitation to proceed.", {
+          position: "top-center",
+        });
+        navigate(
+          `/accept-invitation?company_id=${res.company_id}&email=${email}`
+        );
+        return;
+      }
+      if (res?.role === "sales") {
+        console.log(res.role);
+        navigate("/sales-rep-demo");
+      } else {
+        Cookies.set(TOKEN_KEY, res.access_token, { expires: 7 });
+        navigate("/dashboard");
+      }
     } catch (error: unknown) {
       let message = "Invalid verification code. Please try again.";
       console.log("error==", error);

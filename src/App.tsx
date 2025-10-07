@@ -23,6 +23,7 @@ import TraccBoxStaffPortal from "./pages/TraccBoxStaffPortal";
 import { useEffect } from "react";
 import TaskAssignment from "./pages/Dashboard/features/task/TaskAssignment";
 import ManageTask from "./pages/Dashboard/features/task/ManageTask";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 // Dashboard home content as a component
 const DashboardHome = () => (
@@ -42,6 +43,7 @@ const queryClient = new QueryClient();
 const App = () => (
   <AuthProvider>
     <QueryClientProvider client={queryClient}>
+      <ReactQueryDevtools initialIsOpen={false} />
       <TooltipProvider>
         <Toaster />
         <Sonner />
