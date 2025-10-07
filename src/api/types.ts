@@ -135,6 +135,7 @@ export interface StaffVerifyResponse {
   message: string;
   access_token?: string;
   refresh_token?: string;
+  role: string;
   staff: {
     id: string;
     email: string;

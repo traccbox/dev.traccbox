@@ -63,6 +63,7 @@ const StaffVerification = () => {
     }
   };
 
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -72,11 +73,18 @@ const StaffVerification = () => {
       if (!id) throw new Error("Missing verification id.");
       console.log("Submitting OTP:", otpString, "for id:", id);
       const res = await verifyStaffEmail({ id, token: otpString });
-      console.log("res==", res);
+      console.log("res==9", res);
       toast.success("Email verified successfully!", { position: "top-center" });
-
+      // accept_invitation: false remember)
+      if (res?.role === "sales"){
+        console.log(res.role)
+        navigate("/sales-rep-demo")
+      }else
+       {
       Cookies.set(TOKEN_KEY, res.access_token, { expires: 7 });
-      navigate("/dashboard");
+      navigate("/dashboard")
+    }
+      
     } catch (error: unknown) {
       let message = "Invalid verification code. Please try again.";
       console.log("error==", error);

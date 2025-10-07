@@ -20,24 +20,20 @@ const AcceptInvitation = () => {
   const email = searchParams.get('email');
 
   useEffect(() => {
-    // Validate required parameters
     if (!companyId || !email) {
       setStatus('error');
       setErrorMessage('Invalid invitation link. Missing required parameters.');
     }
   }, [companyId, email]);
 
-  // Helper function to determine navigation path based on role
+  // function to determine navigation path based on role
   const getNavigationPath = (role: string): string => {
-    // Convert role to lowercase for case-insensitive comparison
     const normalizedRole = role.toLowerCase().trim();
+    console.log("Role===",role)
     
-    // Check if the role is sales rep (handle variations)
-    if (normalizedRole === "sales rep" || 
-        normalizedRole === "sales_rep" || 
-        normalizedRole === "salesrep" ||
-        normalizedRole === "sales representative") {
-      return "/sales-rep-demo"; // Replace with your actual sales rep demo page route
+    if (normalizedRole === "sales" || 
+        normalizedRole === "sales rep") {
+      return "/sales-rep-demo"; 
     }
     
     // All other roles go to dashboard
@@ -60,20 +56,20 @@ const AcceptInvitation = () => {
         company_id: companyId,
         email: email,
       });
-
       setStatus('success');
       toast({
         title: "Success",
         description: "Invitation accepted successfully! Redirecting you...",
       });
 
+
+
       // Get user role from response and determine navigation path
-      const userRole = response.user?.role || response.role || response.data?.user?.role || response.data?.role || "";
+      const userRole = response?.staff?.role || "";
       const navigationPath = getNavigationPath(userRole);
       
-      console.log("User role:", userRole, "Navigating to:", navigationPath);
 
-      // Store access token only if going to dashboard (not for sales rep demo)
+      // Store access token only if going to dashboard 
       if (navigationPath === "/dashboard" && response.access_token) {
         Cookies.set(TOKEN_KEY, response.access_token, { expires: 7 }); // 7 days
         console.log("Access token stored for dashboard user");
@@ -89,7 +85,7 @@ const AcceptInvitation = () => {
       let errorMessage = "Failed to accept invitation. Please try again.";
 
       if (error?.response?.data?.detail) {
-        errorMessage = error.response.data.detail;
+        errorMessage = error?.response?.data?.detail || "try again later";
       } else if (error?.message) {
         errorMessage = error.message;
       }

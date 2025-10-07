@@ -207,6 +207,7 @@ export async function createStaff(data: StaffCreateRequest) {
   }
 }
 
+
 // Accept staff invitation
 export async function acceptStaffInvitation(data: StaffAcceptRequest) {
   console.log("Data Going to Backend=====", data);
