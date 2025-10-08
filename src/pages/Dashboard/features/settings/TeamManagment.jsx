@@ -14,6 +14,39 @@ const getInitials = (fullName) => {
   return fullName[0].toUpperCase();
 };
 
+// Helper function to handle attendance data
+const getAttendanceStatus = (attendanceRecords) => {
+  if (!attendanceRecords || attendanceRecords.length === 0) return null;
+
+  const todayRecord = attendanceRecords.find(
+    (record) =>
+      record.attendance_date === new Date().toISOString().split("T")[0]
+  );
+
+  if (!todayRecord) return null;
+
+  return {
+    isCheckedIn: !!todayRecord.check_in_time,
+    isCheckedOut: !!todayRecord.check_out_time,
+    checkInTime: todayRecord.check_in_time
+      ? new Date(todayRecord.check_in_time)
+      : null,
+    checkOutTime: todayRecord.check_out_time
+      ? new Date(todayRecord.check_out_time)
+      : null,
+  };
+};
+
+// Helper function to format time
+const formatTime = (date) => {
+  if (!date) return "";
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
 const TeamManagement = () => {
   const { user } = useAuth();
   const id = user?.id;
@@ -38,7 +71,7 @@ const TeamManagement = () => {
         member.department?.toLowerCase(),
         member.role?.toLowerCase(),
         member.job_title?.toLowerCase(),
-      ].filter(Boolean); 
+      ].filter(Boolean);
 
       return searchTerms.every((term) =>
         searchableFields.some((field) => field.includes(term))
@@ -173,7 +206,7 @@ const TeamManagement = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gray-200 p-4 md:p-6 lg:p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -370,8 +403,77 @@ const TeamManagement = () => {
                     </div>
                   </div>
 
+                  {/* Attendance Status */}
+                  {member.role.toLowerCase() === "sales" && (
+                    <div className="border-t border-gray-200 pt-3 mt-2">
+                      <div className="flex flex-col items-center gap-2">
+                        <h4 className="font-medium text-sm text-gray-700">
+                          Today's Attendance
+                        </h4>
+                        {(() => {
+                          const attendance = getAttendanceStatus(
+                            member.attendance_records
+                          );
+                          if (!attendance) {
+                            return (
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 w-full text-center">
+                                <span className="text-sm text-yellow-700 font-medium">
+                                  No attendance record for today
+                                </span>
+                              </div>
+                            );
+                          }
+
+                          return (
+                            <>
+                              <div className="flex items-center gap-2 w-full justify-center">
+                                <div
+                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium w-full text-center ${
+                                    attendance.isCheckedIn
+                                      ? attendance.checkOutTime
+                                        ? "bg-blue-100 text-blue-800 border border-blue-200"
+                                        : "bg-green-100 text-green-800 border border-green-200"
+                                      : "bg-red-50 text-red-800 border border-red-200"
+                                  }`}
+                                >
+                                  {attendance.isCheckedIn
+                                    ? attendance.checkOutTime
+                                      ? "Shift Completed"
+                                      : "Currently Working"
+                                    : "Not Checked In"}
+                                </div>
+                              </div>
+                              {attendance.checkInTime && (
+                                <div className="bg-gray-50 rounded-lg p-2 w-full">
+                                  <div className="flex flex-col items-center gap-1 text-sm">
+                                    <div className="flex items-center gap-2 text-green-700">
+                                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                      <span className="font-medium">
+                                        Check-in:{" "}
+                                        {formatTime(attendance.checkInTime)}
+                                      </span>
+                                    </div>
+                                    {attendance.checkOutTime && (
+                                      <div className="flex items-center gap-2 text-blue-700">
+                                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                        <span className="font-medium">
+                                          Check-out:{" "}
+                                          {formatTime(attendance.checkOutTime)}
+                                        </span>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Created Date */}
-                  <div className="flex items-center justify-center gap-1 text-xs text-gray-500">
+                  <div className="flex items-center justify-center gap-1 text-xs text-gray-500 mt-2">
                     <Clock className="w-3 h-3" />
                     <span>
                       Joined: {new Date(member.created_at).toLocaleDateString()}
