@@ -80,6 +80,7 @@ const AboutSection = () => {
               <h3 className="text-xl font-semibold mb-3 text-traccbox-500">
                 Our Promise
               </h3>
+              
               <p className="text-gray-600">
                 To continuously evolve our platform based on customer feedback
                 and industry best practices.
