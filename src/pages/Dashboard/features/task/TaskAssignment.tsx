@@ -18,10 +18,12 @@ import {
 } from "@/api/field-Sales-repsApi/TaskService";
 import LeafletMap from "@/components/maps/LeafletMap";
 import { useAuth } from "@/components/auth/AuthProvider";
+import {useNavigate } from "react-router-dom";
 
 export default function TaskAssignment() {
   const { user } = useAuth();
   const companyId = user?.id;
+  const navigate = useNavigate()
   // Fetch staff data
   const {
     data: staffData,
@@ -226,6 +228,7 @@ export default function TaskAssignment() {
       // Reset form on success
       handleReset();
       setSuccessMessage("Task assigned successfully!");
+      navigate("/dashboard/field-reps/manage-task")
 
       // Clear success message after 5 seconds
       setTimeout(() => setSuccessMessage(""), 5000);
@@ -614,12 +617,12 @@ export default function TaskAssignment() {
               >
                 Reset
               </button>
-              <button
+              {/* <button
                 onClick={handleSaveDraft}
-                className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                className="px-6 py-2 border  border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
               >
                 Save Draft
-              </button>
+              </button> */}
               <button
                 onClick={handleAssignTask}
                 disabled={isSubmitting || createTaskMutation.isPending}

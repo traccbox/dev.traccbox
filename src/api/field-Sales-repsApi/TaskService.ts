@@ -10,8 +10,8 @@ export interface TaskCreate {
   customer_phone: string;
   description?: string | null;
   location?: string | null;
-  date: string; // format: date (YYYY-MM-DD)
-  time?: string | null; // format: time (HH:MM:SS)
+  date: string;
+  time?: string | null; 
   priority?: "important" | "normal" | "low";
   attachment?: string[] | null;
   status?: "pending" | "completed" | "overdue" | null;
@@ -49,6 +49,8 @@ export interface TaskResponse {
   status: "pending" | "completed" | "overdue";
   latitude?: number;
   longitude?: number;
+  staff_id: string;
+  staff_name?: string;
 }
 
 export interface TaskStatusUpdate {
@@ -65,19 +67,7 @@ export interface PlaceSuggestionResponse {
   latitude?: number;
   longitude?: number;
 }
-const AprCreateRes = {
-  id: "cf67a058-f5ca-4d90-aeb0-80197b3ccfa1",
-  task_title: "Store Supplies ",
-  task_type: "visit",
-  customer_name: "Ibrahim",
-  customer_phone: "+2349073388245",
-  attachment: null,
-  date: "2025-10-22",
-  description: "Deliver 50 goods to the store house",
-  priority: "important",
-  status: "pending",
-  time: "10:03:00",
-};
+
 // Task API Service
 const taskService = {
   createTask: async (taskData: TaskCreate) => {
@@ -161,7 +151,6 @@ const taskService = {
 
 // Places API Service
 const placesService = {
-  //    * Get place(location) suggestions based on user input
   suggestPlaces: async (input: string, language: string) => {
     console.log("Apl Suggest Location", input, "And EN=", language);
     try {
