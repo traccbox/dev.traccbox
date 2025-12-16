@@ -26,6 +26,10 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     submenus: [
       { label: "Manage Task", to: "/dashboard/field-reps/manage-task" },
       { label: "Task Assignment", to: "/dashboard/field-reps/create-tasks" },
+      {
+        label: "Location Tracking",
+        to: "/dashboard/location-tracking",
+      },
       { label: "GPS Logs", to: "/dashboard/field-reps/gps-logs" },
       { label: "Attendance Reports", to: "/dashboard/field-reps/attendance" },
     ],

@@ -23,6 +23,7 @@ import TraccBoxStaffPortal from "./pages/TraccBoxStaffPortal";
 import { useEffect } from "react";
 import TaskAssignment from "./pages/Dashboard/features/task/TaskAssignment";
 import ManageTask from "./pages/Dashboard/features/task/ManageTask";
+import LocationTracking from "./pages/Dashboard/features/gps/LocationTracking";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 
 // Dashboard home content as a component
@@ -69,9 +70,10 @@ const App = () => (
                   path="field-reps/create-tasks"
                   element={<TaskAssignment />}
                 />
+                <Route path="field-reps/manage-task" element={<ManageTask />} />
                 <Route
-                  path="field-reps/manage-task"
-                  element={<ManageTask />}
+                  path="location-tracking"
+                  element={<LocationTracking />}
                 />
               </Route>
             </Route>
