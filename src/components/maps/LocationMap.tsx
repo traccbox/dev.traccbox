@@ -254,18 +254,16 @@ const LocationMap: React.FC<LocationMapProps> = ({
     });
 
     // Fit map bounds to show all visible markers
-    if (Object.keys(locationsToShow).length > 0) {
+    const validLocations = Object.values(locationsToShow).filter(
+      (loc) => loc.latitude && loc.longitude
+    );
+    if (validLocations.length > 0) {
       const bounds = L.latLngBounds(
-        Object.values(locationsToShow).map((loc) => [
-          loc.latitude,
-          loc.longitude,
-        ])
+        validLocations.map((loc) => [loc.latitude, loc.longitude])
       );
       map.fitBounds(bounds, { padding: [50, 50] });
       console.log(
-        `🗺️ Map bounds updated for ${
-          Object.keys(locationsToShow).length
-        } marker(s)`
+        `🗺️ Map bounds updated for ${validLocations.length} marker(s)`
       );
     }
   }, [
