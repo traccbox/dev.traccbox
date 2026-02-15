@@ -25,19 +25,20 @@ import TaskAssignment from "./pages/Dashboard/features/task/TaskAssignment";
 import ManageTask from "./pages/Dashboard/features/task/ManageTask";
 import LocationTracking from "./pages/Dashboard/features/gps/LocationTracking";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
+import Home from "./pages/Dashboard/Home";
 
 // Dashboard home content as a component
-const DashboardHome = () => (
-  <>
-    <h1 className="text-3xl font-bold mb-4">Welcome to your Dashboard</h1>
-    <p className="text-lg mb-2">
-      Hello, <span className="font-semibold">Welcome!</span>
-    </p>
-    <div className="mt-6 text-gray-500">
-      <p>dashboard Still on Progress......</p>
-    </div>
-  </>
-);
+// const DashboardHome = () => (
+//   <>
+//     <h1 className="text-3xl font-bold mb-4">Welcome to your Dashboard</h1>
+//     <p className="text-lg mb-2">
+//       Hello, <span className="font-semibold">Welcome!</span>
+//     </p>
+//     <div className="mt-6 text-gray-500">
+//       <p>dashboard Still on Progress......</p>
+//     </div>
+//   </>
+// );
 
 const queryClient = new QueryClient();
 
@@ -62,7 +63,7 @@ const App = () => (
             <Route path="/staff-verify" element={<StaffVerification />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />}>
-                <Route index element={<DashboardHome />} />
+                <Route index element={<Home />} />
                 <Route path="settings/general" element={<GeneralSettings />} />
                 <Route path="settings/roles" element={<UserRoles />} />
                 <Route path="settings/team" element={<TeamManagment />} />

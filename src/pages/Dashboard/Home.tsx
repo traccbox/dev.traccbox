@@ -1,0 +1,117 @@
+import { getStaffAnalytics } from "@/api/dashboard-overview/overview";
+import { useAuth } from "@/components/auth/AuthProvider";
+import CardDashboard from "@/components/ui/CardDashboard";
+import CardReps, { CardRepsType } from "@/components/ui/CardReps";
+import Spinner from "@/components/ui/Spinner";
+import { useQuery } from "@tanstack/react-query";
+import {
+  CircleArrowRight,
+  DollarSign,
+  MapPin,
+  Medal,
+  UserRound,
+} from "lucide-react";
+import { Link } from "react-router-dom";
+
+export default function Home() {
+  const { user } = useAuth();
+
+  const { data: analytics, isLoading: isFetchingAnalytics } = useQuery({
+    queryKey: ["analytics"],
+    queryFn: () => getStaffAnalytics(user?.id),
+  });
+
+  console.log(analytics);
+
+  const {
+    total_active_staffs,
+    total_daily_checkins,
+    task_stats: { weekly_task_set, weekly_task_completed },
+    top_5_staffs,
+  } = analytics;
+
+  return isFetchingAnalytics ? (
+    <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
+      <Spinner />
+    </div>
+  ) : (
+    <>
+      <section className="w-full   gap-5 grid md:grid-cols-4 grid-2 ">
+        <CardDashboard
+          title={"Total Active Reps"}
+          numValue={total_active_staffs}
+          percent={12}
+          icon={<UserRound />}
+          index={1}
+        />
+        <CardDashboard
+          title={"Daily Check-ins"}
+          numValue={total_daily_checkins}
+          percent={8}
+          icon={<MapPin />}
+          index={2}
+        />
+        <CardDashboard
+          title={"Weekly Sales Summary"}
+          numValue={weekly_task_completed}
+          percent={15}
+          icon={<DollarSign />}
+          index={1}
+        />
+        <CardDashboard
+          title={"Weekly Task Set"}
+          numValue={weekly_task_set}
+          percent={3}
+          icon={<Medal />}
+          index={2}
+        />
+      </section>
+
+      <section className="w-full h-[500px] grid grid-cols-[65%_35%] gap-5 pr-5 items-center mt-7  ">
+        <div className="w-full h-full py-5 px-4 bg-white rounded-2xl">
+          <div className="w-full flex justify-between items-center">
+            <h3 className="text-3xl flex justify-start items-center gap-2">
+              <MapPin /> Check-in Heat Map
+            </h3>
+            <Link
+              to=""
+              className="text-[#005BBF] flex justify-center items-center gap-1 hover:underline underline-offset-2 transition-all duration-500 text-sm font-medium"
+            >
+              View Details
+              <CircleArrowRight size={14} />
+            </Link>
+          </div>
+        </div>
+        <div className="w-full h-full flex flex-col items-start justify-start py-5 px-4 bg-white rounded-2xl">
+          <div className="w-full flex mb-3 justify-between items-center">
+            <h3 className="text-xl">Top 5 Reps</h3>
+            <Link
+              to=""
+              className="text-[#005BBF] flex justify-center items-center gap-1 hover:underline underline-offset-2 transition-all duration-500 text-sm font-medium"
+            >
+              View Details
+              <CircleArrowRight size={14} />
+            </Link>
+          </div>
+
+          {top_5_staffs.map(
+            ({
+              full_name,
+              rating,
+              staff_id,
+              completion_percentage,
+            }: CardRepsType) => (
+              <CardReps
+                key={staff_id}
+                full_name={full_name}
+                staff_id={staff_id}
+                completion_percentage={Math.round(completion_percentage)}
+                rating={rating}
+              />
+            ),
+          )}
+        </div>
+      </section>
+    </>
+  );
+}
