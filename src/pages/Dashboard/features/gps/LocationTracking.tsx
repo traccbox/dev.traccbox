@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, MapPin, Users, Wifi, WifiOff, RefreshCw } from "lucide-react";
+import { log } from "console";
 
 const LocationTracking: React.FC = () => {
   const { user } = useAuth();
@@ -57,8 +58,9 @@ const LocationTracking: React.FC = () => {
   }, [staffLocations]);
 
   const { data: staffData, isLoading: staffLoading } = useStaffData(
-    companyId || ""
+    companyId || "",
   );
+  console.log("=====", staffData);
 
   // Log staff data when it loads
   useEffect(() => {
@@ -67,7 +69,7 @@ const LocationTracking: React.FC = () => {
       if (staffData) {
         console.log(
           "👥 Total Staff Count:",
-          Array.isArray(staffData) ? staffData.length : 0
+          Array.isArray(staffData) ? staffData.length : 0,
         );
       }
     }
@@ -162,8 +164,8 @@ const LocationTracking: React.FC = () => {
   const visibleLocationsCount = showAll
     ? Object.keys(staffLocations).length
     : selectedStaffId && staffLocations[selectedStaffId]
-    ? 1
-    : 0;
+      ? 1
+      : 0;
 
   if (!companyId) {
     return (
@@ -272,7 +274,7 @@ const LocationTracking: React.FC = () => {
             <Button
               onClick={() => {
                 console.log(
-                  "🔄 Manual Refresh All - Requesting all staff locations"
+                  "🔄 Manual Refresh All - Requesting all staff locations",
                 );
                 requestAllStaff();
               }}
@@ -341,7 +343,7 @@ const LocationTracking: React.FC = () => {
       )}
 
       {/* Map Card */}
-      <Card>
+      {/* <Card>
         <CardHeader>
           <CardTitle>Location Map</CardTitle>
           <CardDescription>
@@ -380,7 +382,14 @@ const LocationTracking: React.FC = () => {
             />
           )}
         </CardContent>
-      </Card>
+      </Card> */}
+      <MapCard
+        showAll={showAll}
+        staffInfo={staffInfo}
+        staffLocations={staffLocations}
+        selectedStaffId={selectedStaffId}
+        title={true}
+      />
 
       {/* Loading State */}
       {staffLoading && (
@@ -392,6 +401,64 @@ const LocationTracking: React.FC = () => {
         </div>
       )}
     </div>
+  );
+};
+
+export const MapCard = ({
+  showAll = true,
+  selectedStaffId = null,
+  staffInfo,
+  staffLocations,
+  title = false,
+}) => {
+  console.log(staffInfo, "staff op", );
+  console.log(staffLocations, "staff lo", );
+
+  return (
+    <Card>
+      <CardHeader>
+        {title && (
+          <>
+            <CardTitle>Location Map</CardTitle>
+            <CardDescription>
+              {showAll
+                ? "Showing all staff locations"
+                : selectedStaffId
+                  ? `Showing location for ${
+                      staffInfo[selectedStaffId]?.name || selectedStaffId
+                    }`
+                  : "Select a staff member or enable 'Show All' to view locations"}
+            </CardDescription>
+          </>
+        )}
+      </CardHeader>
+      <CardContent>
+        {Object.keys(staffLocations).length === 0 &&
+        !showAll &&
+        !selectedStaffId ? (
+          <div className="flex items-center justify-center h-96 border rounded-lg bg-muted/50">
+            <div className="text-center">
+              <MapPin className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+              <p className="text-muted-foreground">
+                No locations to display. Select a staff member or enable "Show
+                All".
+              </p>
+            </div>
+          </div>
+        ) : (
+          <LocationMap
+            staffLocations={staffLocations}
+            selectedStaffId={selectedStaffId}
+            showAll={showAll}
+            height="600px"
+            staffNames={Object.fromEntries(
+              Object.entries(staffInfo).map(([id, info]) => [id, info?.name]),
+            )}
+            staffInfo={staffInfo}
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 };
 

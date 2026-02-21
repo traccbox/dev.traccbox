@@ -12,9 +12,15 @@ import {
   UserRound,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import LocationTracking, { MapCard } from "./features/gps/LocationTracking";
+import { useLocationTrackingContext } from "@/contexts/LocationTrackingContext";
+import { useStaffData } from "@/api/settingsApi/hooks/useStaffData";
+
+// import {MapContainer} from "leaflet"
 
 export default function Home() {
   const { user } = useAuth();
+  const companyId = user?.id || null;
 
   const { data: analytics, isLoading: isFetchingAnalytics } = useQuery({
     queryKey: ["analytics"],
@@ -23,12 +29,23 @@ export default function Home() {
 
   console.log(analytics);
 
+  const { staffLocations } = useLocationTrackingContext();
+
+  const { data: staffData } = useStaffData(companyId || "");
+  console.log("All company staff", staffData);
+
+  console.log("Staff==", staffLocations);
+  const ob = staffLocations || {};
+  const id = Object.keys(ob)[0];
+  const staffInfo = staffData?.find((staff) => staff.id === id);
+
+  console.log("Matched Staff:", staffInfo);
   const {
-    total_active_staffs,
-    total_daily_checkins,
-    task_stats: { weekly_task_set, weekly_task_completed },
-    top_5_staffs,
-  } = analytics;
+    total_active_staffs = 0,
+    total_daily_checkins = 0,
+    task_stats: { weekly_task_set = 0, weekly_task_completed = 0 } = {},
+    top_5_staffs = [],
+  } = analytics ?? {};
 
   return isFetchingAnalytics ? (
     <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
@@ -67,7 +84,8 @@ export default function Home() {
         />
       </section>
 
-      <section className="w-full h-[500px] grid grid-cols-[65%_35%] gap-5 pr-5 items-center mt-7  ">
+      <section className="w-full h-auto grid grid-cols-[65%_35%] gap-5 pr-5 items-center mt-7  ">
+        {/* Map Container */}
         <div className="w-full h-full py-5 px-4 bg-white rounded-2xl">
           <div className="w-full flex justify-between items-center">
             <h3 className="text-3xl flex justify-start items-center gap-2">
@@ -81,7 +99,17 @@ export default function Home() {
               <CircleArrowRight size={14} />
             </Link>
           </div>
+
+          <div>
+            {/* <LocationTracking /> */}
+
+            {staffInfo && (
+              <MapCard staffInfo={staffInfo} staffLocations={staffLocations} />
+            )}
+          </div>
         </div>
+
+        {/* List of Reps Container  */}
         <div className="w-full h-full flex flex-col items-start justify-start py-5 px-4 bg-white rounded-2xl">
           <div className="w-full flex mb-3 justify-between items-center">
             <h3 className="text-xl">Top 5 Reps</h3>
