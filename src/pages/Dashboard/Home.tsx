@@ -117,7 +117,7 @@ export default function Home() {
               to=""
               className="text-[#005BBF] flex justify-center items-center gap-1 hover:underline underline-offset-2 transition-all duration-500 text-sm font-medium"
             >
-              View Details
+              View All
               <CircleArrowRight size={14} />
             </Link>
           </div>
