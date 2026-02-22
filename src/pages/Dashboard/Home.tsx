@@ -39,13 +39,14 @@ export default function Home() {
   const ob = staffLocations || {};
   const id = Object.keys(ob)[0];
 
-  //staff info mapping 
+  //staff info mapping
   const staffInfo = React.useMemo(() => {
     const info: Record<
       string,
       { name: string; role?: string; jobTitle?: string; department?: string }
     > = {};
     if (staffData) {
+      console.log("Staff Data: ==", staffData);
       const staffArray = Array.isArray(staffData) ? staffData : [];
       staffArray.forEach(
         (staff: {
@@ -121,7 +122,7 @@ export default function Home() {
               <MapPin /> Check-in Heat Map
             </h3>
             <Link
-              to=""
+              to="/dashboard/location-tracking"
               className="text-[#005BBF] flex justify-center items-center gap-1 hover:underline underline-offset-2 transition-all duration-500 text-sm font-medium"
             >
               View All
@@ -132,7 +133,7 @@ export default function Home() {
           <div>
             <MapCard
               showAll={true}
-              staffInfo={{}}
+              staffInfo={staffInfo}
               staffLocations={staffLocations}
               selectedStaffId={null}
               title={false}
