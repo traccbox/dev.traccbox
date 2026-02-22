@@ -103,7 +103,11 @@ export default function Home() {
           <div>
             {/* <LocationTracking /> */}
 
-            {staffInfo && (
+            {!staffInfo ? (
+              <div className="w-full bg-slate-200 h-[400px] mt-3 flex justify-center items-center">
+                <Spinner />
+              </div>
+            ) : (
               <MapCard staffInfo={staffInfo} staffLocations={staffLocations} />
             )}
           </div>

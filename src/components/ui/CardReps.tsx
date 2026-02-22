@@ -15,6 +15,9 @@ export default function CardReps({
 
   console.log(staff_id);
 
+  const [fName, lName] = full_name.split(" ");
+  console.log(fName, "and", lName);
+
   const getColor = (value: number) => {
     if (value >= 80) return "bg-green-600";
     if (value >= 60) return "bg-blue-600";
@@ -27,7 +30,10 @@ export default function CardReps({
     <div className="bg-[#EBEBFF] w-full h-[100px] my-2 p-4 flex justify-between rounded-2xl items-center">
       <div className="flex justify-start items-center gap-3">
         <div className="w-[46px] h-[46px] bg-blue-950 flex justify-center text-white rounded-full items-center">
-          <p>VM</p>
+          <p>
+            {fName[0]}
+            {lName[0]}
+          </p>
         </div>
 
         <div>
