@@ -84,11 +84,11 @@ export default function Home() {
         />
       </section>
 
-      <section className="w-full h-auto grid grid-cols-[65%_35%] gap-5 pr-5 items-center mt-7  ">
+      <section className="w-full h-auto grid grid-cols-1  md:grid-cols-[65%_35%] gap-5 md:pr-5 items-center mt-7  ">
         {/* Map Container */}
         <div className="w-full h-full py-5 px-4 bg-white rounded-2xl">
           <div className="w-full flex justify-between items-center">
-            <h3 className="text-3xl flex justify-start items-center gap-2">
+            <h3 className="text-xl md:text-3xl flex justify-start items-center gap-2">
               <MapPin /> Check-in Heat Map
             </h3>
             <Link
