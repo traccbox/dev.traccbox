@@ -64,11 +64,12 @@ const Sidebar: React.FC = () => {
                 setExpandedIndex(expandedIndex === idx ? null : idx)
               }
               isActive={activeIndex === idx}
+              comingSoon={menu.comingSoon}
             />
           ))}
         </nav>
         {/* Upgrade Box */}
-        <div className="mt-8 px-4">
+        {/* <div className="mt-8 px-4">
           <div className="bg-gradient-to-br from-[#7B2FF2] to-[#F357A8] rounded-xl p-3 flex flex-col items-center text-white shadow-lg">
             <span className="font-semibold text-sm mb-2 text-center">
               Upgrade to Pro
@@ -79,7 +80,7 @@ const Sidebar: React.FC = () => {
               Upgrade
             </button>
           </div>
-        </div>
+        </div> */}
       </aside>
 
       {/* Overlay for mobile */}
