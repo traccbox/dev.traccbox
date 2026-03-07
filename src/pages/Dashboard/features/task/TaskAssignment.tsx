@@ -18,12 +18,12 @@ import {
 } from "@/api/field-Sales-repsApi/TaskService";
 import LeafletMap from "@/components/maps/LeafletMap";
 import { useAuth } from "@/components/auth/AuthProvider";
-import {useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 export default function TaskAssignment() {
   const { user } = useAuth();
   const companyId = user?.id;
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   // Fetch staff data
   const {
     data: staffData,
@@ -56,7 +56,7 @@ export default function TaskAssignment() {
     date: "",
     time: "",
     priority: "",
-    attachment: null,
+    // attachment: null,
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -121,9 +121,9 @@ export default function TaskAssignment() {
     }
   };
 
-  const handleFileChange = (e) => {
-    setFormData((prev) => ({ ...prev, attachment: e.target.files[0] }));
-  };
+  // const handleFileChange = (e) => {
+  //   setFormData((prev) => ({ ...prev, attachment: e.target.files[0] }));
+  // };
 
   // Handle location suggestion selection
   const handleLocationSelect = (suggestion: PlaceSuggestionResponse) => {
@@ -172,7 +172,7 @@ export default function TaskAssignment() {
       date: "",
       time: "",
       priority: "",
-      attachment: null,
+      // attachment: null,
     });
     setErrors({});
     setPlaceInput("");
@@ -214,7 +214,7 @@ export default function TaskAssignment() {
         date: formData.date,
         time: formData.time || null,
         priority: priorityMap[formData.priority] || "normal",
-        attachment: formData.attachment ? [formData.attachment.name] : null,
+        // attachment: formData.attachment ? [formData.attachment.name] : null,
         status: "pending",
         // Include coordinates if available
         ...(selectedCoordinates && {
@@ -228,7 +228,7 @@ export default function TaskAssignment() {
       // Reset form on success
       handleReset();
       setSuccessMessage("Task assigned successfully!");
-      navigate("/dashboard/field-reps/manage-task")
+      navigate("/dashboard/field-reps/manage-task");
 
       // Clear success message after 5 seconds
       setTimeout(() => setSuccessMessage(""), 5000);
@@ -472,7 +472,7 @@ export default function TaskAssignment() {
                         {placeSuggestions.suggestions.map(
                           (
                             suggestion: PlaceSuggestionResponse,
-                            index: number
+                            index: number,
                           ) => (
                             <button
                               key={index}
@@ -504,7 +504,7 @@ export default function TaskAssignment() {
                                 </div>
                               </div>
                             </button>
-                          )
+                          ),
                         )}
                       </div>
                     )}
@@ -583,7 +583,7 @@ export default function TaskAssignment() {
                 </div>
               </div>
 
-              <div>
+              {/* <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Attachment
                 </label>
@@ -606,7 +606,7 @@ export default function TaskAssignment() {
                     </span>
                   </label>
                 </div>
-              </div>
+              </div> */}
             </div>
 
             {/* Action Buttons */}
