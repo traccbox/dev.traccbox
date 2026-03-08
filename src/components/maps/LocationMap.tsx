@@ -126,7 +126,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
           if (!latitude || !longitude) {
             console.warn(
               `⚠️ Invalid location data for staff ${staffId}:`,
-              location
+              location,
             );
             return;
           }
@@ -143,7 +143,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
             } catch (error) {
               console.error(`❌ Error fetching address for ${staffId}:`, error);
               const fallback = `Latitude: ${latitude.toFixed(
-                6
+                6,
               )} | Longitude: ${longitude.toFixed(6)}`;
               addressesRef.current.set(staffId, fallback);
               setAddresses((prev) => ({
@@ -152,7 +152,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
               }));
             }
           }
-        }
+        },
       );
 
       await Promise.all(addressPromises);
@@ -167,7 +167,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
       if (!latitude || !longitude) {
         console.warn(
           `⚠️ Invalid location data for staff ${staffId}:`,
-          location
+          location,
         );
         return;
       }
@@ -183,9 +183,12 @@ const LocationMap: React.FC<LocationMapProps> = ({
       // Get address from cache or use coordinates as fallback
       const address =
         addressesRef.current.get(staffId) ||
+        // addresses[staffId] ||
         addresses[staffId] ||
+        // `${location.address}`;
         `Latitude: ${latitude.toFixed(6)} | Longitude: ${longitude.toFixed(6)}`;
 
+      console.log("This is the address of the agent", address);
       console.log(`🗺️ Updating marker for staff:`, {
         staffId,
         name: staffName,
@@ -194,6 +197,10 @@ const LocationMap: React.FC<LocationMapProps> = ({
         address,
         timestamp,
       });
+
+      // Latitude: ${latitude.toFixed(6)} | Longitude: ${longitude.toFixed(
+      //     6,
+      //   )}
 
       // Create popup content with enhanced information (matching the sample format)
       const popupContent = `
@@ -211,9 +218,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
             ${address}
           </p> 
           <p style="margin: 4px 0; font-size: 11px; color: #6b7280;">
-            Latitude: ${latitude.toFixed(6)} | Longitude: ${longitude.toFixed(
-        6
-      )}
+          ${location.address}
           </p>
           <hr style="margin: 8px 0; border: none; border-top: 1px solid #e2e8f0;" />
           <p style="margin: 4px 0; font-size: 12px; color: #666;">
@@ -221,8 +226,8 @@ const LocationMap: React.FC<LocationMapProps> = ({
               task_status === "completed"
                 ? "#10b981"
                 : task_status === "pending"
-                ? "#f59e0b"
-                : "#6b7280"
+                  ? "#f59e0b"
+                  : "#6b7280"
             }">${task_status || "N/A"}</span>
           </p>
           <p style="margin: 4px 0; font-size: 12px; color: #666;">
@@ -255,15 +260,15 @@ const LocationMap: React.FC<LocationMapProps> = ({
 
     // Fit map bounds to show all visible markers
     const validLocations = Object.values(locationsToShow).filter(
-      (loc) => loc.latitude && loc.longitude
+      (loc) => loc.latitude && loc.longitude,
     );
     if (validLocations.length > 0) {
       const bounds = L.latLngBounds(
-        validLocations.map((loc) => [loc.latitude, loc.longitude])
+        validLocations.map((loc) => [loc.latitude, loc.longitude]),
       );
       map.fitBounds(bounds, { padding: [50, 50] });
       console.log(
-        `🗺️ Map bounds updated for ${validLocations.length} marker(s)`
+        `🗺️ Map bounds updated for ${validLocations.length} marker(s)`,
       );
     }
   }, [

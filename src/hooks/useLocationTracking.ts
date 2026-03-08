@@ -5,6 +5,7 @@ export interface StaffLocation {
   longitude: number;
   timestamp: string;
   task_status?: string;
+  address?: string;
 }
 
 export interface StaffLocations {
@@ -49,13 +50,13 @@ export const useLocationTracking = ({
       console.log("📤 WebSocket Ready State:", wsRef.current.readyState);
       wsRef.current.send(messageStr);
       console.log(
-        "✅ Message sent successfully (response will come via onmessage handler)"
+        "✅ Message sent successfully (response will come via onmessage handler)",
       );
     } else {
       const readyState = wsRef.current?.readyState;
       console.warn("⚠️ WebSocket is not connected. Ready state:", readyState);
       console.warn(
-        "⚠️ WebSocket states: 0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED"
+        "⚠️ WebSocket states: 0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED",
       );
       setError("WebSocket is not connected");
     }
@@ -144,7 +145,7 @@ export const useLocationTracking = ({
             if (data.status === "success" && data.locations) {
               console.log(
                 "✅ Processing location data for staff:",
-                Object.keys(data.locations)
+                Object.keys(data.locations),
               );
               setStaffLocations((prev) => {
                 // Merge new locations with existing ones
@@ -169,7 +170,7 @@ export const useLocationTracking = ({
             } else {
               console.warn(
                 "⚠️ WebSocket response status not 'success' or missing locations:",
-                data
+                data,
               );
             }
           } else {
@@ -205,17 +206,17 @@ export const useLocationTracking = ({
         if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current += 1;
           console.log(
-            `🔄 Scheduling reconnection attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts} in ${reconnectDelay}ms`
+            `🔄 Scheduling reconnection attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts} in ${reconnectDelay}ms`,
           );
           reconnectTimeoutRef.current = setTimeout(() => {
             console.log(
-              `🔄 Reconnecting... Attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`
+              `🔄 Reconnecting... Attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`,
             );
             connect();
           }, reconnectDelay);
         } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
           console.error(
-            "❌ Max reconnection attempts reached. Manual refresh required."
+            "❌ Max reconnection attempts reached. Manual refresh required.",
           );
           setError("Failed to reconnect. Please refresh the page.");
         }
@@ -254,7 +255,7 @@ export const useLocationTracking = ({
       console.log("📤 Requesting Single Staff Location:", message);
       sendMessage(message);
     },
-    [sendMessage]
+    [sendMessage],
   );
 
   // Connect on mount and when companyId or enabled changes
