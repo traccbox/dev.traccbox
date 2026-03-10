@@ -10,8 +10,8 @@ const Sidebar: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
   const location = useLocation();
-
-  // Toggle sidebar
+ 
+  // Toggle sideba
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };

@@ -247,10 +247,10 @@ const LocationMap: React.FC<LocationMapProps> = ({
           marker.setPopupContent(popupContent);
         }
       } else {
-        // Create new marker
+        // Create new marker with custom icon
         const marker = L.marker([latitude, longitude], {
           icon: createStaffIcon(),
-        })
+        }) 
           .addTo(map)
           .bindPopup(popupContent);
 

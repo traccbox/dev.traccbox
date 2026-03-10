@@ -28,10 +28,10 @@ export const LocationTrackingProvider: React.FC<{ children: ReactNode }> = ({
     enabled: !!companyId,
     userEmail: user?.email,
   });
-
+ 
   const {
     staffLocations,
-    isConnected,
+    isConnected, 
     error,
     requestAllStaff,
     requestSingleStaff,

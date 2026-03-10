@@ -27,7 +27,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({
   const location = useLocation();
   const LucideIcon = (LucideIcons)[icon] || LucideIcons["Circle"];
 
-  // If no submenus, render as a direct link
+
   if (!submenus.length && to) {
     const isComingSoon = comingSoon;
     const baseClasses = "flex items-center gap-3 px-4 py-3 rounded-lg mb-2 transition-colors font-medium text-base";
