@@ -32,8 +32,8 @@ export const sidebarMenus: SidebarMenuConfig[] = [
         label: "Location Tracking",
         to: "/dashboard/location-tracking",
       },
-      { label: "GPS Logs", to: "/dashboard/field-reps/gps-logs" },
-      { label: "Attendance Reports", to: "/dashboard/field-reps/attendance" },
+      // { label: "GPS Logs", to: "/dashboard/field-reps/gps-logs" },
+      // { label: "Attendance Reports", to: "/dashboard/field-reps/attendance" },
     ],
   },
   // {
