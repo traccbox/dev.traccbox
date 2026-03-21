@@ -71,7 +71,7 @@ const Navbar = () => {
             Contact
           </a>
         </div>
-
+{/* 
         <div className="hidden md:flex items-center space-x-4">
           <Link to="/login">
             <Button
@@ -86,7 +86,7 @@ const Navbar = () => {
               Get Started
             </Button>
           </Link>
-        </div>
+        </div> */}
 
         {/* Mobile menu button */}
         <div className="md:hidden flex items-center">
@@ -141,7 +141,7 @@ const Navbar = () => {
           >
             Contact
           </a>
-          <div className="flex flex-col space-y-2 pt-2">
+          {/* <div className="flex flex-col space-y-2 pt-2">
             <Link to="/login">
               <Button variant="ghost" className="justify-center border border-traccbox-500 w-full">
                 Sign In
@@ -152,7 +152,7 @@ const Navbar = () => {
                 Get Started
               </Button>
             </Link>
-          </div>
+          </div> */}
         </div>
       </div>
     </nav>

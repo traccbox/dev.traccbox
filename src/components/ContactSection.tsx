@@ -285,7 +285,7 @@ const ContactSection = () => {
               <div className="mt-8 pt-8 border-t border-gray-100">
                 <div className="flex items-center mb-4">
                   <Phone className="text-traccbox-500 mr-3" size={18} />
-                  <span className="text-gray-700">Call us: +2348031100015</span>
+                  <span className="text-gray-700">Call us: +234906 388 0674</span>
                 </div>
                 <div className="flex items-center">
                   <MessageSquare className="text-traccbox-500 mr-3" size={18} />
