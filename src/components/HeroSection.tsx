@@ -52,20 +52,27 @@ const HeroSection = () => {
               style={{ animationDelay: "0.4s" }}
               data-aos="fade-up"
             >
-              <Link to="/signup">
+              {/* <Link to="/signup">
                 <Button className="bg-traccbox-500 hover:bg-traccbox-600 text-white px-6 py-6 text-lg rounded-full">
                   Start Free Trial
                 </Button>
-              </Link>
-              <Button
-                variant="outline"
-                className="border-traccbox-500 text-traccbox-500 hover:bg-traccbox-50 px-6 py-6 text-lg rounded-full"
-                data-aos="fade-up"
+              </Link> */}
+              <a
+                href="#waitlist"
+                className="inline-flex items-center bg-traccbox-500 hover:bg-traccbox-600 text-white px-6 py-4 text-lg rounded-full transition-colors"
               >
-                Request Demo <ArrowRight size={18} className="ml-2" />
-              </Button>
+                Join Waitlist
+                <ArrowRight className="ml-2" size={18} />
+              </a>
             </div>
           </div>
+          {/* <Button
+            variant="outline"
+            className="border-traccbox-500 text-traccbox-500 hover:bg-traccbox-50 px-6 py-6 text-lg rounded-full"
+            data-aos="fade-up"
+          >
+            Request Demo <ArrowRight size={18} className="ml-2" />
+          </Button> */}
           <div
             className="w-full lg:w-1/2 relative animate-fade-in"
             style={{ animationDelay: "0.6s" }}

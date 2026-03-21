@@ -160,7 +160,7 @@ const ContactSection = () => {
       } else {
         throw new Error(data.message || "Failed to send message.");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Contact form error:", error);
       setModal({
         open: true,

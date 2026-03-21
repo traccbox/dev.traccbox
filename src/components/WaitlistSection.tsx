@@ -158,7 +158,7 @@ const WaitlistSection = () => {
       } else {
         throw new Error(data.message || "Failed to join waitlist.");
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Waitlist form error:", error);
       setModal({
         open: true,
@@ -177,7 +177,7 @@ const WaitlistSection = () => {
     <>
       <StatusModal modal={modal} onClose={() => setModal((m) => ({ ...m, open: false }))} />
 
-      <section className="py-24 bg-blue-wave-bottom bg-no-repeat bg-top bg-cover">
+      <section id="waitlist" className="py-24 bg-blue-wave-bottom bg-no-repeat bg-top bg-cover">
         <div className="container mx-auto px-4">
           <div
             className="max-w-4xl mx-auto bg-white rounded-xl shadow-xl overflow-hidden"
