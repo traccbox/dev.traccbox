@@ -87,7 +87,7 @@ const CompanyDetailsForm: React.FC<CompanyDetailsFormProps> = ({
                   First Name<span className="text-red-500">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="John" {...field} />
+                  <Input placeholder="Victor" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -102,7 +102,7 @@ const CompanyDetailsForm: React.FC<CompanyDetailsFormProps> = ({
                   Last Name<span className="text-red-500">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input placeholder="Doe" {...field} />
+                  <Input placeholder="Moses" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

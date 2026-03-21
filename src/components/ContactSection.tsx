@@ -212,7 +212,7 @@ const ContactSection = () => {
                     type="text"
                     value={formData.name}
                     onChange={handleChange}
-                    placeholder="John Doe"
+                    placeholder="Victor Moses"
                     required
                   />
                 </div>
