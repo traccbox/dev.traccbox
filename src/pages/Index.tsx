@@ -8,12 +8,12 @@ import PricingSection from "@/components/PricingSection";
 import TrialSection from "@/components/TrialSection";
 import ContactSection from "@/components/ContactSection";
 import AboutSection from "@/components/AboutSection";
-import DemoSection from "@/components/DemoSection";
 import OnboardingSection from "@/components/OnboardingSection";
 import BlogSection from "@/components/BlogSection";
 import Footer from "@/components/Footer";
 import AOS from "aos";
 import "aos/dist/aos.css";
+import WaitlistSection from "@/components/WaitlistSection";
 const Index = () => {
   useEffect(() => {
     AOS.init({
@@ -32,7 +32,7 @@ const Index = () => {
         <TrialSection />
         <OnboardingSection />
         <AboutSection />
-        <DemoSection />
+        <WaitlistSection />
         <BlogSection />
         <ContactSection />
       </main>
