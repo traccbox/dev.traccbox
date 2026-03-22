@@ -289,7 +289,7 @@ const ContactSection = () => {
                 </div>
                 <div className="flex items-center">
                   <MessageSquare className="text-traccbox-500 mr-3" size={18} />
-                  <span className="text-gray-700">Email: support@traccbox.com</span>
+                  <span className="text-gray-700">Email: hello@traccbox.com</span>
                 </div>
               </div>
             </div>

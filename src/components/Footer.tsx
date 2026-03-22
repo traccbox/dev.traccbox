@@ -153,10 +153,10 @@ const Footer = () => {
               <li className="text-gray-400">Nigeria</li>
               <li>
                 <a
-                  href="mailto:info@traccbox.com"
+                  href="mailto:hello@traccbox.com"
                   className="text-gray-400 hover:text-white transition-colors"
                 >
-                  info@traccbox.com
+                  hello@traccbox.com
                 </a>
               </li>
               <li>
