@@ -53,8 +53,8 @@ const App = () => (
           <GlobalAuthRedirect />
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
+            <Route path="/company$&-admin-signup" element={<Signup />} />
+            <Route path="/company$&-admin-login" element={<Login />} />
             <Route path="/verify" element={<Verification />} />
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
