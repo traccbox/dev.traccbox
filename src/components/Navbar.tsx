@@ -46,12 +46,12 @@ const Navbar = () => {
           >
             Features
           </a>
-          <a
+          {/* <a
             href="#pricing"
             className="text-gray-700 hover:text-traccbox-500 transition-colors"
           >
             Pricing
-          </a>
+          </a> */}
           <a
             href="#about"
             className="text-gray-700 hover:text-traccbox-500 transition-colors"
@@ -113,13 +113,13 @@ const Navbar = () => {
           >
             Features
           </a>
-          <a
+          {/* <a
             href="#pricing"
             className="block text-gray-700 hover:text-traccbox-500 transition-colors py-2"
             onClick={() => setIsMenuOpen(false)}
           >
             Pricing
-          </a>
+          </a> */}
           <a
             href="#about"
             className="block text-gray-700 hover:text-traccbox-500 transition-colors py-2"
