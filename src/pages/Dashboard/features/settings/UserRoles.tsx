@@ -14,7 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { createStaff } from "@/api/auth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
-import type { StaffPermissions } from "@/api/types";
+import type { StaffPermissions, StaffCreateRequest } from "@/api/types";
 import { useNavigate } from "react-router-dom";
 
 // Zod schema for form validation
@@ -26,8 +26,9 @@ const userFormSchema = z.object({
     .regex(/^[a-zA-Z\s]+$/, "Full name can only contain letters and spaces"),
   email: z
     .string()
-    .min(1, "Email is required")
-    .email("Please enter a valid email address"),
+    .email("Please enter a valid email address")
+    .optional()
+    .or(z.literal("")),
   phoneNumber: z
     .string()
     .min(1, "Phone number is required")
@@ -45,191 +46,159 @@ const userFormSchema = z.object({
 
 // TypeScript type for the form data
 type UserFormData = z.infer<typeof userFormSchema>;
+type TabMode = "standard" | "fieldWorker";
 
-const UserFormSection = React.forwardRef((props, ref) => {
-  const fileInputRef = useRef(null);
-  const [photo, setPhoto] = useState(null);
+interface UserFormSectionProps {
+  mode: TabMode;
+}
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch,
-    setValue,
-    getValues,
-    reset,
-  } = useForm<UserFormData>({
-    resolver: zodResolver(userFormSchema),
-    defaultValues: {
-      fullName: "",
-      email: "",
-      phoneNumber: "",
-      jobTitle: "",
-      department: "",
-    },
-    mode: "onChange",
-  });
+interface UserFormHandle {
+  getValues: () => UserFormData;
+  formState: { errors: Record<string, unknown> };
+  reset: () => void;
+}
 
-  // Expose form methods to parent via ref
-  React.useImperativeHandle(ref, () => ({
-    getValues,
-    formState: { errors },
-    reset,
-  }));
+const UserFormSection = React.forwardRef<UserFormHandle, UserFormSectionProps>(
+  ({ mode }, ref) => {
+    const {
+      register,
+      handleSubmit,
+      formState: { errors },
+      watch,
+      setValue,
+      getValues,
+      reset,
+    } = useForm<UserFormData>({
+      resolver: zodResolver(userFormSchema),
+      defaultValues: {
+        fullName: "",
+        email: undefined,
+        phoneNumber: "",
+        jobTitle: "",
+        department: "",
+      },
+      mode: "onChange",
+    });
 
-  const handlePhotoClick = () => {
-    fileInputRef.current?.click();
-  };
+    // Expose form methods to parent via ref
+    React.useImperativeHandle(ref, () => ({
+      getValues,
+      formState: { errors },
+      reset,
+    }));
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        setPhoto(ev.target?.result);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  return (
-    <div className="bg-white rounded-xl shadow p-8 mb-6">
-      <h2 className="text-lg font-semibold mb-4">User Information</h2>
-      <div className="grid grid-cols-5 gap-6 items-start">
-        {/* Profile Photo */}
-        <div className="col-span-1 flex flex-col items-center">
-          <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mb-2 overflow-hidden">
-            {photo ? (
-              <img
-                src={photo}
-                alt="Profile Preview"
-                className="w-full h-full object-cover"
+    return (
+      <div className="bg-white rounded-xl shadow p-8 mb-6">
+        <h2 className="text-lg font-semibold mb-4">User Information</h2>
+        <div className="grid grid-cols-1 gap-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs mb-1 font-medium">
+                Full Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("fullName")}
+                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                  errors.fullName ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter full name"
               />
-            ) : (
-              <span className="text-4xl text-gray-400">👤</span>
-            )}
-          </div>
-          <button
-            type="button"
-            className="text-xs border px-2 py-1 rounded mt-2 hover:bg-gray-50"
-            onClick={handlePhotoClick}
-          >
-            Upload Photo
-          </button>
-          <input
-            type="file"
-            accept="image/*"
-            ref={fileInputRef}
-            style={{ display: "none" }}
-            onChange={handlePhotoChange}
-          />
-        </div>
-        {/* Form Fields */}
-        <div className="col-span-4 grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs mb-1 font-medium">
-              Full Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              {...register("fullName")}
-              className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
-                errors.fullName ? "border-red-500" : "border-gray-300"
-              }`}
-              placeholder="Enter full name"
-            />
-            {errors.fullName && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.fullName.message}
-              </p>
-            )}
-          </div>
+              {errors.fullName && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.fullName.message}
+                </p>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-xs mb-1 font-medium">
-              Email Address <span className="text-red-500">*</span>
-            </label>
-            <input
-              {...register("email")}
-              type="email"
-              className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
-                errors.email ? "border-red-500" : "border-gray-300"
-              }`}
-              placeholder="Enter email address"
-            />
-            {errors.email && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.email.message}
-              </p>
+            {mode === "standard" && (
+              <div>
+                <label className="block text-xs mb-1 font-medium">
+                  Email Address <span className="text-red-500">*</span>
+                </label>
+                <input
+                  {...register("email")}
+                  type="email"
+                  className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                    errors.email ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="Enter email address"
+                />
+                {errors.email && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {errors.email.message}
+                  </p>
+                )}
+              </div>
             )}
-          </div>
 
-          <div>
-            <label className="block text-xs mb-1 font-medium">
-              Phone Number <span className="text-red-500">*</span>
-            </label>
-            <input
-              {...register("phoneNumber")}
-              type="tel"
-              className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
-                errors.phoneNumber ? "border-red-500" : "border-gray-300"
-              }`}
-              placeholder="Enter phone number"
-            />
-            {errors.phoneNumber && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.phoneNumber.message}
-              </p>
-            )}
-          </div>
+            <div>
+              <label className="block text-xs mb-1 font-medium">
+                Phone Number <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("phoneNumber")}
+                type="tel"
+                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                  errors.phoneNumber ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter phone number"
+              />
+              {errors.phoneNumber && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.phoneNumber.message}
+                </p>
+              )}
+            </div>
 
-          <div>
-            <label className="block text-xs mb-1 font-medium">
-              Job Title <span className="text-red-500">*</span>
-            </label>
-            <input
-              {...register("jobTitle")}
-              className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
-                errors.jobTitle ? "border-red-500" : "border-gray-300"
-              }`}
-              placeholder="Enter job title"
-            />
-            {errors.jobTitle && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.jobTitle.message}
-              </p>
-            )}
-          </div>
+            <div>
+              <label className="block text-xs mb-1 font-medium">
+                Job Title <span className="text-red-500">*</span>
+              </label>
+              <input
+                {...register("jobTitle")}
+                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                  errors.jobTitle ? "border-red-500" : "border-gray-300"
+                }`}
+                placeholder="Enter job title"
+              />
+              {errors.jobTitle && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.jobTitle.message}
+                </p>
+              )}
+            </div>
 
-          <div className="col-span-2">
-            <label className="block text-xs mb-1 font-medium">
-              Department <span className="text-red-500">*</span>
-            </label>
-            <select
-              {...register("department")}
-              className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
-                errors.department ? "border-red-500" : "border-gray-300"
-              }`}
-            >
-              <option value="">Select department</option>
-              <option value="Sales">Sales</option>
-              <option value="Marketing">Marketing</option>
-              <option value="Operations">Operations</option>
-              <option value="Finance">Finance</option>
-              <option value="HR">HR</option>
-              <option value="IT">IT</option>
-              <option value="Other">Other</option>
-            </select>
-            {errors.department && (
-              <p className="text-red-500 text-xs mt-1">
-                {errors.department.message}
-              </p>
-            )}
+            <div className="col-span-2">
+              <label className="block text-xs mb-1 font-medium">
+                Department <span className="text-red-500">*</span>
+              </label>
+              <select
+                {...register("department")}
+                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                  errors.department ? "border-red-500" : "border-gray-300"
+                }`}
+              >
+                <option value="">Select department</option>
+                <option value="Sales">Sales</option>
+                <option value="Marketing">Marketing</option>
+                <option value="Operations">Operations</option>
+                <option value="Finance">Finance</option>
+                <option value="HR">HR</option>
+                <option value="IT">IT</option>
+                <option value="Other">Other</option>
+              </select>
+              {errors.department && (
+                <p className="text-red-500 text-xs mt-1">
+                  {errors.department.message}
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);
 
 const roleOptions = [
   {
@@ -351,7 +320,29 @@ const managerDisabled = [
   "Manage API Keys",
 ];
 
-const RoleAssignmentSection = ({ selectedRole, setSelectedRole }) => {
+const RoleAssignmentSection: React.FC<{
+  selectedRole: string;
+  setSelectedRole: (role: string) => void;
+  mode: TabMode;
+}> = ({ selectedRole, setSelectedRole, mode }) => {
+  if (mode === "fieldWorker") {
+    return (
+      <div className="bg-white rounded-xl shadow p-8 mb-6">
+        <h2 className="text-lg font-semibold mb-4">Role Assignment</h2>
+        <p className="text-sm text-gray-700">
+          Field workers are assigned the Sales Rep role by default.
+        </p>
+        <div className="mt-4 p-4 border rounded bg-purple-50 border-purple-200">
+          <div className="font-semibold">Sales Rep (Fixed)</div>
+          <div className="text-sm text-gray-600">
+            This role is assigned automatically for non-smartphone field
+            workers.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-white rounded-xl shadow p-8 mb-6">
       <h2 className="text-lg font-semibold mb-4">Role Assignment</h2>
@@ -572,11 +563,17 @@ const SecuritySection = ({
   );
 };
 
-const FooterActions = ({ onSave, loading, isFormValid }) => (
+const FooterActions: React.FC<{
+  onSave: () => void;
+  loading: boolean;
+  isFormValid: boolean;
+  mode: TabMode;
+}> = ({ onSave, loading, isFormValid, mode }) => (
   <div className="flex justify-between items-center mt-8">
     <button
       type="button"
       className="border border-purple-700 text-purple-700 px-8 py-3 rounded-lg font-semibold text-lg hover:bg-purple-50 transition"
+      onClick={() => window.history.back()}
     >
       Cancel
     </button>
@@ -590,19 +587,25 @@ const FooterActions = ({ onSave, loading, isFormValid }) => (
       disabled={loading || !isFormValid}
       type="button"
     >
-      {loading ? "Saving..." : "Save & Send Invite"}
+      {loading
+        ? "Saving..."
+        : mode === "fieldWorker"
+          ? "Save Field Worker"
+          : "Save & Send Invite"}
     </button>
   </div>
 );
 
 const UserRoles = () => {
-  const formRef = useRef(null);
-  const [photo, setPhoto] = useState(null);
+  const formRef = useRef<UserFormHandle>(null);
   const [isFormValid, setIsFormValid] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  const Navigate = useNavigate()
+  const Navigate = useNavigate();
 
+  const [activeTab, setActiveTab] = useState<"standard" | "fieldWorker">(
+    "standard",
+  );
   const [selectedRole, setSelectedRole] = useState("admin");
 
   const [permissions, setPermissions] = useState(() => {
@@ -621,8 +624,16 @@ const UserRoles = () => {
   const [sendInvite, setSendInvite] = useState(true);
   const [loading, setLoading] = useState(false);
 
+  React.useEffect(() => {
+    if (activeTab === "fieldWorker") {
+      setSelectedRole("sales");
+      setSendInvite(false);
+      setForceChange(false);
+      setTwoFactor(false);
+    }
+  }, [activeTab]);
+
   function buildStaffPermissions(): StaffPermissions {
-    
     return {
       core_dashboard_report: {
         view_dashboard: permissions["View Dashboard"] ?? false,
@@ -699,15 +710,13 @@ const UserRoles = () => {
     }
 
     // Additional check for empty required fields
-    const requiredFields = [
-      "fullName",
-      "email",
-      "phoneNumber",
-      "jobTitle",
-      "department",
-    ];
+    const requiredFields =
+      activeTab === "standard"
+        ? ["fullName", "email", "phoneNumber", "jobTitle", "department"]
+        : ["fullName", "phoneNumber", "jobTitle", "department"];
+
     const emptyFields = requiredFields.filter(
-      (field) => !formData[field] || formData[field].trim() === ""
+      (field) => !formData[field] || formData[field].trim() === "",
     );
 
     if (emptyFields.length > 0) {
@@ -718,7 +727,7 @@ const UserRoles = () => {
       return;
     }
 
-    if (!password.trim()) {
+    if (activeTab === "standard" && !password.trim()) {
       toast({
         title: "Error",
         description: "Please generate or enter a password.",
@@ -729,28 +738,49 @@ const UserRoles = () => {
     setLoading(true);
 
     try {
-      const staffReq = {
+      const staffReq: Partial<StaffCreateRequest> & {
+        send_invite: boolean;
+        force_change_password?: boolean;
+        two_factor?: boolean;
+      } = {
         company_id: user.id,
         full_name: formData.fullName,
-        email: formData.email,
-        password,
         phone_number: formData.phoneNumber,
         job_title: formData.jobTitle,
         department: formData.department,
         role: selectedRole,
         permissions: buildStaffPermissions(),
+        send_invite: false,
       };
-      await createStaff(staffReq);
+
+      if (activeTab === "standard") {
+        staffReq.email = formData.email;
+        staffReq.password = password;
+        staffReq.force_change_password = forceChange;
+        staffReq.two_factor = twoFactor;
+        staffReq.send_invite = sendInvite;
+      } else {
+        staffReq.email = "";
+        staffReq.password = "";
+        staffReq.force_change_password = false;
+        staffReq.two_factor = false;
+        staffReq.send_invite = false;
+      }
+
+      await createStaff(staffReq as StaffCreateRequest);
       toast({
         title: "Success",
-        description: "User created and invite sent!",
+        description:
+          activeTab === "standard"
+            ? "User created and invite sent!"
+            : "Field worker created successfully!",
       });
-      Navigate("/dashboard/settings/team")
+      Navigate("/dashboard/settings/team");
       // Reset form
       formRef.current.reset();
       setPassword("");
-      setSelectedRole("admin");
-      
+      setSelectedRole(activeTab === "fieldWorker" ? "sales" : "admin");
+      setActiveTab("standard");
     } catch (e) {
       let errorMessage =
         "Failed to create user. Please check your input and try again.";
@@ -778,7 +808,7 @@ const UserRoles = () => {
         } else if (detail.includes("Unexpected error")) {
           // Extract the actual error message from the SQL error
           const match = detail.match(
-            /Key \(email\)=\(([^)]+)\) already exists/
+            /Key \(email\)=\(([^)]+)\) already exists/,
           );
           if (match) {
             const email = match[1];
@@ -815,29 +845,65 @@ const UserRoles = () => {
         </div>
       </div>
 
-      <UserFormSection ref={formRef} />
+      <div className="mb-6 flex gap-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab("standard")}
+          className={`px-4 py-2 rounded-lg font-semibold ${
+            activeTab === "standard"
+              ? "bg-purple-700 text-white"
+              : "bg-white border border-gray-300 text-gray-700"
+          }`}
+        >
+          Standard User
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("fieldWorker")}
+          className={`px-4 py-2 rounded-lg font-semibold ${
+            activeTab === "fieldWorker"
+              ? "bg-purple-700 text-white"
+              : "bg-white border border-gray-300 text-gray-700"
+          }`}
+        >
+          Field Worker (No Email)
+        </button>
+      </div>
+
+      <UserFormSection ref={formRef} mode={activeTab} />
 
       <RoleAssignmentSection
         selectedRole={selectedRole}
         setSelectedRole={setSelectedRole}
-      />
-      <PermissionsSection
-        selectedRole={selectedRole}
-        permissions={permissions}
-        setPermissions={setPermissions}
-      />
-      <SecuritySection
-        password={password}
-        setPassword={setPassword}
-        forceChange={forceChange}
-        setForceChange={setForceChange}
-        twoFactor={twoFactor}
-        setTwoFactor={setTwoFactor}
-        sendInvite={sendInvite}
-        setSendInvite={setSendInvite}
+        mode={activeTab}
       />
 
-      <FooterActions onSave={handleSave} loading={loading} isFormValid={true} />
+      {activeTab === "standard" && (
+        <>
+          <PermissionsSection
+            selectedRole={selectedRole}
+            permissions={permissions}
+            setPermissions={setPermissions}
+          />
+          <SecuritySection
+            password={password}
+            setPassword={setPassword}
+            forceChange={forceChange}
+            setForceChange={setForceChange}
+            twoFactor={twoFactor}
+            setTwoFactor={setTwoFactor}
+            sendInvite={sendInvite}
+            setSendInvite={setSendInvite}
+          />
+        </>
+      )}
+
+      <FooterActions
+        onSave={handleSave}
+        loading={loading}
+        isFormValid={true}
+        mode={activeTab}
+      />
     </div>
   );
 };
