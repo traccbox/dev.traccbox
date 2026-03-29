@@ -11,6 +11,7 @@ import Verification from "./pages/Verification";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 import AcceptInvitation from "./pages/AcceptInvitation";
+import ClockIn from "./pages/ClockIn";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import Dashboard from "./pages/Dashboard";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
@@ -59,6 +60,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/accept-invitation" element={<AcceptInvitation />} />
+            <Route path="/clock-in/:staffId/:companyId" element={<ClockIn />} />
             <Route path="/sales-rep-demo" element={<TraccBoxStaffPortal />} />
             <Route path="/staff-verify" element={<StaffVerification />} />
             <Route element={<ProtectedRoute />}>

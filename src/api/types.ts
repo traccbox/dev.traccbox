@@ -155,3 +155,35 @@ export interface StaffDeleteRequest {
   staff_id: string;
   permissions: Record<string, boolean>;
 }
+
+// Attendance Types
+
+export interface AttendanceCheckInRequest {
+  staff_id: string;
+  company_id: string;
+}
+
+export interface AttendanceCheckOutRequest {
+  staff_id: string;
+  company_id: string;
+}
+
+export interface AttendanceResponse {
+  id?: string;
+  staff_id: string;
+  company_id: string;
+  check_in_time?: string;
+  check_out_time?: string;
+  status: "checked_in" | "checked_out";
+  message?: string;
+  timestamp?: string;
+}
+
+export interface AttendanceStatus {
+  staff_id: string;
+  company_id: string;
+  is_checked_in: boolean;
+  last_check_in?: string;
+  last_check_out?: string;
+  check_in_time?: string;
+}
