@@ -27,6 +27,8 @@ import ManageTask from "./pages/Dashboard/features/task/ManageTask";
 import LocationTracking from "./pages/Dashboard/features/gps/LocationTracking";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import Home from "./pages/Dashboard/Home";
+import TermsAndCondition from "./pages/TermsAndCondition";
+import PrivacyPolicies from "./pages/PrivacyPolicies";
 
 // Dashboard home content as a component
 // const DashboardHome = () => (
@@ -80,6 +82,13 @@ const App = () => (
                 />
               </Route>
             </Route>
+            {/* Terms and conditions */}
+            <Route
+              path="terms-and-conditions"
+              element={<TermsAndCondition />}
+            />
+            <Route path="privacy-policies" element={<PrivacyPolicies />} />
+            {/* Not found */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
