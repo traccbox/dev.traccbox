@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   return (
@@ -123,20 +124,20 @@ const Footer = () => {
             <h3 className="text-lg font-semibold mb-4">Legal</h3>
             <ul className="space-y-2">
               <li>
-                <a
-                  href="#"
-                  className="text-gray-400 hover:text-white transition-colors"
+                <Link
+                  to="/privacy-policies "
+                  className="text-gray-400 hover:text-white transition-color"
                 >
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a
-                  href="#"
-                  className="text-gray-400 hover:text-white transition-colors"
+                <Link
+                  to="/terms-and-conditions"
+                  className="text-gray-400 hover:text-white transition-color"
                 >
                   Terms of Service
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
@@ -147,8 +148,7 @@ const Footer = () => {
             <ul className="space-y-2">
               <li className="text-gray-400">
                 Adebola House (Suite 100, Rear Wing), 38 Opebi Road, Ikeja
-                Lagos. Mailing address: Adebola House (Suite 100, Rear Wing), 38
-                Opebi Road, Ikeja Lagos.
+                Lagos.
               </li>
               <li className="text-gray-400">Nigeria</li>
               <li>
