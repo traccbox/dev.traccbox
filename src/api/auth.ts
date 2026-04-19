@@ -45,7 +45,7 @@ export async function registerCompany(data: RegisterRequest) {
   console.log("Sending regis", data);
   const res = await api.post<RegisterCompanyResponse>(
     `/companies/register`,
-    data
+    data,
   );
   console.log("Register res==", res);
   return res.data;
@@ -76,7 +76,7 @@ export async function verifyStaffEmail(params: { id: string; token: string }) {
   console.log("verifyStaffEmail params ,,,,==", params);
   try {
     const res = await api.post<StaffVerifyResponse>(
-      `/staff/verify_email?id=${params.id}&token=${params.token}`
+      `/staff/verify_email?id=${params.id}&token=${params.token}`,
     );
     console.log("Staff email verification res==", res);
     return res.data;
@@ -109,7 +109,7 @@ export async function verifyEmail(params: VerifyEmailParams) {
   console.log("verifyEmail params ", params);
   try {
     const res = await api.post(
-      `/companies/verify_email?id=${params.id}&token=${params.token}`
+      `/companies/verify_email?id=${params.id}&token=${params.token}`,
     );
     return res.data;
   } catch (error) {
@@ -133,7 +133,7 @@ export async function forgottenPasswordRequest(email: string) {
 export async function forgottenPasswordUpdate(
   email: string,
   reset_token: string,
-  password: string
+  password: string,
 ) {
   try {
     const res = await api.patch(`/companies/forgotten_password`, null, {
@@ -155,7 +155,7 @@ export async function updateCompanyInfo(
     address: string;
     country: string;
     logo_url?: string;
-  }
+  },
 ) {
   console.log(company_id, "Data Going to Backend=====", data);
   try {
@@ -207,7 +207,6 @@ export async function createStaff(data: StaffCreateRequest) {
   }
 }
 
-
 // Accept staff invitation
 export async function acceptStaffInvitation(data: StaffAcceptRequest) {
   console.log("Data Going to Backend=====", data);
@@ -215,7 +214,7 @@ export async function acceptStaffInvitation(data: StaffAcceptRequest) {
     const res = await api.post(
       `/onboarding/staff/accept`,
       data,
-      getAuthHeaders()
+      getAuthHeaders(),
     );
     console.log("Accept invitation response=====", res);
     return res.data;
@@ -227,12 +226,12 @@ export async function acceptStaffInvitation(data: StaffAcceptRequest) {
 
 // Update staff permissions
 export async function updateStaffPermissions(
-  data: StaffPermissionUpdateRequest
+  data: StaffPermissionUpdateRequest,
 ) {
   const res = await api.patch(
     `/onboarding/staff/permissions`,
     data,
-    getAuthHeaders()
+    getAuthHeaders(),
   );
   console.log("Update permissions response=====", res);
   return res.data;

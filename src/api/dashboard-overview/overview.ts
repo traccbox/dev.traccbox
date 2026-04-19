@@ -1,12 +1,15 @@
-const ROOT_URL = "https://fastapi.tests.com.ng/api/v1";
+const ROOT_URL = "http://85.190.254.210:8000/api/v1";
 
 export async function getStaffAnalytics(company_id) {
-  const response = await fetch(`${ROOT_URL}/companies/staff-analytics?company_id=${company_id}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
+  const response = await fetch(
+    `${ROOT_URL}/companies/staff-analytics?company_id=${company_id}`,
+    {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
     },
-  });
+  );
 
   const data = await response.json();
 
