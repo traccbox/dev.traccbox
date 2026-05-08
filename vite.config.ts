@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     proxy: {
       "/api": {
-        target: "http://85.190.254.210:8000/api/v1",
+        target: "https://api.traccbox.com/api/v1",
         changeOrigin: true,
         secure: false,
         rewrite: (path) => path.replace(/^\/api/, ""),
@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => ({
             console.log(
               "Received Response from the Target:",
               proxyRes.statusCode,
-              req.url
+              req.url,
             );
           });
         },
@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => ({
     },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(
-    Boolean
+    Boolean,
   ),
   resolve: {
     alias: {

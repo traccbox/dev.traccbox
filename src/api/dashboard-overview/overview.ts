@@ -1,4 +1,4 @@
-const ROOT_URL = "http://85.190.254.210:8000/api/v1";
+const ROOT_URL = "https://api.traccbox.com/api/v1";
 
 export async function getStaffAnalytics(company_id) {
   const response = await fetch(
