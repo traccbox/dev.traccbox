@@ -36,7 +36,7 @@ const Login = () => {
             <div className="text-sm text-gray-600">
               Don't have an account?{" "}
               <Link
-                to="/signup"
+                to="/company$&-admin-signup"
                 className="text-traccbox-500 font-medium hover:underline"
               >
                 Sign Up

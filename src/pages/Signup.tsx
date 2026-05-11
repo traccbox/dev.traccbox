@@ -17,7 +17,7 @@ const Signup = () => {
       <div className="flex flex-1 items-center justify-center p-6">
         <div className="w-full  max-w-2xl mx-auto">
           <div className="flex flex-col items-center mb-8">
-          <Link to="/">
+            <Link to="/">
               <img
                 src="/assets/logo.png"
                 alt="TraccBox Logo"
@@ -35,7 +35,7 @@ const Signup = () => {
           <div className="mt-6 text-center text-sm text-gray-600">
             Already have an account?{" "}
             <Link
-              to="/login"
+              to="/company$&-admin-login"
               className="text-traccbox-500 font-medium hover:underline"
             >
               Sign In
