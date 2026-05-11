@@ -36,7 +36,7 @@ const onboardingSchema = z.object({
     .max(15, "Phone number must be at most 15 digits")
     .regex(
       /^[+]?\d{10,15}$/,
-      "Enter a valid phone number (digits only, optional + at start)"
+      "Enter a valid phone number (digits only, optional + at start)",
     ),
   country: z.string().min(1, "Please select a country"),
   logo: z.any().optional(),
@@ -106,7 +106,7 @@ const CompanyOnboardingModal: React.FC = () => {
       {
         method: "POST",
         body: formData,
-      }
+      },
     );
     if (!res.ok) throw new Error("Failed to upload image");
     const data = await res.json();
@@ -129,7 +129,7 @@ const CompanyOnboardingModal: React.FC = () => {
         country: data.country,
         logo_url: logoUrl,
       };
-      
+
       if (user?.id) {
         const response = await updateCompanyInfo(user.id, payload);
         // Axios: response.data is the actual data object
@@ -150,12 +150,9 @@ const CompanyOnboardingModal: React.FC = () => {
             alert(error.message || "Network Error Try Again");
           }
 
-          toast.success(
-            resData.message || "Company updated successfully!",
-            {
-              position: "top-center",
-            }
-          );
+          toast.success(resData.message || "Company updated successfully!", {
+            position: "top-center",
+          });
           setUser({ ...user, ...resData.company });
           setModalOpen(false);
         } else {
@@ -218,8 +215,8 @@ const CompanyOnboardingModal: React.FC = () => {
   };
 
   return (
-    <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+    <Dialog open={modalOpen} onOpenChange={setModalOpen} >
+      <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-[99999]">
         <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-8 relative">
           {/* Logo */}
           <div className="flex justify-center mb-6">
@@ -278,7 +275,7 @@ const CompanyOnboardingModal: React.FC = () => {
                     <SelectTrigger>
                       <SelectValue placeholder="Select your Industry" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[999999]">
                       {industryOptions.map((option) => (
                         <SelectItem key={option} value={option}>
                           {option}
@@ -368,7 +365,7 @@ const CompanyOnboardingModal: React.FC = () => {
                     <SelectTrigger>
                       <SelectValue placeholder="Select your country" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className="z-[999999]">
                       {countryOptions.map((option) => (
                         <SelectItem key={option.label} value={option.label}>
                           {option.label}
