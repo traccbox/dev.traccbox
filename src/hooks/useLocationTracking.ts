@@ -77,7 +77,7 @@ export const useLocationTracking = ({
     }
 
     try {
-      const wsUrl = `wss://fastapi.tests.com.ng/ws/admin/${companyId}`;
+      const wsUrl = `wss://api.traccbox.com/ws/admin/${companyId}`;
       console.log("🔌 Attempting WebSocket connection to:", wsUrl);
       const ws = new WebSocket(wsUrl);
 
