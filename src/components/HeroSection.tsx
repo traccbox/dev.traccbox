@@ -52,18 +52,18 @@ const HeroSection = () => {
               style={{ animationDelay: "0.4s" }}
               data-aos="fade-up"
             >
-              {/* <Link to="/signup">
+              <Link to="/signup">
                 <Button className="bg-traccbox-500 hover:bg-traccbox-600 text-white px-6 py-6 text-lg rounded-full">
                   Start Free Trial
                 </Button>
-              </Link> */}
-              <a
+              </Link>
+              {/* <a
                 href="#waitlist"
                 className="inline-flex items-center bg-traccbox-500 hover:bg-traccbox-600 text-white px-6 py-4 text-lg rounded-full transition-colors"
               >
                 Join Waitlist
                 <ArrowRight className="ml-2" size={18} />
-              </a>
+              </a> */}
             </div>
           </div>
           {/* <Button

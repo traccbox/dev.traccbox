@@ -32,7 +32,7 @@ const Index = () => {
         {/* <TrialSection /> */}
         <OnboardingSection />
         <AboutSection />
-        <WaitlistSection />
+        {/* <WaitlistSection /> */}
         {/* <BlogSection /> */}
         <ContactSection />
       </main>
