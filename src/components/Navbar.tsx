@@ -81,7 +81,7 @@ const Navbar = () => {
               Sign In
             </Button>
           </Link>
-          <Link to="/signup">
+          <Link to="/company$&-admin-signup">
             <Button className="bg-traccbox-500 hover:bg-traccbox-600 text-white">
               Get Started
             </Button>
