@@ -29,6 +29,8 @@ import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import Home from "./pages/Dashboard/Home";
 import TermsAndCondition from "./pages/TermsAndCondition";
 import PrivacyPolicies from "./pages/PrivacyPolicies";
+import UserRolesLayout from "./pages/Dashboard/features/settings/UserRolesLayout";
+import BulkUpload from "./pages/Dashboard/features/settings/BulkUpload";
 
 // Dashboard home content as a component
 // const DashboardHome = () => (
@@ -84,7 +86,10 @@ const App = () => (
               <Route path="/dashboard" element={<Dashboard />}>
                 <Route index element={<Home />} />
                 <Route path="settings/general" element={<GeneralSettings />} />
-                <Route path="settings/roles" element={<UserRoles />} />
+                 <Route path="settings/roles" element={<UserRolesLayout />}>
+                  <Route index element={<UserRoles />} />
+                  <Route path="bulk-upload" element={<BulkUpload />} />
+                </Route>
                 <Route path="settings/team" element={<TeamManagment />} />
                 <Route
                   path="field-reps/create-tasks"

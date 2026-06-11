@@ -46,7 +46,7 @@ const userFormSchema = z.object({
 
 // TypeScript type for the form data
 type UserFormData = z.infer<typeof userFormSchema>;
-type TabMode = "standard" | "fieldWorker";
+type TabMode = "standard" | "fieldWorker" | "bulkUpload";
 
 interface UserFormSectionProps {
   mode: TabMode;
@@ -603,9 +603,9 @@ const UserRoles = () => {
   const { toast } = useToast();
   const Navigate = useNavigate();
 
-  const [activeTab, setActiveTab] = useState<"standard" | "fieldWorker">(
-    "standard",
-  );
+  const [activeTab, setActiveTab] = useState<
+    "standard" | "fieldWorker" | "bulkUpload" // Add bulk upload button
+  >("standard");
   const [selectedRole, setSelectedRole] = useState("admin");
 
   const [permissions, setPermissions] = useState(() => {
@@ -834,6 +834,12 @@ const UserRoles = () => {
     }
   };
 
+ 
+
+  function handleBulkUpload() {
+    Navigate("bulk-upload")
+  }
+
   return (
     <div className="p-6 max-w-6xl mx-auto min-h-screen bg-gray-50">
       <div className="mb-6 flex items-center gap-2 ml-4">
@@ -867,6 +873,24 @@ const UserRoles = () => {
           }`}
         >
           Field Worker (No Email)
+        </button>
+
+        {/* // Add button for bulk upload */}
+        {/* // Add button for bulk upload */}
+        <button
+          type="button"
+          onClick={() => {
+            setActiveTab("bulkUpload");
+            handleBulkUpload();
+          }}
+          // onClick={handleBulkUpload}
+          className={`px-4 py-2 rounded-lg font-semibold ${
+            activeTab === "bulkUpload"
+              ? "bg-purple-700 text-white"
+              : "bg-white border border-gray-300 text-gray-700"
+          }`}
+        >
+          Bulk Upload
         </button>
       </div>
 
