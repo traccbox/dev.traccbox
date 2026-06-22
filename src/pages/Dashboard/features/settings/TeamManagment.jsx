@@ -1,8 +1,11 @@
 import React from "react";
-import { Search, Plus, MoreVertical, Clock } from "lucide-react";
+import { Search, Plus, MoreVertical, Clock, QrCode, FileText } from "lucide-react";
 import { useAuth } from "../../../../components/auth/AuthProvider";
 import { useStaffData } from "../../../../api/settingsApi/hooks/useStaffData";
 import { useNavigate } from "react-router-dom";
+import { QRCodeModal } from "./components/QRCodeModal";
+import { IDCardModal } from "./components/IDCardModal";
+import { useStaffQRCode } from "../../../../api/settingsApi/hooks/useQRCode";
 
 // Helper function to generate initials from full name
 const getInitials = (fullName) => {
@@ -49,15 +52,56 @@ const formatTime = (date) => {
 
 const TeamManagement = () => {
   const { user } = useAuth();
-  const id = user?.id;
+  // For admins: user.id IS the company_id
+  // user.id = '17f7beb9-6d57-4152-bc98-a6e05f65030d' (company ID)
+  const companyId = user?.id;
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = React.useState("");
+  const [selectedMember, setSelectedMember] = React.useState(null);
+  const [showQRModal, setShowQRModal] = React.useState(false);
+  const [showIDCardModal, setShowIDCardModal] = React.useState(false);
+  const [memberQRCodeData, setMemberQRCodeData] = React.useState(null);
+
+  // Get QR code data for the selected member
+  const { data: qrCodeData } = useStaffQRCode(
+    companyId,
+    selectedMember?.id,
+    "json",
+    undefined
+  );
+
+  React.useEffect(() => {
+    if (qrCodeData) {
+      setMemberQRCodeData(qrCodeData);
+    }
+  }, [qrCodeData]);
+
+  const handleOpenQRModal = (member) => {
+    setSelectedMember(member);
+    setShowQRModal(true);
+  };
+
+  const handleOpenIDCardModal = (member) => {
+    setSelectedMember(member);
+    setShowIDCardModal(true);
+  };
+
+  const handleCloseQRModal = () => {
+    setShowQRModal(false);
+    setSelectedMember(null);
+    setMemberQRCodeData(null);
+  };
+
+  const handleCloseIDCardModal = () => {
+    setShowIDCardModal(false);
+    setSelectedMember(null);
+  };
   const {
     data: teamMembers = [],
     isLoading,
     isError,
     error,
-  } = useStaffData(id);
+  } = useStaffData(companyId);
 
   // Filter team members based on search query
   const filteredTeamMembers = React.useMemo(() => {
@@ -472,6 +516,26 @@ const TeamManagement = () => {
                     </div>
                   )}
 
+                  {/* QR Code & ID Card Buttons */}
+                  <div className="border-t border-gray-200 pt-3 mt-2">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleOpenQRModal(member)}
+                        className="flex-1 bg-purple-50 hover:bg-purple-100 text-purple-700 font-medium py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm border border-purple-200"
+                      >
+                        <QrCode className="w-4 h-4" />
+                        QR Code
+                      </button>
+                      <button
+                        onClick={() => handleOpenIDCardModal(member)}
+                        className="flex-1 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm border border-blue-200"
+                      >
+                        <FileText className="w-4 h-4" />
+                        ID Card
+                      </button>
+                    </div>
+                  </div>
+
                   {/* Created Date */}
                   <div className="flex items-center justify-center gap-1 text-xs text-gray-500 mt-2">
                     <Clock className="w-3 h-3" />
@@ -485,6 +549,27 @@ const TeamManagement = () => {
           )}
         </div>
       </div>
+
+      {/* QR Code Modal */}
+      {selectedMember && (
+        <QRCodeModal
+          isOpen={showQRModal}
+          onClose={handleCloseQRModal}
+          staff={selectedMember}
+          company_id={companyId}
+        />
+      )}
+
+      {/* ID Card Modal */}
+      {selectedMember && (
+        <IDCardModal
+          isOpen={showIDCardModal}
+          onClose={handleCloseIDCardModal}
+          staff={selectedMember}
+          company_id={companyId}
+          qrCodeData={memberQRCodeData}
+        />
+      )}
     </div>
   );
 };

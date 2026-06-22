@@ -9,6 +9,7 @@ import { login as apiLogin, staffLogin as apiStaffLogin } from "@/api/auth";
 import type { AxiosError } from "axios";
 import { jwtDecode } from "jwt-decode";
 import Cookies from "js-cookie";
+import { isTokenValid } from "@/utils/authUtils";
 
 export interface User {
   id: string;
@@ -71,29 +72,71 @@ const TOKEN_KEY = "access_token";
 const REFRESH_TOKEN = "refresh_token";
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const [token, setToken] = useState<string | null>(
-    () => Cookies.get(TOKEN_KEY) || null
-  );
-  const [refreshToken, setRefreshToke] = useState<string | null>(
-    () => Cookies.get(REFRESH_TOKEN) || null
-  );
+  const [token, setToken] = useState<string | null>(() => {
+    const storedToken = Cookies.get(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+    return storedToken && isTokenValid(storedToken) ? storedToken : null;
+  });
+  const [refreshToken, setRefreshToke] = useState<string | null>(() => {
+    const storedRefresh = Cookies.get(REFRESH_TOKEN) || localStorage.getItem(REFRESH_TOKEN);
+    return storedRefresh || null;
+  });
   const [user, setUser] = useState<User | null>(() => {
-    const storedToken = Cookies.get(TOKEN_KEY);
-    return storedToken ? getUserFromToken(storedToken) : null;
+    const storedToken = Cookies.get(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+    if (!storedToken || !isTokenValid(storedToken)) {
+      return null;
+    }
+    return getUserFromToken(storedToken);
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (token && refreshToken) {
+    if (token && refreshToken && isTokenValid(token)) {
       Cookies.set(TOKEN_KEY, token, { expires: 7 }); // 7 days expiry, adjust as needed
       Cookies.set(REFRESH_TOKEN, refreshToken, { expires: 7 }); // 7 days expiry, adjust as needed
-      setUser(getUserFromToken(token));
+      localStorage.setItem(TOKEN_KEY, token);
+      localStorage.setItem(REFRESH_TOKEN, refreshToken);
+
+      const userData = getUserFromToken(token);
+      setUser(userData);
+      
+      // Also save to localStorage for cross-tab access
+      if (userData) {
+        try {
+          localStorage.setItem("user_data", JSON.stringify(userData));
+          localStorage.setItem("user_data_timestamp", Date.now().toString());
+        } catch (err) {
+          console.error("Error saving user to localStorage:", err);
+        }
+      }
     } else {
       Cookies.remove(TOKEN_KEY);
+      Cookies.remove(REFRESH_TOKEN);
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(REFRESH_TOKEN);
+      localStorage.removeItem("user_data");
+      localStorage.removeItem("user_data_timestamp");
       setUser(null);
     }
   }, [token, refreshToken]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === TOKEN_KEY || event.key === "user_data") {
+        const storedToken = Cookies.get(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
+        if (storedToken && isTokenValid(storedToken)) {
+          setToken(storedToken);
+          setUser(getUserFromToken(storedToken));
+        } else {
+          setToken(null);
+          setUser(null);
+        }
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, []);
 
   const login = async (email: string, password: string) => {
     setLoading(true);
@@ -102,7 +145,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const res = await apiLogin({ email, password });
       setToken(res.access_token);
       setRefreshToke(res.refresh_token);
-      setUser(getUserFromToken(res.refresh_token));
+      setUser(getUserFromToken(res.access_token));
+      localStorage.setItem(TOKEN_KEY, res.access_token);
+      localStorage.setItem(REFRESH_TOKEN, res.refresh_token);
+      const userData = getUserFromToken(res.access_token);
+      if (userData) {
+        localStorage.setItem("user_data", JSON.stringify(userData));
+        localStorage.setItem("user_data_timestamp", Date.now().toString());
+      }
       setLoading(false);
       return true;
     } catch (err: unknown) {

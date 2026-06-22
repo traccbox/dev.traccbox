@@ -183,6 +183,7 @@ export interface AttendanceStatus {
   staff_id: string;
   company_id: string;
   is_checked_in: boolean;
+  status?: "CHECKED_IN" | "NOT_CHECKED_IN" | "CHECKED_OUT";
   last_check_in?: string;
   last_check_out?: string;
   check_in_time?: string;

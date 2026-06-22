@@ -79,7 +79,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/accept-invitation" element={<AcceptInvitation />} />
-            <Route path="/clock-in/:staffId/:companyId" element={<ClockIn />} />
+            <Route path="/clock-in/:companyId/:staffId" element={<ClockIn />} />
             <Route path="/sales-rep-demo" element={<TraccBoxStaffPortal />} />
             <Route path="/staff-verify" element={<StaffVerification />} />
             <Route element={<ProtectedRoute />}>

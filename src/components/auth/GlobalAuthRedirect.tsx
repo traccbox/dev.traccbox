@@ -18,10 +18,27 @@ const GlobalAuthRedirect: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (user && token && PUBLIC_ROUTES.includes(location.pathname)) {
+    if (!user || !token) return;
+
+    const searchParams = new URLSearchParams(location.search);
+    const returnUrl = searchParams.get("returnUrl");
+
+    if (location.pathname === "/login") {
+      if (returnUrl) {
+        navigate(returnUrl, { replace: true });
+        return;
+      }
+      const storedReturnUrl = localStorage.getItem("return_url");
+      if (storedReturnUrl) {
+        navigate(storedReturnUrl, { replace: true });
+        return;
+      }
+    }
+
+    if (PUBLIC_ROUTES.includes(location.pathname)) {
       navigate("/dashboard", { replace: true });
     }
-  }, [user, token, location.pathname, navigate]);
+  }, [user, token, location.pathname, location.search, navigate]);
 
   return null;
 };

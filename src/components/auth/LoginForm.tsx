@@ -14,7 +14,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Eye, EyeOff } from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 import { toast } from "sonner";
 import { AxiosError } from "axios";
@@ -226,6 +226,16 @@ const LoginForm = () => {
   const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  let returnUrl = searchParams.get("returnUrl") || "/dashboard";
+  
+  if (!searchParams.get("returnUrl")) {
+    const storedReturnUrl = localStorage.getItem("return_url");
+    if (storedReturnUrl) {
+      returnUrl = storedReturnUrl;
+    }
+  }
 
   const { login, staffLogin, error } = useAuth();
 
@@ -251,7 +261,12 @@ const LoginForm = () => {
     const success = await login(values.email, values.password);
 
     if (success) {
-      navigate("/dashboard");
+      try {
+        localStorage.removeItem("return_url");
+      } catch (error) {
+        console.error("Could not remove return_url", error);
+      }
+      navigate(returnUrl, { replace: true });
     }
 
     setLoading(false);
