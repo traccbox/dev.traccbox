@@ -32,18 +32,7 @@ import PrivacyPolicies from "./pages/PrivacyPolicies";
 import UserRolesLayout from "./pages/Dashboard/features/settings/UserRolesLayout";
 import BulkUpload from "./pages/Dashboard/features/settings/BulkUpload";
 
-// Dashboard home content as a component
-// const DashboardHome = () => (
-//   <>
-//     <h1 className="text-3xl font-bold mb-4">Welcome to your Dashboard</h1>
-//     <p className="text-lg mb-2">
-//       Hello, <span className="font-semibold">Welcome!</span>
-//     </p>
-//     <div className="mt-6 text-gray-500">
-//       <p>dashboard Still on Progress......</p>
-//     </div>
-//   </>
-// );
+
 
 const queryClient = new QueryClient();
 const PageTracking = () => {
@@ -79,7 +68,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/accept-invitation" element={<AcceptInvitation />} />
-            <Route path="/clock-in/:companyId/:staffId" element={<ClockIn />} />
+            <Route path="/clock-in/:companyId/:staffId/:managerId?" element={<ClockIn />} />
             <Route path="/sales-rep-demo" element={<TraccBoxStaffPortal />} />
             <Route path="/staff-verify" element={<StaffVerification />} />
             <Route element={<ProtectedRoute />}>

@@ -147,7 +147,7 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     icon: "Settings",
     submenus: [
       { label: "General Settings", to: "/dashboard/settings/general" },
-      { label: "Integrations", to: "/dashboard/settings/integrations" },
+      // { label: "Integrations", to: "/dashboard/settings/integrations" },
       { label: "User Roles & Permissions", to: "/dashboard/settings/roles" },
       { label: "Team", to: "/dashboard/settings/team" },
     ],
