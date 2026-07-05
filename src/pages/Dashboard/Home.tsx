@@ -105,14 +105,14 @@ export default function Home() {
           numValue={weekly_task_completed}
           percent={15}
           icon={<DollarSign />}
-          index={1}
+          index={3}
         />
         <CardDashboard
           title={"Weekly Task Set"}
           numValue={weekly_task_set}
           percent={3}
           icon={<Medal />}
-          index={2}
+          index={4}
         />
       </section>
 

@@ -89,10 +89,10 @@ export default function CardDashboard({
 
   return (
     <div
-      className="group relative overflow-hidden rounded-2xl border shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 h-[150px] lg:h-[170px] flex flex-col"
+      className="group relative overflow-hidden rounded-2xl border shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 h-[130px] lg:h-[150px] flex flex-col"
       style={{
-        background: `linear-gradient(135deg, ${palette.soft} 0%, #ffffff 100%)`,
-        borderColor: `${palette.accent}22`,
+        background: `linear-gradient(145deg, ${palette.soft} 0%, #ffffff 70%)`,
+        borderColor: `${palette.accent}33`,
       }}
     >
       {/* Decorative corner gradient wash */}
@@ -145,7 +145,7 @@ export default function CardDashboard({
       </div>
 
       {/* Bottom: real sparkline chart */}
-      <div className="relative mt-auto h-16 lg:h-20 w-full">
+      <div className="relative mt-auto h-12 lg:h-14 w-full">
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={series} margin={{ top: 4, right: 0, left: 0, bottom: 0 }}>
             <defs>
