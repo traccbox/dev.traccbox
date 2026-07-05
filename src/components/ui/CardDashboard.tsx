@@ -88,7 +88,13 @@ export default function CardDashboard({
   const gradId = `card-grad-${index}-${title.replace(/\s+/g, "-")}`;
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl bg-white border border-slate-200/70 shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 h-[190px] lg:h-[220px] flex flex-col">
+    <div
+      className="group relative overflow-hidden rounded-2xl border shadow-sm hover:shadow-lg hover:-translate-y-0.5 transition-all duration-300 h-[150px] lg:h-[170px] flex flex-col"
+      style={{
+        background: `linear-gradient(135deg, ${palette.soft} 0%, #ffffff 100%)`,
+        borderColor: `${palette.accent}22`,
+      }}
+    >
       {/* Decorative corner gradient wash */}
       <div
         aria-hidden
