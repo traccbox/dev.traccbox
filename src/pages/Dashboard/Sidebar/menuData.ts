@@ -23,6 +23,11 @@ export const sidebarMenus: SidebarMenuConfig[] = [
   },
 
   {
+    label: "Work Areas",
+    icon: "MapPinned",
+    to: "/dashboard/work-areas",
+  },
+  {
     label: "Field Sales Reps",
     icon: "Users",
     submenus: [

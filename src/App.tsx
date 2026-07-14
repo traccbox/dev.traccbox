@@ -31,6 +31,7 @@ import TermsAndCondition from "./pages/TermsAndCondition";
 import PrivacyPolicies from "./pages/PrivacyPolicies";
 import UserRolesLayout from "./pages/Dashboard/features/settings/UserRolesLayout";
 import BulkUpload from "./pages/Dashboard/features/settings/BulkUpload";
+import WorkAreas from "./pages/Dashboard/features/work-areas/WorkAreas";
 
 
 
@@ -89,6 +90,7 @@ const App = () => (
                   path="location-tracking"
                   element={<LocationTracking />}
                 />
+                <Route path="work-areas" element={<WorkAreas />} />
               </Route>
             </Route>
             {/* Terms and conditions */}
