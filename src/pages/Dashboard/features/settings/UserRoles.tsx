@@ -386,33 +386,35 @@ const RoleAssignmentSection: React.FC<{
   );
 };
 
-const PermissionsSection = ({ selectedRole, permissions, setPermissions }) => {
-  const handleToggle = (perm) => {
-    setPermissions((prev) => ({ ...prev, [perm]: !prev[perm] }));
-  };
+const PermissionsSection = ({
+  selectedRole,
+  permissions,
+  setPermissions,
+}: {
+  selectedRole: string;
+  permissions: PermissionsMap;
+  setPermissions: (p: PermissionsMap) => void;
+}) => {
+  const schemaQ = usePermissionsSchema();
+  const defaultsQ = useRoleDefaults(selectedRole);
+
+  // Whenever role changes and defaults load, replace the state with those defaults
+  // (merged onto an empty skeleton from schema so unknown modules aren't left stale)
+  React.useEffect(() => {
+    if (!schemaQ.data || !defaultsQ.data) return;
+    const skeleton = emptyFromSchema(schemaQ.data, false);
+    setPermissions(mergePermissions(skeleton, defaultsQ.data));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultsQ.data, schemaQ.data]);
 
   const resetPermissions = () => {
-    const initialPermissions = {};
-    permissionGroups.forEach((group) => {
-      group.permissions.forEach((perm) => {
-        initialPermissions[perm] = true;
-      });
-    });
-    setPermissions(initialPermissions);
+    if (schemaQ.data && defaultsQ.data) {
+      const skeleton = emptyFromSchema(schemaQ.data, false);
+      setPermissions(mergePermissions(skeleton, defaultsQ.data));
+    }
   };
 
-  const isDisabled = (perm) => {
-    if (selectedRole === "admin" || selectedRole === "custom") return false;
-    if (selectedRole === "sales") return true;
-    if (selectedRole === "view") return !viewOnlyEnabled.includes(perm);
-    if (selectedRole === "manager") return managerDisabled.includes(perm);
-    return false;
-  };
-
-  const isChecked = (perm) => {
-    if (isDisabled(perm)) return false;
-    return permissions[perm];
-  };
+  const loading = schemaQ.isLoading || defaultsQ.isLoading;
 
   return (
     <div className="bg-white rounded-xl shadow p-8 mb-6">
@@ -421,62 +423,36 @@ const PermissionsSection = ({ selectedRole, permissions, setPermissions }) => {
           <SlidersHorizontal className="text-purple-700 w-6 h-6 mr-2" />
           <h2 className="text-lg font-semibold mr-2">Permissions Management</h2>
           <span className="text-xs text-gray-400 font-normal">
-            (Default permissions for admin)
+            (Defaults for{" "}
+            <span className="text-purple-700 font-medium">{selectedRole}</span>)
           </span>
         </div>
         <button
           type="button"
           onClick={resetPermissions}
-          className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 hover:border-gray-400"
+          disabled={loading}
+          className="px-4 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 hover:border-gray-400 disabled:opacity-50"
         >
           Reset Permissions
         </button>
       </div>
-      <div className="flex flex-col gap-6">
-        {permissionGroups.map((group) => (
-          <div key={group.label} className="mb-2">
-            <div className="font-semibold text-sm mb-2">{group.label}</div>
-            <div className="grid grid-cols-2 gap-x-8 gap-y-2">
-              {group.permissions.map((perm) => (
-                <div
-                  key={perm}
-                  className="flex items-center justify-between w-full"
-                >
-                  <span className="text-sm">{perm}</span>
-                  <Switch
-                    checked={isChecked(perm)}
-                    onCheckedChange={() => handleToggle(perm)}
-                    className="data-[state=checked]:bg-purple-700 data-[state=unchecked]:bg-gray-200"
-                    disabled={isDisabled(perm)}
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
 
-        <div className="mt-2 rounded-lg bg-gray-50 p-4 border border-gray-200">
-          <div className="font-semibold text-sm mb-2 text-gray-400">
-            Insurance Permissions (Coming Soon)
-          </div>
-          <div className="grid grid-cols-4 gap-2">
-            {insurancePermissions.map((perm) => (
-              <div
-                key={perm}
-                className="flex items-center justify-between w-full text-gray-400"
-              >
-                <span className="text-sm">{perm}</span>
-                <Switch
-                  checked={false}
-                  onCheckedChange={() => {}}
-                  disabled
-                  className="bg-gray-200"
-                />
-              </div>
-            ))}
-          </div>
+      {loading ? (
+        <div className="flex items-center justify-center py-10 text-sm text-gray-500">
+          <Loader2 className="w-4 h-4 animate-spin mr-2" /> Loading permission
+          schema…
         </div>
-      </div>
+      ) : schemaQ.isError ? (
+        <div className="text-sm text-red-600 py-6 text-center">
+          Failed to load permissions schema.
+        </div>
+      ) : (
+        <PermissionsEditor
+          schema={schemaQ.data || {}}
+          value={permissions}
+          onChange={setPermissions}
+        />
+      )}
     </div>
   );
 };
