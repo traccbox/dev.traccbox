@@ -595,15 +595,8 @@ const UserRoles = () => {
   >("standard");
   const [selectedRole, setSelectedRole] = useState("admin");
 
-  const [permissions, setPermissions] = useState(() => {
-    const perms = {};
-    permissionGroups.forEach((group) => {
-      group.permissions.forEach((perm) => {
-        perms[perm] = true;
-      });
-    });
-    return perms;
-  });
+  // Dynamic permissions map, hydrated from the API by PermissionsSection
+  const [permissions, setPermissions] = useState<PermissionsMap>({});
 
   const [password, setPassword] = useState("");
   const [forceChange, setForceChange] = useState(true);
@@ -621,59 +614,10 @@ const UserRoles = () => {
   }, [activeTab]);
 
   function buildStaffPermissions(): StaffPermissions {
-    return {
-      core_dashboard_report: {
-        view_dashboard: permissions["View Dashboard"] ?? false,
-        export_data: permissions["Export Data"] ?? false,
-        generate_export_reports:
-          permissions["Generate/Export Reports"] ?? false,
-        view_sales_analytics: permissions["View Sales & Analytics"] ?? false,
-        view_reports: permissions["View Reports"] ?? false,
-      },
-      lead_client_management: {
-        view_leads: permissions["View Leads"] ?? false,
-        view_clients: permissions["View Clients"] ?? false,
-        assign_lead: permissions["Assign Leads"] ?? false,
-        add_edit_clients: permissions["Add/Edit Clients"] ?? false,
-        add_edit_leads: permissions["Add/Edit Leads"] ?? false,
-        assign_client: permissions["Assign Client"] ?? false,
-      },
-      order_task_management: {
-        view_orders: permissions["View Orders"] ?? false,
-        manage_orders: permissions["Manage Orders"] ?? false,
-        edit_tasks: permissions["Edit Task"] ?? false,
-        create_edit_orders: permissions["Create/Edit Orders"] ?? false,
-        assign_tasks: permissions["Assign Tasks"] ?? false,
-      },
-      user_role_management: {
-        view_users: permissions["View Users"] ?? false,
-        manage_users: permissions["Manage Users"] ?? false,
-        add_edit_users: permissions["Add/Edit Users"] ?? false,
-        assign_roles: permissions["Assign Roles"] ?? false,
-      },
-      billing_subscription: {
-        view_billing: permissions["View Billing"] ?? false,
-        manage_billing: permissions["Manage Billing"] ?? false,
-        access_invoice: permissions["Access Invoice"] ?? false,
-        update_payment_method: permissions["Update Payment Method"] ?? false,
-      },
-      integrations_api: {
-        access_integration: permissions["Access Integration"] ?? false,
-        manage_webhook: permissions["Manage Webhooks"] ?? false,
-        manage_api_keys: permissions["Manage API Keys"] ?? false,
-      },
-      commission_management: {
-        view_commission: permissions["View Commissions"] ?? false,
-        approve_commission: permissions["Approve Commissions"] ?? false,
-      },
-      notification_management: {
-        manage_email_notification:
-          permissions["Manage Email Notifications"] ?? false,
-        manage_sms_notification:
-          permissions["Manage SMS Notifications"] ?? false,
-      },
-    };
+    // The permissions map now mirrors the API schema exactly, so we can send it as-is.
+    return permissions as unknown as StaffPermissions;
   }
+
 
   const handleSave = async () => {
     if (!formRef.current) {
