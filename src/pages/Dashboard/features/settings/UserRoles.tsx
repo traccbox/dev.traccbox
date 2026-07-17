@@ -9,6 +9,7 @@ import {
   Eye,
   Settings,
   SlidersHorizontal,
+  Loader2,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { createStaff } from "@/api/auth";
@@ -16,6 +17,16 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
 import type { StaffPermissions, StaffCreateRequest } from "@/api/types";
 import { useNavigate } from "react-router-dom";
+import PermissionsEditor from "@/components/permissions/PermissionsEditor";
+import {
+  usePermissionsSchema,
+  useRoleDefaults,
+} from "@/api/permissions/hooks";
+import {
+  PermissionsMap,
+  emptyFromSchema,
+  mergePermissions,
+} from "@/api/permissions";
 
 // Zod schema for form validation
 const userFormSchema = z.object({
