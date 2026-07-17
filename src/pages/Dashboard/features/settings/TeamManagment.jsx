@@ -1,11 +1,12 @@
 import React from "react";
-import { Search, Plus, MoreVertical, Clock, QrCode, FileText } from "lucide-react";
+import { Search, Plus, MoreVertical, Clock, QrCode, FileText, Shield } from "lucide-react";
 import { useAuth } from "../../../../components/auth/AuthProvider";
 import { useStaffData } from "../../../../api/settingsApi/hooks/useStaffData";
 import { useNavigate } from "react-router-dom";
 import { QRCodeModal } from "./components/QRCodeModal";
 import { IDCardModal } from "./components/IDCardModal";
 import { useStaffQRCode } from "../../../../api/settingsApi/hooks/useQRCode";
+import EditPermissionsDrawer from "../../../../components/permissions/EditPermissionsDrawer";
 
 // Helper function to generate initials from full name
 const getInitials = (fullName) => {
@@ -61,6 +62,8 @@ const TeamManagement = () => {
   const [showQRModal, setShowQRModal] = React.useState(false);
   const [showIDCardModal, setShowIDCardModal] = React.useState(false);
   const [memberQRCodeData, setMemberQRCodeData] = React.useState(null);
+  const [permissionsMember, setPermissionsMember] = React.useState(null);
+
 
   // Get QR code data for the selected member
   const { data: qrCodeData } = useStaffQRCode(
@@ -534,7 +537,15 @@ const TeamManagement = () => {
                         ID Card
                       </button>
                     </div>
+                    <button
+                      onClick={() => setPermissionsMember(member)}
+                      className="mt-2 w-full bg-gray-900 hover:bg-black text-white font-medium py-2 px-3 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm"
+                    >
+                      <Shield className="w-4 h-4" />
+                      Manage Permissions
+                    </button>
                   </div>
+
 
                   {/* Created Date */}
                   <div className="flex items-center justify-center gap-1 text-xs text-gray-500 mt-2">
@@ -570,6 +581,14 @@ const TeamManagement = () => {
           qrCodeData={memberQRCodeData}
         />
       )}
+
+      {/* Manage Permissions Drawer */}
+      <EditPermissionsDrawer
+        open={!!permissionsMember}
+        onClose={() => setPermissionsMember(null)}
+        companyId={companyId}
+        staff={permissionsMember}
+      />
     </div>
   );
 };
