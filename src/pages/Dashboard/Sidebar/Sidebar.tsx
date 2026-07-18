@@ -38,7 +38,7 @@ const Sidebar: React.FC = () => {
 
   // Determine active menu by route
   const getActiveIndex = () => {
-    return sidebarMenus.findIndex((menu) => {
+    return menus.findIndex((menu) => {
       if (menu.to && location.pathname === menu.to) return true;
       if (menu.submenus) {
         return menu.submenus.some((submenu) =>
@@ -72,7 +72,7 @@ const Sidebar: React.FC = () => {
         </div>
         {/* Menus */}
         <nav className="flex-1 flex flex-col gap-1 overflow-y-auto hide-scrollbar">
-          {sidebarMenus.map((menu, idx) => (
+          {menus.map((menu, idx) => (
             <SidebarMenu
               key={menu.label}
               label={menu.label}
