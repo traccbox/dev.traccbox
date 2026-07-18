@@ -9,6 +9,25 @@ import { useAuth } from "@/components/auth/AuthProvider";
 const Sidebar: React.FC = () => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { hasPermission, isStaff } = useAuth();
+  const menus = useMemo(() => {
+    if (!isStaff) return sidebarMenus;
+    return sidebarMenus
+      .map((menu) => {
+        if (menu.submenus?.length) {
+          const filtered = menu.submenus.filter(
+            (s) => !s.permission || hasPermission(s.permission[0], s.permission[1])
+          );
+          if (!filtered.length) return null;
+          return { ...menu, submenus: filtered };
+        }
+        if (menu.permission && !hasPermission(menu.permission[0], menu.permission[1])) {
+          return null;
+        }
+        return menu;
+      })
+      .filter(Boolean) as typeof sidebarMenus;
+  }, [hasPermission, isStaff]);
   const isMobile = useIsMobile();
   const location = useLocation();
  
