@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { sidebarMenus } from "./menuData";
 import SidebarMenu from "./SidebarMenu";
 import { Link, useLocation } from "react-router-dom";
 import { LogOut, Menu } from "lucide-react";
 import { useIsMobile } from "../../../hooks/use-mobile";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const Sidebar: React.FC = () => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
