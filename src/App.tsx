@@ -32,6 +32,11 @@ import PrivacyPolicies from "./pages/PrivacyPolicies";
 import UserRolesLayout from "./pages/Dashboard/features/settings/UserRolesLayout";
 import BulkUpload from "./pages/Dashboard/features/settings/BulkUpload";
 import WorkAreas from "./pages/Dashboard/features/work-areas/WorkAreas";
+import RequirePermission from "@/components/auth/RequirePermission";
+
+const gate = (mod: string, act: string, element: React.ReactNode) => (
+  <RequirePermission module={mod} action={act}>{element}</RequirePermission>
+);
 
 
 
@@ -74,23 +79,23 @@ const App = () => (
             <Route path="/staff-verify" element={<StaffVerification />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />}>
-                <Route index element={<Home />} />
-                <Route path="settings/general" element={<GeneralSettings />} />
+                <Route index element={gate("core_dashboard_report", "view_dashboard", <Home />)} />
+                <Route path="settings/general" element={gate("user_role_management", "view_users", <GeneralSettings />)} />
                  <Route path="settings/roles" element={<UserRolesLayout />}>
-                  <Route index element={<UserRoles />} />
-                  <Route path="bulk-upload" element={<BulkUpload />} />
+                  <Route index element={gate("user_role_management", "assign_roles", <UserRoles />)} />
+                  <Route path="bulk-upload" element={gate("user_role_management", "add_edit_users", <BulkUpload />)} />
                 </Route>
-                <Route path="settings/team" element={<TeamManagment />} />
+                <Route path="settings/team" element={gate("user_role_management", "manage_users", <TeamManagment />)} />
                 <Route
                   path="field-reps/create-tasks"
-                  element={<TaskAssignment />}
+                  element={gate("order_task_management", "assign_tasks", <TaskAssignment />)}
                 />
-                <Route path="field-reps/manage-task" element={<ManageTask />} />
+                <Route path="field-reps/manage-task" element={gate("order_task_management", "view_orders", <ManageTask />)} />
                 <Route
                   path="location-tracking"
-                  element={<LocationTracking />}
+                  element={gate("core_dashboard_report", "view_dashboard", <LocationTracking />)}
                 />
-                <Route path="work-areas" element={<WorkAreas />} />
+                <Route path="work-areas" element={gate("order_task_management", "view_orders", <WorkAreas />)} />
               </Route>
             </Route>
             {/* Terms and conditions */}
