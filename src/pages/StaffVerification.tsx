@@ -17,7 +17,7 @@ const StaffVerification = () => {
   const id = searchParams.get("id");
   const [formError, setFormError] = useState("");
   const [resendCooldown, setResendCooldown] = useState(0);
-  const { refreshToken, TOKEN_KEY } = useAuth();
+  const { refreshToken, TOKEN_KEY, authenticateStaff } = useAuth();
 
   useEffect(() => {
     if (!email) {
@@ -85,10 +85,10 @@ const StaffVerification = () => {
         return;
       }
       if (res?.role === "sales") {
-        console.log(res.role);
         navigate("/sales-rep-demo");
       } else {
-        Cookies.set(TOKEN_KEY, res.access_token, { expires: 7 });
+        // Web dashboard staff (manager, HR, etc.) — persist full session + permissions
+        authenticateStaff(res);
         navigate("/dashboard");
       }
     } catch (error: unknown) {
