@@ -1,13 +1,33 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { sidebarMenus } from "./menuData";
 import SidebarMenu from "./SidebarMenu";
 import { Link, useLocation } from "react-router-dom";
 import { LogOut, Menu } from "lucide-react";
 import { useIsMobile } from "../../../hooks/use-mobile";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const Sidebar: React.FC = () => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const { hasPermission, isStaff } = useAuth();
+  const menus = useMemo(() => {
+    if (!isStaff) return sidebarMenus;
+    return sidebarMenus
+      .map((menu) => {
+        if (menu.submenus?.length) {
+          const filtered = menu.submenus.filter(
+            (s) => !s.permission || hasPermission(s.permission[0], s.permission[1])
+          );
+          if (!filtered.length) return null;
+          return { ...menu, submenus: filtered };
+        }
+        if (menu.permission && !hasPermission(menu.permission[0], menu.permission[1])) {
+          return null;
+        }
+        return menu;
+      })
+      .filter(Boolean) as typeof sidebarMenus;
+  }, [hasPermission, isStaff]);
   const isMobile = useIsMobile();
   const location = useLocation();
  
@@ -18,7 +38,7 @@ const Sidebar: React.FC = () => {
 
   // Determine active menu by route
   const getActiveIndex = () => {
-    return sidebarMenus.findIndex((menu) => {
+    return menus.findIndex((menu) => {
       if (menu.to && location.pathname === menu.to) return true;
       if (menu.submenus) {
         return menu.submenus.some((submenu) =>
@@ -52,7 +72,7 @@ const Sidebar: React.FC = () => {
         </div>
         {/* Menus */}
         <nav className="flex-1 flex flex-col gap-1 overflow-y-auto hide-scrollbar">
-          {sidebarMenus.map((menu, idx) => (
+          {menus.map((menu, idx) => (
             <SidebarMenu
               key={menu.label}
               label={menu.label}
