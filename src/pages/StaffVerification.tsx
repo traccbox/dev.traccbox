@@ -88,7 +88,7 @@ const StaffVerification = () => {
         navigate("/sales-rep-demo");
       } else {
         // Web dashboard staff (manager, HR, etc.) — persist full session + permissions
-        authenticateStaff(res);
+        authenticateStaff(res as unknown as Parameters<typeof authenticateStaff>[0]);
         navigate("/dashboard");
       }
     } catch (error: unknown) {
