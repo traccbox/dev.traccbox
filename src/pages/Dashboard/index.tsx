@@ -6,13 +6,13 @@ import CompanyOnboardingModal from "@/components/auth/CompanyOnboardingModal";
 import { LocationTrackingProvider } from "@/contexts/LocationTrackingContext";
 
 const Dashboard: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isStaff } = useAuth();
 
   return (
     <LocationTrackingProvider>
       <DashboardLayout>
-        {/* Only show onboarding modal if company_name is missing */}
-        {!user?.company_name && <CompanyOnboardingModal />}
+        {/* Only show onboarding modal if company_name is missing and user is not staff */}
+        {!isStaff && !user?.company_name && <CompanyOnboardingModal />}
         <Outlet />
       </DashboardLayout>
     </LocationTrackingProvider>

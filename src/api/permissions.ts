@@ -8,7 +8,7 @@ import api from "./AxiosInstance";
  * the sub-path here. If VITE_API_BASE does NOT already include
  * /api/v1 for other routes, adjust the BASE constant below.
  */
-const BASE = "/api/v1/permissions";
+const BASE = "/permissions";
 
 // ---- Types --------------------------------------------------------------
 
@@ -34,8 +34,8 @@ export interface ResetPermissionsRequest {
 export async function getPermissionsSchema(): Promise<PermissionsSchema> {
   const res = await api.get(`${BASE}/schema`);
   const data = res.data;
-  // Backend may return { permissions: {...} } or the map directly.
-  return (data?.permissions ?? data?.schema ?? data) as PermissionsSchema;
+  // Backend may return { permission_groups: {...} } or { permissions: {...} } or the map directly.
+  return (data?.permission_groups ?? data?.permissions ?? data?.schema ?? data) as PermissionsSchema;
 }
 
 export async function getRoleDefaults(role: string): Promise<PermissionsMap> {
