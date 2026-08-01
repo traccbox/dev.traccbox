@@ -60,7 +60,7 @@ export default function WorkAreaMap({
     if (!containerRef.current || mapRef.current) return;
     const map = L.map(containerRef.current, { zoomControl: true }).setView(
       centerOverride || [6.5244, 3.3792],
-      zoomOverride || 11,
+      zoomOverride || 13,
     );
     mapRef.current = map;
     tileRef.current = L.tileLayer(
@@ -70,7 +70,14 @@ export default function WorkAreaMap({
       { attribution: "© OpenStreetMap", maxZoom: 19 },
     ).addTo(map);
 
+    // The map is often mounted inside modals/drawers that size after paint.
+    const t = setTimeout(() => map.invalidateSize(), 200);
+    const ro = new ResizeObserver(() => map.invalidateSize());
+    ro.observe(containerRef.current);
+
     return () => {
+      clearTimeout(t);
+      ro.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -90,7 +97,7 @@ export default function WorkAreaMap({
     ).addTo(map);
   }, [satellite]);
 
-  // render areas
+  // render areas (each area may hold multiple locations/boundaries)
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -103,39 +110,53 @@ export default function WorkAreaMap({
       const weight = isSelected ? 3 : 1.5;
       const fillOpacity = isSelected ? 0.35 : 0.15;
 
-      let layer: L.Layer | null = null;
-      if (a.boundary.kind === "circle") {
-        layer = L.circle(a.boundary.center, {
-          radius: a.boundary.radius,
-          color,
-          weight,
-          fillColor: color,
-          fillOpacity,
-        });
-      } else {
-        layer = L.polygon(a.boundary.points, {
-          color,
-          weight,
-          fillColor: color,
-          fillOpacity,
-        });
-      }
-      if (layer) {
-        (layer as any).bindTooltip(a.name, { direction: "top" });
-        (layer as any).on("click", () => onSelect?.(a.id));
-        layer.addTo(map);
-        layersRef.current.push(layer);
-      }
+      const shapes: { label: string; boundary: BoundaryShape }[] =
+        a.locations && a.locations.length
+          ? a.locations.map((l) => ({ label: `${a.name} — ${l.name}`, boundary: l.boundary }))
+          : [{ label: a.name, boundary: a.boundary }];
+
+      shapes.forEach(({ label, boundary }) => {
+        let layer: L.Layer | null = null;
+        if (boundary.kind === "circle") {
+          layer = L.circle(boundary.center, {
+            radius: boundary.radius,
+            color,
+            weight,
+            fillColor: color,
+            fillOpacity,
+          });
+        } else if (boundary.points.length) {
+          layer = L.polygon(boundary.points, {
+            color,
+            weight,
+            fillColor: color,
+            fillOpacity,
+          });
+        }
+        if (layer) {
+          (layer as any).bindTooltip(label, { direction: "top" });
+          (layer as any).on("click", () => onSelect?.(a.id));
+          layer.addTo(map);
+          layersRef.current.push(layer);
+        }
+      });
     });
 
     if (selectedId) {
       const sel = areas.find((a) => a.id === selectedId);
       if (sel) {
-        if (sel.boundary.kind === "circle") {
-          map.setView(sel.boundary.center, 14);
-        } else if (sel.boundary.points.length) {
-          map.fitBounds(sel.boundary.points as any);
-        }
+        const bounds = L.latLngBounds([]);
+        const list = sel.locations?.length
+          ? sel.locations.map((l) => l.boundary)
+          : [sel.boundary];
+        list.forEach((b) => {
+          if (b.kind === "circle") {
+            bounds.extend(L.circle(b.center, { radius: b.radius }).getBounds());
+          } else {
+            b.points.forEach((p) => bounds.extend(p));
+          }
+        });
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
       }
     }
   }, [areas, selectedId, onSelect]);
