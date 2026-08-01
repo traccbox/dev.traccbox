@@ -23,7 +23,6 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, MapPin, Users, Wifi, WifiOff, RefreshCw } from "lucide-react";
-import { log } from "console";
 
 const LocationTracking: React.FC = () => {
   const { user } = useAuth();
@@ -452,7 +451,7 @@ export const MapCard = ({
             showAll={showAll}
             height="600px"
             staffNames={Object.fromEntries(
-              Object.entries(staffInfo).map(([id, info]) => [id, info?.name]),
+              Object.entries(staffInfo).map(([id, info]) => [id, (info as any)?.name]),
             )}
             staffInfo={staffInfo}
           />

@@ -1,5 +1,4 @@
 import Navbar from "@/components/Navbar";
-import { describe } from "node:test";
 import React from "react";
 
 const terms = [
