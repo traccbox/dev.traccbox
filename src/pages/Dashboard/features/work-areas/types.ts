@@ -53,13 +53,29 @@ export interface WorkAreaRules {
   violationAlerts: boolean;
 }
 
+export interface WorkAreaLocation {
+  id: string;
+  name: string;
+  method: "draw" | "admin" | "manual";
+  boundary: BoundaryShape;
+  address?: string;
+  country?: string;
+  state?: string;
+  lga?: string;
+  ward?: string;
+  community?: string;
+}
+
 export interface WorkArea {
   id: string;
   name: string;
   description?: string;
   type: WorkAreaType;
   status: WorkAreaStatus;
+  /** Primary boundary (first location) — kept for backwards compatibility. */
   boundary: BoundaryShape;
+  /** A work area can contain multiple locations/boundaries. */
+  locations?: WorkAreaLocation[];
   address?: string;
   country?: string;
   state?: string;
