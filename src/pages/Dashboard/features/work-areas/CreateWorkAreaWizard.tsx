@@ -1,13 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   X, Check, ChevronRight, ChevronLeft, MapPin, Building2, Users, Settings, ClipboardCheck,
-  PenTool, Globe, Type, Circle, Hexagon, Trash2,
+  PenTool, Globe, Type, Circle, Hexagon, Trash2, Plus,
 } from "lucide-react";
 import WorkAreaMap from "./WorkAreaMap";
 import {
   WorkArea, WorkAreaType, WORK_AREA_TYPE_OPTIONS, DEFAULT_RULES, BoundaryShape, WorkAreaRules,
+  WorkAreaLocation,
 } from "./types";
 import { MOCK_EMPLOYEES } from "./mockData";
+import { ADMIN_TREE, findNode } from "./adminData";
 
 interface Props {
   open: boolean;
@@ -17,7 +19,7 @@ interface Props {
 
 const STEPS = [
   { id: 1, label: "Basic Info", icon: Building2 },
-  { id: 2, label: "Boundary", icon: MapPin },
+  { id: 2, label: "Locations", icon: MapPin },
   { id: 3, label: "Employees", icon: Users },
   { id: 4, label: "Work Rules", icon: Settings },
   { id: 5, label: "Review", icon: ClipboardCheck },
@@ -30,6 +32,11 @@ export default function CreateWorkAreaWizard({ open, onClose, onCreate }: Props)
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [type, setType] = useState<WorkAreaType>("office");
+
+  // multi-location support
+  const [locations, setLocations] = useState<WorkAreaLocation[]>([]);
+  const [locName, setLocName] = useState("");
+
   const [method, setMethod] = useState<"draw" | "admin" | "manual" | null>(null);
   const [drawMode, setDrawMode] = useState<"circle" | "polygon">("circle");
   const [radius, setRadius] = useState(200);
@@ -40,49 +47,127 @@ export default function CreateWorkAreaWizard({ open, onClose, onCreate }: Props)
   const [country, setCountry] = useState("");
   const [state, setState] = useState("");
   const [lga, setLga] = useState("");
+  const [ward, setWard] = useState("");
+  const [community, setCommunity] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [rules, setRules] = useState<WorkAreaRules>(DEFAULT_RULES);
   const [empSearch, setEmpSearch] = useState("");
 
+  // ---- administrative cascade ----
+  const countryNode = useMemo(() => findNode(ADMIN_TREE, country), [country]);
+  const stateNode = useMemo(() => findNode(countryNode?.children, state), [countryNode, state]);
+  const lgaNode = useMemo(() => findNode(stateNode?.children, lga), [stateNode, lga]);
+  const wardNode = useMemo(() => findNode(lgaNode?.children, ward), [lgaNode, ward]);
+  const communityNode = useMemo(() => findNode(wardNode?.children, community), [wardNode, community]);
+
+  const adminFocus = communityNode || wardNode || lgaNode || stateNode || countryNode;
+
   if (!open) return null;
+
+  const resetLocationDraft = () => {
+    setMethod(null); setShape(null); setRadius(200); setLocName("");
+    setAddress(""); setLat(""); setLng("");
+    setCountry(""); setState(""); setLga(""); setWard(""); setCommunity("");
+  };
 
   const reset = () => {
     setStep(1); setName(""); setDescription(""); setType("office");
-    setMethod(null); setShape(null); setRadius(200);
-    setAddress(""); setLat(""); setLng(""); setCountry(""); setState(""); setLga("");
+    setLocations([]); resetLocationDraft();
     setSelectedEmployees([]); setRules(DEFAULT_RULES);
   };
 
   const close = () => { reset(); onClose(); };
 
-  const canProceed = () => {
-    if (step === 1) return name.trim().length > 0;
-    if (step === 2) {
-      if (method === "manual") return !!(lat && lng);
-      if (method === "admin") return !!(country && state);
-      return !!shape;
-    }
-    return true;
-  };
-
-  const finalShape = (): BoundaryShape => {
+  const draftBoundary = (): BoundaryShape | null => {
     if (shape) return shape;
     if (method === "manual" && lat && lng) {
       return { kind: "circle", center: [parseFloat(lat), parseFloat(lng)], radius: radius || 200 };
     }
-    return { kind: "circle", center: [6.5244, 3.3792], radius: 200 };
+    if (method === "admin" && adminFocus?.center) {
+      return { kind: "circle", center: adminFocus.center, radius: radius || 1000 };
+    }
+    return null;
+  };
+
+  const canAddLocation = () => {
+    if (!method) return false;
+    if (method === "manual") return !!(lat && lng);
+    if (method === "admin") return !!(country && state && lga);
+    return !!shape;
+  };
+
+  const addLocation = () => {
+    const boundary = draftBoundary();
+    if (!boundary) return;
+    const label =
+      locName.trim() ||
+      (method === "admin" ? [community, ward, lga, state].filter(Boolean).join(", ") : "") ||
+      address ||
+      `Location ${locations.length + 1}`;
+    setLocations((prev) => [
+      ...prev,
+      {
+        id: `loc-${Date.now()}`,
+        name: label,
+        method: method!,
+        boundary,
+        address: address || undefined,
+        country: country || undefined,
+        state: state || undefined,
+        lga: lga || undefined,
+        ward: ward || undefined,
+        community: community || undefined,
+      },
+    ]);
+    resetLocationDraft();
+  };
+
+  const removeLocation = (id: string) =>
+    setLocations((prev) => prev.filter((l) => l.id !== id));
+
+  const canProceed = () => {
+    if (step === 1) return name.trim().length > 0;
+    if (step === 2) return locations.length > 0 || canAddLocation();
+    return true;
   };
 
   const handleSave = () => {
+    let all = locations;
+    if (canAddLocation()) {
+      const boundary = draftBoundary();
+      if (boundary) {
+        all = [
+          ...locations,
+          {
+            id: `loc-${Date.now()}`,
+            name: locName.trim() || address || `Location ${locations.length + 1}`,
+            method: method!,
+            boundary,
+            address: address || undefined,
+            country: country || undefined,
+            state: state || undefined,
+            lga: lga || undefined,
+            ward: ward || undefined,
+            community: community || undefined,
+          },
+        ];
+      }
+    }
+    const primary = all[0];
     const wa: WorkArea = {
       id: `wa-${Date.now()}`,
       name,
       description,
       type,
       status: "active",
-      boundary: finalShape(),
-      address,
-      country, state, lga,
+      boundary: primary?.boundary || { kind: "circle", center: [6.5244, 3.3792], radius: 200 },
+      locations: all,
+      address: primary?.address,
+      country: primary?.country,
+      state: primary?.state,
+      lga: primary?.lga,
+      ward: primary?.ward,
+      community: primary?.community,
       employees: MOCK_EMPLOYEES.filter((e) => selectedEmployees.includes(e.id)),
       rules,
       createdAt: new Date().toISOString(),
@@ -96,6 +181,23 @@ export default function CreateWorkAreaWizard({ open, onClose, onCreate }: Props)
       setShape({ kind: "circle", center: [parseFloat(lat), parseFloat(lng)], radius: radius || 200 });
     }
   };
+
+  // Preview areas: saved locations rendered on any wizard map
+  const previewAreas: WorkArea[] = locations.length
+    ? [{
+        id: "draft",
+        name: name || "New Work Area",
+        type,
+        status: "active",
+        boundary: locations[0].boundary,
+        locations,
+        employees: [],
+        rules,
+        createdAt: "",
+      } as WorkArea]
+    : [];
+
+  const selectOptions = (list?: { name: string }[]) => (list || []).map((n) => n.name);
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/50 flex items-center justify-center p-4 overflow-y-auto">
@@ -175,145 +277,237 @@ export default function CreateWorkAreaWizard({ open, onClose, onCreate }: Props)
             </div>
           )}
 
-          {step === 2 && !method && (
-            <div className="grid md:grid-cols-3 gap-4">
-              {[
-                { id: "draw", icon: PenTool, title: "Draw on Map", desc: "Search a location and draw your work area directly on the map.", rec: true },
-                { id: "admin", icon: Globe, title: "Administrative Area", desc: "Create using Country, State and Local Government." },
-                { id: "manual", icon: Type, title: "Manual Entry", desc: "Create using an address or GPS coordinates." },
-              ].map((c: any) => {
-                const Icon = c.icon;
-                return (
-                  <div key={c.id} className="border-2 rounded-2xl p-5 hover:border-[#1658E5] hover:shadow-lg transition-all cursor-pointer relative"
-                    onClick={() => setMethod(c.id)}>
-                    {c.rec && <span className="absolute top-3 right-3 text-[10px] bg-blue-100 text-[#1658E5] font-semibold px-2 py-0.5 rounded-full">RECOMMENDED</span>}
-                    <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-3">
-                      <Icon className="w-6 h-6 text-[#1658E5]" />
+          {step === 2 && (
+            <div className="space-y-5">
+              {/* Saved locations */}
+              {locations.length > 0 && (
+                <div className="border rounded-xl overflow-hidden">
+                  <div className="px-4 py-2.5 bg-gray-50 border-b flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-900">
+                      Locations in this work area ({locations.length})
+                    </span>
+                  </div>
+                  <div className="divide-y">
+                    {locations.map((l, i) => (
+                      <div key={l.id} className="flex items-center gap-3 px-4 py-2.5">
+                        <span className="w-6 h-6 rounded-full bg-blue-50 text-[#1658E5] text-xs font-bold flex items-center justify-center">
+                          {i + 1}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-medium text-gray-900 truncate">{l.name}</div>
+                          <div className="text-xs text-gray-500">
+                            {l.boundary.kind === "circle"
+                              ? `Circle · ${l.boundary.radius}m · [${l.boundary.center[0].toFixed(4)}, ${l.boundary.center[1].toFixed(4)}]`
+                              : `Polygon · ${l.boundary.points.length} points`}
+                          </div>
+                        </div>
+                        <button onClick={() => removeLocation(l.id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {!method && (
+                <div className="grid md:grid-cols-3 gap-4">
+                  {[
+                    { id: "draw", icon: PenTool, title: "Draw on Map", desc: "Search a location and draw your work area directly on the map.", rec: true },
+                    { id: "admin", icon: Globe, title: "Administrative Area", desc: "Country → State → LGA → Ward → Community." },
+                    { id: "manual", icon: Type, title: "Manual Entry", desc: "Create using an address or GPS coordinates." },
+                  ].map((c: any) => {
+                    const Icon = c.icon;
+                    return (
+                      <div key={c.id} className="border-2 rounded-2xl p-5 hover:border-[#1658E5] hover:shadow-lg transition-all cursor-pointer relative"
+                        onClick={() => setMethod(c.id)}>
+                        {c.rec && <span className="absolute top-3 right-3 text-[10px] bg-blue-100 text-[#1658E5] font-semibold px-2 py-0.5 rounded-full">RECOMMENDED</span>}
+                        <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center mb-3">
+                          <Icon className="w-6 h-6 text-[#1658E5]" />
+                        </div>
+                        <h3 className="font-semibold text-gray-900 mb-1">{c.title}</h3>
+                        <p className="text-xs text-gray-500 mb-4">{c.desc}</p>
+                        <button className="w-full bg-[#1658E5] text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">
+                          {locations.length ? "Add another location" : "Select"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {method === "draw" && (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <input value={locName} onChange={(e) => setLocName(e.target.value)}
+                      placeholder="Location name (optional)"
+                      className="flex-1 min-w-[200px] px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
+                    <div className="flex items-center gap-1 border rounded-lg p-1 bg-gray-50">
+                      <button onClick={() => { setDrawMode("circle"); setShape(null); }}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 ${drawMode === "circle" ? "bg-white shadow text-[#1658E5]" : "text-gray-600"}`}>
+                        <Circle className="w-3.5 h-3.5" /> Circle
+                      </button>
+                      <button onClick={() => { setDrawMode("polygon"); setShape(null); }}
+                        className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 ${drawMode === "polygon" ? "bg-white shadow text-[#1658E5]" : "text-gray-600"}`}>
+                        <Hexagon className="w-3.5 h-3.5" /> Polygon
+                      </button>
                     </div>
-                    <h3 className="font-semibold text-gray-900 mb-1">{c.title}</h3>
-                    <p className="text-xs text-gray-500 mb-4">{c.desc}</p>
-                    <button className="w-full bg-[#1658E5] text-white py-2 rounded-lg text-sm font-semibold hover:bg-blue-700">Select</button>
+                    <button onClick={() => setShape(null)} className="p-2 border rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600" title="Clear shape">
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                    <button onClick={resetLocationDraft} className="text-xs text-gray-500 hover:underline ml-auto">Change method</button>
                   </div>
-                );
-              })}
-            </div>
-          )}
 
-          {step === 2 && method === "draw" && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 flex-wrap">
-                <input placeholder="Search location..." className="flex-1 min-w-[200px] px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500" />
-                <div className="flex items-center gap-1 border rounded-lg p-1 bg-gray-50">
-                  <button onClick={() => setDrawMode("circle")} className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 ${drawMode === "circle" ? "bg-white shadow text-[#1658E5]" : "text-gray-600"}`}>
-                    <Circle className="w-3.5 h-3.5" /> Circle
-                  </button>
-                  <button onClick={() => setDrawMode("polygon")} className={`px-3 py-1.5 rounded-md text-xs font-medium flex items-center gap-1 ${drawMode === "polygon" ? "bg-white shadow text-[#1658E5]" : "text-gray-600"}`}>
-                    <Hexagon className="w-3.5 h-3.5" /> Polygon
-                  </button>
-                </div>
-                <button onClick={() => setShape(null)} className="p-2 border rounded-lg text-gray-600 hover:bg-red-50 hover:text-red-600" title="Delete shape">
-                  <Trash2 className="w-4 h-4" />
-                </button>
-                <button onClick={() => setMethod(null)} className="text-xs text-gray-500 hover:underline ml-auto">Change method</button>
-              </div>
-              <div className="rounded-xl overflow-hidden border">
-                <WorkAreaMap
-                  areas={[]}
-                  height={380}
-                  interactiveDraw={{
-                    shape,
-                    onChange: (s) => setShape(s),
-                    mode: drawMode,
-                    radius,
-                  }}
-                />
-              </div>
-              {drawMode === "circle" && shape?.kind === "circle" && (
-                <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
-                  <span className="text-sm font-medium text-gray-700">Radius:</span>
-                  <input type="range" min={50} max={5000} step={50} value={radius}
-                    onChange={(e) => { const r = parseInt(e.target.value); setRadius(r); setShape({ ...shape, radius: r }); }}
-                    className="flex-1" />
-                  <input type="number" value={radius}
-                    onChange={(e) => { const r = parseInt(e.target.value) || 0; setRadius(r); setShape({ ...shape, radius: r }); }}
-                    className="w-24 px-2 py-1 border rounded text-sm" />
-                  <span className="text-xs text-gray-500">meters</span>
+                  {drawMode === "circle" && (
+                    <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-lg">
+                      <span className="text-sm font-medium text-gray-700 whitespace-nowrap">Radius:</span>
+                      <input type="range" min={50} max={5000} step={50} value={radius}
+                        onChange={(e) => {
+                          const r = parseInt(e.target.value);
+                          setRadius(r);
+                          if (shape?.kind === "circle") setShape({ ...shape, radius: r });
+                        }}
+                        className="flex-1" />
+                      <input type="number" value={radius}
+                        onChange={(e) => {
+                          const r = parseInt(e.target.value) || 0;
+                          setRadius(r);
+                          if (shape?.kind === "circle") setShape({ ...shape, radius: r });
+                        }}
+                        className="w-24 px-2 py-1 border rounded text-sm" />
+                      <span className="text-xs text-gray-500">meters</span>
+                    </div>
+                  )}
+
+                  <div className="rounded-xl overflow-hidden border">
+                    <WorkAreaMap
+                      areas={previewAreas}
+                      height={380}
+                      interactiveDraw={{ shape, onChange: (s) => setShape(s), mode: drawMode, radius }}
+                    />
+                  </div>
+
+                  {drawMode === "polygon" && shape?.kind === "polygon" && (
+                    <div className="p-3 bg-blue-50 rounded-lg flex items-center justify-between">
+                      <span className="text-sm text-gray-700">{shape.points.length} points placed (min 3)</span>
+                      <button onClick={() => setShape(null)} className="text-sm text-red-600">Clear points</button>
+                    </div>
+                  )}
+                  {!shape && (
+                    <p className="text-xs text-center text-gray-500">
+                      Click on the map to {drawMode === "circle" ? "place the circle center" : "add polygon points"}
+                    </p>
+                  )}
                 </div>
               )}
-              {drawMode === "polygon" && shape?.kind === "polygon" && (
-                <div className="p-3 bg-blue-50 rounded-lg flex items-center justify-between">
-                  <span className="text-sm text-gray-700">{shape.points.length} points placed</span>
-                  <button className="text-sm bg-[#1658E5] text-white px-3 py-1.5 rounded-md">Save Boundary</button>
-                </div>
-              )}
-              {!shape && (
-                <p className="text-xs text-center text-gray-500">Click on the map to {drawMode === "circle" ? "place the circle center" : "add polygon points"}</p>
-              )}
-            </div>
-          )}
 
-          {step === 2 && method === "admin" && (
-            <div className="space-y-4 max-w-xl">
-              <button onClick={() => setMethod(null)} className="text-xs text-gray-500 hover:underline">← Change method</button>
-              {[
-                { label: "Country *", val: country, set: setCountry, opts: ["Nigeria", "Ghana", "Kenya", "South Africa"] },
-                { label: "State *", val: state, set: setState, opts: ["Lagos", "Abuja", "Rivers", "Kano"] },
-                { label: "Local Government", val: lga, set: setLga, opts: ["Ikeja", "Eti-Osa", "Apapa", "Surulere"] },
-              ].map((f) => (
-                <div key={f.label}>
-                  <label className="block text-sm font-medium mb-1.5">{f.label}</label>
-                  <select value={f.val} onChange={(e) => f.set(e.target.value)}
-                    className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                    <option value="">Select...</option>
-                    {f.opts.map((o) => <option key={o} value={o}>{o}</option>)}
-                  </select>
-                </div>
-              ))}
-              <div className="p-4 bg-blue-50 rounded-lg text-sm text-gray-700">
-                Once selected, the map will zoom to the boundary. You can use the full administrative area or draw a custom boundary inside it.
-              </div>
-            </div>
-          )}
-
-          {step === 2 && method === "manual" && (
-            <div className="grid md:grid-cols-2 gap-4">
-              <div className="space-y-4">
-                <button onClick={() => setMethod(null)} className="text-xs text-gray-500 hover:underline">← Change method</button>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Address</label>
-                  <input value={address} onChange={(e) => setAddress(e.target.value)}
-                    className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-sm font-medium mb-1.5">Latitude</label>
-                    <input value={lat} onChange={(e) => setLat(e.target.value)} placeholder="6.5244"
-                      className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+              {method === "admin" && (
+                <div className="grid md:grid-cols-2 gap-5">
+                  <div className="space-y-3">
+                    <button onClick={resetLocationDraft} className="text-xs text-gray-500 hover:underline">← Change method</button>
+                    <AdminSelect label="Country *" value={country} options={selectOptions(ADMIN_TREE)}
+                      onChange={(v) => { setCountry(v); setState(""); setLga(""); setWard(""); setCommunity(""); setShape(null); }} />
+                    <AdminSelect label="State *" value={state} options={selectOptions(countryNode?.children)} disabled={!country}
+                      onChange={(v) => { setState(v); setLga(""); setWard(""); setCommunity(""); setShape(null); }} />
+                    <AdminSelect label="Local Government *" value={lga} options={selectOptions(stateNode?.children)} disabled={!state}
+                      onChange={(v) => { setLga(v); setWard(""); setCommunity(""); setShape(null); }} />
+                    <AdminSelect label="Ward" value={ward} options={selectOptions(lgaNode?.children)} disabled={!lga}
+                      onChange={(v) => { setWard(v); setCommunity(""); setShape(null); }} />
+                    <AdminSelect label="Community" value={community} options={selectOptions(wardNode?.children)} disabled={!ward}
+                      onChange={(v) => { setCommunity(v); setShape(null); }} />
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Coverage radius (m)</label>
+                      <input type="number" value={radius}
+                        onChange={(e) => {
+                          const r = parseInt(e.target.value) || 0;
+                          setRadius(r);
+                          if (shape?.kind === "circle") setShape({ ...shape, radius: r });
+                        }}
+                        className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      The map focuses on your selection. You can also click the map to fine-tune the boundary centre.
+                    </p>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1.5">Longitude</label>
-                    <input value={lng} onChange={(e) => setLng(e.target.value)} placeholder="3.3792"
-                      className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                    <label className="block text-sm font-medium mb-1.5">Map</label>
+                    <div className="rounded-xl overflow-hidden border">
+                      <WorkAreaMap
+                        areas={previewAreas}
+                        height={380}
+                        interactiveDraw={{
+                          shape: shape || (adminFocus?.center ? { kind: "circle", center: adminFocus.center, radius } : null),
+                          onChange: (s) => setShape(s),
+                          mode: "circle",
+                          radius,
+                        }}
+                        centerOverride={adminFocus?.center}
+                        zoomOverride={adminFocus?.zoom}
+                      />
+                    </div>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium mb-1.5">Radius (m)</label>
-                  <input type="number" value={radius} onChange={(e) => setRadius(parseInt(e.target.value) || 0)}
-                    className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+              )}
+
+              {method === "manual" && (
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-4">
+                    <button onClick={resetLocationDraft} className="text-xs text-gray-500 hover:underline">← Change method</button>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Location name</label>
+                      <input value={locName} onChange={(e) => setLocName(e.target.value)}
+                        className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Address</label>
+                      <input value={address} onChange={(e) => setAddress(e.target.value)}
+                        className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">Latitude</label>
+                        <input value={lat} onChange={(e) => setLat(e.target.value)} placeholder="6.5244"
+                          className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-1.5">Longitude</label>
+                        <input value={lng} onChange={(e) => setLng(e.target.value)} placeholder="3.3792"
+                          className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium mb-1.5">Radius (m)</label>
+                      <input type="number" value={radius} onChange={(e) => setRadius(parseInt(e.target.value) || 0)}
+                        className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500" />
+                    </div>
+                    <button onClick={applyManualPreview} className="w-full bg-[#1658E5] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700">
+                      Generate Preview
+                    </button>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1.5">Preview</label>
+                    <div className="rounded-xl overflow-hidden border">
+                      <WorkAreaMap areas={previewAreas} height={320}
+                        interactiveDraw={{ shape, onChange: setShape, mode: "circle", radius }}
+                        centerOverride={lat && lng ? [parseFloat(lat), parseFloat(lng)] : undefined}
+                        zoomOverride={15} />
+                    </div>
+                  </div>
                 </div>
-                <button onClick={applyManualPreview} className="w-full bg-[#1658E5] text-white py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700">
-                  Generate Preview
-                </button>
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1.5">Preview</label>
-                <div className="rounded-xl overflow-hidden border">
-                  <WorkAreaMap areas={[]} height={320}
-                    interactiveDraw={{ shape, onChange: setShape, mode: "circle", radius }}
-                    centerOverride={lat && lng ? [parseFloat(lat), parseFloat(lng)] : undefined}
-                    zoomOverride={14} />
+              )}
+
+              {method && (
+                <div className="flex items-center justify-end gap-3 pt-1">
+                  <button onClick={resetLocationDraft} className="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">
+                    Cancel
+                  </button>
+                  <button disabled={!canAddLocation()} onClick={addLocation}
+                    className="inline-flex items-center gap-1 px-4 py-2 bg-[#1658E5] text-white rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-50">
+                    <Plus className="w-4 h-4" /> Add location
+                  </button>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -433,11 +627,14 @@ export default function CreateWorkAreaWizard({ open, onClose, onCreate }: Props)
                 <SummaryRow label="Type" value={WORK_AREA_TYPE_OPTIONS.find((o) => o.value === type)?.label || type} />
                 {description && <SummaryRow label="Description" value={description} />}
               </SummaryBlock>
-              <SummaryBlock title="Boundary">
-                {shape?.kind === "circle" && <SummaryRow label="Circle" value={`Center [${shape.center[0].toFixed(4)}, ${shape.center[1].toFixed(4)}] · r=${shape.radius}m`} />}
-                {shape?.kind === "polygon" && <SummaryRow label="Polygon" value={`${shape.points.length} points`} />}
-                {!shape && method === "admin" && <SummaryRow label="Administrative" value={`${country} / ${state} / ${lga}`} />}
-                {!shape && method === "manual" && <SummaryRow label="Coordinates" value={`${lat}, ${lng}`} />}
+              <SummaryBlock title={`Locations (${locations.length})`}>
+                {locations.map((l, i) => (
+                  <SummaryRow key={l.id} label={`${i + 1}. ${l.name}`}
+                    value={l.boundary.kind === "circle"
+                      ? `Circle · [${l.boundary.center[0].toFixed(4)}, ${l.boundary.center[1].toFixed(4)}] · r=${l.boundary.radius}m`
+                      : `Polygon · ${l.boundary.points.length} points`} />
+                ))}
+                {locations.length === 0 && <SummaryRow label="—" value="No locations added" />}
               </SummaryBlock>
               <SummaryBlock title="Assigned Employees">
                 <SummaryRow label="Count" value={`${selectedEmployees.length} employee(s)`} />
@@ -471,6 +668,21 @@ export default function CreateWorkAreaWizard({ open, onClose, onCreate }: Props)
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function AdminSelect({
+  label, value, options, onChange, disabled,
+}: { label: string; value: string; options: string[]; onChange: (v: string) => void; disabled?: boolean }) {
+  return (
+    <div>
+      <label className="block text-sm font-medium mb-1.5">{label}</label>
+      <select value={value} disabled={disabled} onChange={(e) => onChange(e.target.value)}
+        className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white disabled:bg-gray-100 disabled:text-gray-400">
+        <option value="">{disabled ? "Select the level above first" : "Select..."}</option>
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
     </div>
   );
 }
