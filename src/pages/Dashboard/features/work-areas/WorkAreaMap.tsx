@@ -168,14 +168,18 @@ export default function WorkAreaMap({
 
     const clickHandler = (e: L.LeafletMouseEvent) => {
       if (interactiveDraw.mode === "circle") {
+        const radius = interactiveDraw.radius || 200;
         interactiveDraw.onChange({
           kind: "circle",
           center: [e.latlng.lat, e.latlng.lng],
-          radius: interactiveDraw.radius || 200,
+          radius,
         });
+        // Make sure the drawn circle is actually visible at the current zoom.
+        const bounds = L.circle(e.latlng, { radius }).getBounds();
+        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 18 });
       } else {
         polyPointsRef.current = [...polyPointsRef.current, [e.latlng.lat, e.latlng.lng]];
-        interactiveDraw.onChange({ kind: "polygon", points: polyPointsRef.current });
+        interactiveDraw.onChange({ kind: "polygon", points: [...polyPointsRef.current] });
       }
     };
     map.on("click", clickHandler);
