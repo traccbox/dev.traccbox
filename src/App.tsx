@@ -104,6 +104,14 @@ const App = () => (
                   element={gate("core_dashboard_report", "view_dashboard", <LocationTracking />)}
                 />
                 <Route path="work-areas" element={gate("order_task_management", "view_orders", <WorkAreas />)} />
+                <Route path="performance/logs" element={gate("core_dashboard_report", "view_reports", <PerformanceLogs />)} />
+                <Route path="performance/reports" element={gate("core_dashboard_report", "view_reports", <Reports />)} />
+                <Route path="travel-monitoring" element={gate("core_dashboard_report", "view_dashboard", <TravelMonitoring />)} />
+                <Route path="communication/calls" element={gate("core_dashboard_report", "view_reports", <CallHistory />)} />
+                <Route path="subscription/current" element={gate("billing_subscription", "view_billing", <CurrentPlan />)} />
+                <Route path="subscription/billing" element={gate("billing_subscription", "access_invoice", <BillingHistory />)} />
+                <Route path="subscription/plans" element={gate("billing_subscription", "view_billing", <PlanComparison />)} />
+                <Route path="subscription/trial" element={gate("billing_subscription", "manage_billing", <TrialConfiguration />)} />
               </Route>
             </Route>
             {/* Terms and conditions */}
