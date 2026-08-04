@@ -33,6 +33,14 @@ import UserRolesLayout from "./pages/Dashboard/features/settings/UserRolesLayout
 import BulkUpload from "./pages/Dashboard/features/settings/BulkUpload";
 import WorkAreas from "./pages/Dashboard/features/work-areas/WorkAreas";
 import RequirePermission from "@/components/auth/RequirePermission";
+import PerformanceLogs from "./pages/Dashboard/features/performance/PerformanceLogs";
+import Reports from "./pages/Dashboard/features/performance/Reports";
+import TravelMonitoring from "./pages/Dashboard/features/travel/TravelMonitoring";
+import CurrentPlan from "./pages/Dashboard/features/subscription/CurrentPlan";
+import BillingHistory from "./pages/Dashboard/features/subscription/BillingHistory";
+import PlanComparison from "./pages/Dashboard/features/subscription/PlanComparison";
+import TrialConfiguration from "./pages/Dashboard/features/subscription/TrialConfiguration";
+import CallHistory from "./pages/Dashboard/features/communication/CallHistory";
 
 const gate = (mod: string, act: string, element: React.ReactNode) => (
   <RequirePermission module={mod} action={act}>{element}</RequirePermission>
