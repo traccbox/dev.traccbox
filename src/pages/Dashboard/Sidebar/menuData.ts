@@ -54,6 +54,65 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     ],
   },
   {
+    label: "Performance",
+    icon: "TrendingUp",
+    submenus: [
+      {
+        label: "Performance Logs",
+        to: "/dashboard/performance/logs",
+        permission: ["core_dashboard_report", "view_reports"],
+      },
+      {
+        label: "Weekly & Monthly Reports",
+        to: "/dashboard/performance/reports",
+        permission: ["core_dashboard_report", "view_reports"],
+      },
+    ],
+  },
+  {
+    label: "Travel Monitoring",
+    icon: "Navigation",
+    to: "/dashboard/travel-monitoring",
+    permission: ["core_dashboard_report", "view_dashboard"],
+  },
+  {
+    label: "Communication",
+    icon: "PhoneCall",
+    submenus: [
+      {
+        label: "Call History",
+        to: "/dashboard/communication/calls",
+        permission: ["core_dashboard_report", "view_reports"],
+      },
+    ],
+  },
+  {
+    label: "Subscription",
+    icon: "CreditCard",
+    submenus: [
+      {
+        label: "Current Plan",
+        to: "/dashboard/subscription/current",
+        permission: ["billing_subscription", "view_billing"],
+      },
+      {
+        label: "Billing History",
+        to: "/dashboard/subscription/billing",
+        permission: ["billing_subscription", "access_invoice"],
+      },
+      {
+        label: "Plan Comparison",
+        to: "/dashboard/subscription/plans",
+        permission: ["billing_subscription", "view_billing"],
+      },
+      {
+        label: "Trial Configuration",
+        to: "/dashboard/subscription/trial",
+        permission: ["billing_subscription", "manage_billing"],
+      },
+    ],
+  },
+  {
     label: "Settings & Integrations",
     icon: "Settings",
     submenus: [
