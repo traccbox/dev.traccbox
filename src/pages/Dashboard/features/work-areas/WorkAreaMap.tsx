@@ -4,10 +4,14 @@ import "leaflet/dist/leaflet.css";
 import { WorkArea, BoundaryShape } from "./types";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
+
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
-  iconUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-  shadowUrl: "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
+  iconRetinaUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png",
+  iconUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
+  shadowUrl:
+    "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
 });
 
 const TYPE_COLOR: Record<string, string> = {
@@ -29,12 +33,14 @@ interface Props {
   onSelect?: (id: string) => void;
   height?: string | number;
   satellite?: boolean;
+
   interactiveDraw?: {
     shape: BoundaryShape | null;
-    onChange: (s: BoundaryShape) => void;
+    onChange: (shape: BoundaryShape) => void;
     mode: "circle" | "polygon";
     radius?: number;
   };
+
   centerOverride?: [number, number];
   zoomOverride?: number;
 }
@@ -50,73 +56,167 @@ export default function WorkAreaMap({
   zoomOverride,
 }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
+
   const mapRef = useRef<L.Map | null>(null);
+
   const layersRef = useRef<L.Layer[]>([]);
+
   const tileRef = useRef<L.TileLayer | null>(null);
+
   const drawLayerRef = useRef<L.Layer | null>(null);
+
   const polyPointsRef = useRef<[number, number][]>([]);
 
+  /**
+   * Keep the latest interactiveDraw values here.
+   *
+   * This allows us to register the Leaflet click
+   * listener only once instead of every render.
+   */
+  const interactiveDrawRef = useRef(interactiveDraw);
+
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current, { zoomControl: true }).setView(
+    interactiveDrawRef.current = interactiveDraw;
+  }, [interactiveDraw]);
+
+  /**
+   * Create map
+   */
+  useEffect(() => {
+    if (!containerRef.current || mapRef.current) {
+      return;
+    }
+
+    const map = L.map(containerRef.current, {
+      zoomControl: true,
+    }).setView(
       centerOverride || [6.5244, 3.3792],
       zoomOverride || 13,
     );
+
     mapRef.current = map;
+
     tileRef.current = L.tileLayer(
       satellite
         ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      { attribution: "© OpenStreetMap", maxZoom: 19 },
+      {
+        attribution: "© OpenStreetMap",
+        maxZoom: 19,
+      },
     ).addTo(map);
 
-    // The map is often mounted inside modals/drawers that size after paint.
-    const t = setTimeout(() => map.invalidateSize(), 200);
-    const ro = new ResizeObserver(() => map.invalidateSize());
-    ro.observe(containerRef.current);
+    /**
+     * The map can sometimes be inside a modal/drawer
+     * whose size isn't available immediately.
+     */
+    const timeout = setTimeout(() => {
+      if (mapRef.current) {
+        map.invalidateSize();
+      }
+    }, 200);
+
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapRef.current) {
+        map.invalidateSize();
+      }
+    });
+
+    resizeObserver.observe(containerRef.current);
 
     return () => {
-      clearTimeout(t);
-      ro.disconnect();
-      map.remove();
-      mapRef.current = null;
+      clearTimeout(timeout);
+      resizeObserver.disconnect();
+
+      if (mapRef.current) {
+        mapRef.current.off();
+        mapRef.current.remove();
+        mapRef.current = null;
+      }
+
+      tileRef.current = null;
+      drawLayerRef.current = null;
+      layersRef.current = [];
     };
+
+    // Map should only be created once.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // swap tile layer
+  /**
+   * Change tile layer
+   */
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !tileRef.current) return;
-    map.removeLayer(tileRef.current);
+
+    if (!map) {
+      return;
+    }
+
+    if (tileRef.current) {
+      map.removeLayer(tileRef.current);
+    }
+
     tileRef.current = L.tileLayer(
       satellite
         ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
         : "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      { attribution: "© OpenStreetMap", maxZoom: 19 },
+      {
+        attribution: "© OpenStreetMap",
+        maxZoom: 19,
+      },
     ).addTo(map);
   }, [satellite]);
 
-  // render areas (each area may hold multiple locations/boundaries)
+  /**
+   * Render saved work areas
+   */
   useEffect(() => {
     const map = mapRef.current;
-    if (!map) return;
-    layersRef.current.forEach((l) => map.removeLayer(l));
+
+    if (!map) {
+      return;
+    }
+
+    // Remove previously rendered areas
+    layersRef.current.forEach((layer) => {
+      if (map.hasLayer(layer)) {
+        map.removeLayer(layer);
+      }
+    });
+
     layersRef.current = [];
 
-    areas.forEach((a) => {
-      const color = TYPE_COLOR[a.type] || "#1658E5";
-      const isSelected = a.id === selectedId;
+    areas.forEach((area) => {
+      const color = TYPE_COLOR[area.type] || "#1658E5";
+
+      const isSelected = area.id === selectedId;
+
       const weight = isSelected ? 3 : 1.5;
+
       const fillOpacity = isSelected ? 0.35 : 0.15;
 
-      const shapes: { label: string; boundary: BoundaryShape }[] =
-        a.locations && a.locations.length
-          ? a.locations.map((l) => ({ label: `${a.name} — ${l.name}`, boundary: l.boundary }))
-          : [{ label: a.name, boundary: a.boundary }];
+      /**
+       * An area can contain multiple locations.
+       */
+      const shapes: {
+        label: string;
+        boundary: BoundaryShape;
+      }[] = area.locations?.length
+        ? area.locations.map((location) => ({
+            label: `${area.name} — ${location.name}`,
+            boundary: location.boundary,
+          }))
+        : [
+            {
+              label: area.name,
+              boundary: area.boundary,
+            },
+          ];
 
       shapes.forEach(({ label, boundary }) => {
         let layer: L.Layer | null = null;
+
         if (boundary.kind === "circle") {
           layer = L.circle(boundary.center, {
             radius: boundary.radius,
@@ -125,7 +225,13 @@ export default function WorkAreaMap({
             fillColor: color,
             fillOpacity,
           });
-        } else if (boundary.points.length) {
+        }
+
+        if (
+          boundary.kind === "polygon" &&
+          boundary.points &&
+          boundary.points.length > 0
+        ) {
           layer = L.polygon(boundary.points, {
             color,
             weight,
@@ -133,71 +239,187 @@ export default function WorkAreaMap({
             fillOpacity,
           });
         }
-        if (layer) {
-          (layer as any).bindTooltip(label, { direction: "top" });
-          (layer as any).on("click", () => onSelect?.(a.id));
-          layer.addTo(map);
-          layersRef.current.push(layer);
+
+        if (!layer) {
+          return;
         }
+
+        layer.bindTooltip(label, {
+          direction: "top",
+        });
+
+        layer.on("click", () => {
+          onSelect?.(area.id);
+        });
+
+        layer.addTo(map);
+
+        layersRef.current.push(layer);
       });
     });
 
+    /**
+     * Fit selected area into view.
+     */
     if (selectedId) {
-      const sel = areas.find((a) => a.id === selectedId);
-      if (sel) {
+      const selectedArea = areas.find(
+        (area) => area.id === selectedId,
+      );
+
+      if (selectedArea) {
         const bounds = L.latLngBounds([]);
-        const list = sel.locations?.length
-          ? sel.locations.map((l) => l.boundary)
-          : [sel.boundary];
-        list.forEach((b) => {
-          if (b.kind === "circle") {
-            bounds.extend(L.circle(b.center, { radius: b.radius }).getBounds());
-          } else {
-            b.points.forEach((p) => bounds.extend(p));
+
+        const boundaries = selectedArea.locations?.length
+          ? selectedArea.locations.map(
+              (location) => location.boundary,
+            )
+          : [selectedArea.boundary];
+
+        boundaries.forEach((boundary) => {
+          if (boundary.kind === "circle") {
+            const circle = L.circle(boundary.center, {
+              radius: boundary.radius,
+            });
+
+            bounds.extend(circle.getBounds());
+          }
+
+          if (
+            boundary.kind === "polygon" &&
+            boundary.points?.length
+          ) {
+            boundary.points.forEach((point) => {
+              bounds.extend(point);
+            });
           }
         });
-        if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, {
+            padding: [40, 40],
+            maxZoom: 16,
+          });
+        }
       }
     }
+
+    map.invalidateSize();
   }, [areas, selectedId, onSelect]);
 
-  // interactive draw
+  /**
+   * Leaflet map click listener.
+   *
+   * IMPORTANT:
+   * This listener is registered ONCE.
+   */
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !interactiveDraw) return;
 
-    const clickHandler = (e: L.LeafletMouseEvent) => {
-      if (interactiveDraw.mode === "circle") {
-        const radius = interactiveDraw.radius || 200;
-        interactiveDraw.onChange({
+    if (!map) {
+      return;
+    }
+
+    const clickHandler = (event: L.LeafletMouseEvent) => {
+      const draw = interactiveDrawRef.current;
+
+      if (!draw) {
+        return;
+      }
+
+      /**
+       * Make sure the Leaflet event actually contains
+       * a valid LatLng.
+       */
+      if (!event.latlng) {
+        return;
+      }
+
+      const { lat, lng } = event.latlng;
+
+      /**
+       * CIRCLE
+       */
+      if (draw.mode === "circle") {
+        const radius = draw.radius || 200;
+
+        const newShape: BoundaryShape = {
           kind: "circle",
-          center: [e.latlng.lat, e.latlng.lng],
+          center: [lat, lng],
           radius,
-        });
-        // Make sure the drawn circle is actually visible at the current zoom.
-        const bounds = L.circle(e.latlng, { radius }).getBounds();
-        map.fitBounds(bounds, { padding: [60, 60], maxZoom: 18 });
-      } else {
-        polyPointsRef.current = [...polyPointsRef.current, [e.latlng.lat, e.latlng.lng]];
-        interactiveDraw.onChange({ kind: "polygon", points: [...polyPointsRef.current] });
+        };
+
+        draw.onChange(newShape);
+
+        return;
+      }
+
+      /**
+       * POLYGON
+       */
+      if (draw.mode === "polygon") {
+        polyPointsRef.current = [
+          ...polyPointsRef.current,
+          [lat, lng],
+        ];
+
+        const newShape: BoundaryShape = {
+          kind: "polygon",
+          points: [...polyPointsRef.current],
+        };
+
+        draw.onChange(newShape);
       }
     };
+
     map.on("click", clickHandler);
+
     return () => {
       map.off("click", clickHandler);
     };
-  }, [interactiveDraw]);
+  }, []);
 
-  // render current draw shape
+  /**
+   * Reset polygon points when switching mode
+   */
+  useEffect(() => {
+    polyPointsRef.current = [];
+
+    /**
+     * If we switched to circle mode, make sure
+     * old polygon points don't remain.
+     */
+  }, [interactiveDraw?.mode]);
+
+  /**
+   * Render current drawing
+   */
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !interactiveDraw) return;
+
+    if (!map) {
+      return;
+    }
+
+    /**
+     * Remove previous drawing
+     */
     if (drawLayerRef.current) {
-      map.removeLayer(drawLayerRef.current);
+      if (map.hasLayer(drawLayerRef.current)) {
+        map.removeLayer(drawLayerRef.current);
+      }
+
       drawLayerRef.current = null;
     }
-    const shape = interactiveDraw.shape;
-    if (!shape) return;
+
+    const shape = interactiveDraw?.shape;
+
+    if (!shape) {
+      return;
+    }
+
+    /**
+     * Circle
+     */
     if (shape.kind === "circle") {
       drawLayerRef.current = L.circle(shape.center, {
         radius: shape.radius,
@@ -205,30 +427,51 @@ export default function WorkAreaMap({
         fillColor: "#1658E5",
         fillOpacity: 0.25,
       }).addTo(map);
-    } else if (shape.points.length) {
+
+      return;
+    }
+
+    /**
+     * Polygon
+     */
+    if (
+      shape.kind === "polygon" &&
+      shape.points &&
+      shape.points.length > 0
+    ) {
       drawLayerRef.current = L.polygon(shape.points, {
         color: "#1658E5",
         fillColor: "#1658E5",
         fillOpacity: 0.25,
       }).addTo(map);
     }
-  }, [interactiveDraw?.shape, interactiveDraw?.radius]);
-
-  // reset poly ref when shape cleared
-  useEffect(() => {
-    if (!interactiveDraw?.shape) polyPointsRef.current = [];
   }, [interactiveDraw?.shape]);
 
+  /**
+   * Update map center
+   */
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !centerOverride) return;
-    map.setView(centerOverride, zoomOverride || map.getZoom());
+
+    if (!map || !centerOverride) {
+      return;
+    }
+
+    map.setView(
+      centerOverride,
+      zoomOverride || map.getZoom(),
+    );
   }, [centerOverride, zoomOverride]);
 
   return (
     <div
       ref={containerRef}
-      style={{ height, width: "100%", borderRadius: 12, overflow: "hidden" }}
+      style={{
+        height,
+        width: "100%",
+        borderRadius: 12,
+        overflow: "hidden",
+      }}
     />
   );
 }
