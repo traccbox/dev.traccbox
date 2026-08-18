@@ -12,19 +12,19 @@ import {
   Building2,
   LucideIcon,
 } from "lucide-react";
-import {
-  // WorkArea,
-  WORK_AREA_TYPE_OPTIONS,
-  WorkAreaType,
-  WorkAreaStatus,
-} from "./types";
-// import { MOCK_WORK_AREAS } from "./mockData";
+import { WORK_AREA_TYPE_OPTIONS, WorkAreaType, WorkAreaStatus } from "./types";
 import WorkAreaMap from "./WorkAreaMap";
 import CreateWorkAreaWizard from "./CreateWorkAreaWizard";
 import WorkAreaDetailsDrawer from "./WorkAreaDetailsDrawer";
-import { useQuery } from "@tanstack/react-query";
-import { getWorkAreas, getWorkAreaStats } from "@/api/geoFencing/apiGeoFencing";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  deleteWorkAreaById,
+  getWorkAreas,
+  getWorkAreaStats,
+} from "@/api/geoFencing/apiGeoFencing";
 import { useDebounce } from "@/hooks/useDebounce";
+import Spinner from "@/components/ui/Spinner";
+import { toast } from "sonner";
 
 const TYPE_DOT: Record<string, string> = {
   office: "bg-blue-500",
@@ -39,7 +39,6 @@ const TYPE_DOT: Record<string, string> = {
 };
 
 export default function WorkAreas() {
-  // const [areas, setAreas] = useState<WorkArea[]>(MOCK_WORK_AREAS);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | WorkAreaStatus>(
     "all",
@@ -58,10 +57,12 @@ export default function WorkAreas() {
 
   const debouncedSearch = useDebounce(search, 500);
 
+  const queryClient = useQueryClient();
+
+  // Get Work Areas
   const {
     data: workAreasResponse,
     isLoading: isLoadingWorkAreas,
-    // isFetching: isFetchingWorkAreas,
     isError: isWorkAreasError,
     error: workAreasError,
   } = useQuery({
@@ -84,6 +85,8 @@ export default function WorkAreas() {
         limit,
       }),
   });
+
+  // Get AREA STATS
   const {
     data: workAreaStats,
     isLoading: isLoadingStats,
@@ -94,11 +97,42 @@ export default function WorkAreas() {
     queryFn: getWorkAreaStats,
   });
 
-  const areas = workAreasResponse?.data ?? [];
-  // console.log("areas", areas);
+  // Delete Work Area
+
+  const { mutate: onDelete, isPending: isDeleting } = useMutation({
+    mutationFn: deleteWorkAreaById,
+
+    onSuccess: () => {
+      toast.success("Work area deleted successfully");
+
+      // Refetch the work areas list
+      queryClient.invalidateQueries({
+        queryKey: ["work-areas"],
+      });
+
+      // Refetch the statistics
+      queryClient.invalidateQueries({
+        queryKey: ["work-area-stats"],
+      });
+
+      // If the details query is cached
+      queryClient.invalidateQueries({
+        queryKey: ["work-area"],
+      });
+    },
+
+    onError: (error) => {
+      console.error("Failed to delete work area:", error);
+      toast.error("Failed to delete work area");
+    },
+  });
 
   if (isLoadingWorkAreas || isLoadingStats) {
-    return <div>Loading</div>;
+    return (
+      <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
+        <Spinner />
+      </div>
+    );
   }
 
   if (isWorkAreasError || isStatsError) {
@@ -130,7 +164,9 @@ export default function WorkAreas() {
       </div>
     );
   }
-  console.log(workAreasResponse);
+  const areas = workAreasResponse?.data ?? [];
+  console.log("HI", areas);
+
   const detailsArea = detailsId
     ? areas.find((a) => a.id === detailsId) || null
     : null;
@@ -294,10 +330,11 @@ export default function WorkAreas() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        // handleDelete(a.id);
+                        onDelete(a.id);
                       }}
-                      className="p-1.5 hover:bg-red-100 rounded-md text-red-600"
+                      className="p-1.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:text-gray-500 rounded-md text-red-600"
                       title="Delete"
+                      disabled={isDeleting}
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -338,7 +375,7 @@ export default function WorkAreas() {
             </button>
           </div>
           <WorkAreaMap
-            areas={areas.locations || []}
+            areas={areas || []}
             selectedId={selectedId}
             onSelect={setSelectedId}
             satellite={satellite}
@@ -350,12 +387,11 @@ export default function WorkAreas() {
       <CreateWorkAreaWizard
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
-        // onCreate={(wa) => setAreas((prev) => [wa, ...prev])}
       />
       <WorkAreaDetailsDrawer
-        id={selectedId}
-        area={detailsArea}
+        id={detailsId}
         onClose={() => setDetailsId(null)}
+        // area={detailsArea}
         // onDelete={handleDelete}
         // onToggle={handleToggle}
       />

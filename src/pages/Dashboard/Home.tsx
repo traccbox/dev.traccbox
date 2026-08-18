@@ -28,8 +28,6 @@ export default function Home() {
     queryFn: () => getStaffAnalytics(user?.id),
   });
 
-  console.log(analytics, "analytics");
-
   const { staffLocations } = useLocationTrackingContext();
   console.log(staffLocations, "Hello locations");
 

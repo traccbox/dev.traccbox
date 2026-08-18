@@ -1,4 +1,3 @@
-import React from "react";
 import {
   X,
   Edit,
@@ -11,12 +10,19 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { WorkArea, WORK_AREA_TYPE_OPTIONS } from "./types";
-import WorkAreaMap from "./WorkAreaMap";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  deleteWorkAreaById,
+  getWorkAreaById,
+} from "@/api/geoFencing/apiGeoFencing";
+import Spinner from "@/components/ui/Spinner";
+import { toast } from "sonner";
 
 interface Props {
-  area: WorkArea | null;
+  // area: WorkArea | null;
+  id: string;
   onClose: () => void;
-  onDelete?: (id: string) => void;
+  // onDelete?: (id: string) => void;
   onToggle?: (id: string) => void;
 }
 
@@ -28,12 +34,84 @@ const STATUS_STYLE: Record<string, string> = {
 };
 
 export default function WorkAreaDetailsDrawer({
-  area,
+  id,
   onClose,
-  onDelete,
   onToggle,
 }: Props) {
-  if (!area) return null;
+  console.log(id);
+
+  const queryClient = useQueryClient();
+
+  const {
+    data: workAreaDetails,
+    isLoading: isLoading,
+    isError: isError,
+    error: detailsError,
+  } = useQuery({
+    queryKey: ["work-area-details", id],
+    queryFn: () => getWorkAreaById(id),
+  });
+
+  const { mutate: onDelete, isPending: isDeleting } = useMutation({
+    mutationFn: deleteWorkAreaById,
+
+    onSuccess: () => {
+      toast.success("Work area deleted successfully");
+
+      // Refetch the work areas list
+      queryClient.invalidateQueries({
+        queryKey: ["work-areas"],
+      });
+
+      // Refetch the statistics
+      queryClient.invalidateQueries({
+        queryKey: ["work-area-stats"],
+      });
+
+      // If the details query is cached
+      queryClient.invalidateQueries({
+        queryKey: ["work-area"],
+      });
+
+      onClose();
+    },
+
+    onError: (error) => {
+      console.error("Failed to delete work area:", error);
+      toast.error("Failed to delete work area");
+    },
+  });
+
+  if (isLoading) {
+    return (
+      <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+          <h2 className="font-semibold text-red-700">
+            Failed to load work area information
+          </h2>
+          <p className="mt-1 text-sm text-red-600">
+            Statistics:{" "}
+            {detailsError instanceof Error
+              ? detailsError.message
+              : "Failed to load work area statistics."}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const area = workAreaDetails;
+
+  console.log(area);
+
   const typeLabel =
     WORK_AREA_TYPE_OPTIONS.find((o) => o.value === area.type)?.label ||
     area.type;
@@ -61,7 +139,7 @@ export default function WorkAreaDetailsDrawer({
               </span>
             </div>
             <p className="text-xs text-gray-500">
-              {typeLabel} · {area.address || "No address"}
+              {typeLabel} · {area.locations[0].name || "No address"}
             </p>
           </div>
           <button
@@ -87,6 +165,7 @@ export default function WorkAreaDetailsDrawer({
               {
                 icon: Trash2,
                 label: "Delete",
+                id: "delete",
                 color: "text-red-600",
                 onClick: () => onDelete?.(area.id),
               },
@@ -94,11 +173,16 @@ export default function WorkAreaDetailsDrawer({
               <button
                 key={i}
                 onClick={a.onClick}
-                className="flex flex-col items-center gap-1 py-3 border rounded-xl hover:bg-gray-50"
+                disabled={a.id === "delete" && isDeleting}
+                className="flex flex-col items-center gap-1 py-3 border rounded-xl hover:bg-gray-50 disabled:opacity-50"
               >
                 <a.icon className={`w-4 h-4 ${a.color}`} />
                 <span className="text-[11px] font-medium text-gray-700">
-                  {a.label}
+                  {a.id === "delete"
+                    ? isDeleting
+                      ? "Deleting"
+                      : "Delete"
+                    : a.label}
                 </span>
               </button>
             ))}
@@ -107,7 +191,7 @@ export default function WorkAreaDetailsDrawer({
           {/* Map */}
           <div>
             <h4 className="text-sm font-semibold mb-2">Map Preview</h4>
-            <WorkAreaMap areas={[area]} selectedId={area.id} height={220} />
+            {/* <WorkAreaMap areas={[area]} selectedId={area.id} height={220} /> */}
           </div>
 
           {/* Today's Attendance */}
@@ -175,23 +259,24 @@ export default function WorkAreaDetailsDrawer({
             <div className="border rounded-xl p-4 grid grid-cols-2 gap-y-2 text-sm">
               <span className="text-gray-500">Days</span>
               <span className="font-medium">
-                {area.rules.workingDays.join(", ")}
+                {area.rules.working_days.join(", ") || "---"}
               </span>
               <span className="text-gray-500">Hours</span>
               <span className="font-medium">
-                {area.rules.workingHours.start} – {area.rules.workingHours.end}
+                {area.rules.working_hours.start} –{" "}
+                {area.rules.working_hours.end}
               </span>
               <span className="text-gray-500">GPS Accuracy</span>
-              <span className="font-medium">{area.rules.gpsAccuracy} m</span>
+              <span className="font-medium">{area.rules.gps_accuracy} m</span>
               <span className="text-gray-500">Grace Period</span>
-              <span className="font-medium">{area.rules.gracePeriod} min</span>
+              <span className="font-medium">{area.rules.grace_period} min</span>
               <span className="text-gray-500">Auto Check-In</span>
               <span className="font-medium">
-                {area.rules.autoCheckIn ? "Yes" : "No"}
+                {area.rules.auto_check_in ? "Yes" : "No"}
               </span>
               <span className="text-gray-500">Violation Alerts</span>
               <span className="font-medium">
-                {area.rules.violationAlerts ? "On" : "Off"}
+                {area.rules.violation_alerts ? "On" : "Off"}
               </span>
             </div>
           </div>

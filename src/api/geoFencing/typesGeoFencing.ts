@@ -7,14 +7,6 @@ export interface WorkAreaStats {
   violations_today: number;
 }
 
-
-// export interface WorkAreaLocation {
-//   id: string;
-//   name: string;
-//   // Add other location fields when the API provides them
-//   [key: string]: unknown;
-// }
-
 export interface WorkArea {
   id: string;
   name: string;
@@ -48,7 +40,6 @@ export interface GetWorkAreasParams {
   limit?: number;
 }
 
-
 export interface WorkAreaLocation {
   name: string;
   method: string;
@@ -64,6 +55,7 @@ export interface WorkAreaLocation {
   lga?: string;
   ward?: string;
   community?: string;
+  id?: string;
 }
 
 export interface WorkAreaRules {
@@ -120,7 +112,6 @@ export interface WorkAreaEmployee {
 export interface WorkAreaLocationResponse extends WorkAreaLocation {
   id: string;
 }
-
 
 export interface GetWorkAreaByIDResponse extends Omit<
   CreateWorkAreaPayload,

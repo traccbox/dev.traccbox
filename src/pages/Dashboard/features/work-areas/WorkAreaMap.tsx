@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { WorkArea, BoundaryShape } from "./types";
+import { BoundaryShape } from "./types";
+import { WorkArea } from "@/api/geoFencing/typesGeoFencing";
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
@@ -89,10 +90,7 @@ export default function WorkAreaMap({
 
     const map = L.map(containerRef.current, {
       zoomControl: true,
-    }).setView(
-      centerOverride || [6.5244, 3.3792],
-      zoomOverride || 13,
-    );
+    }).setView(centerOverride || [6.5244, 3.3792], zoomOverride || 13);
 
     mapRef.current = map;
 
@@ -262,17 +260,13 @@ export default function WorkAreaMap({
      * Fit selected area into view.
      */
     if (selectedId) {
-      const selectedArea = areas.find(
-        (area) => area.id === selectedId,
-      );
+      const selectedArea = areas.find((area) => area.id === selectedId);
 
       if (selectedArea) {
         const bounds = L.latLngBounds([]);
 
         const boundaries = selectedArea.locations?.length
-          ? selectedArea.locations.map(
-              (location) => location.boundary,
-            )
+          ? selectedArea.locations.map((location) => location.boundary)
           : [selectedArea.boundary];
 
         boundaries.forEach((boundary) => {
@@ -284,10 +278,7 @@ export default function WorkAreaMap({
             bounds.extend(circle.getBounds());
           }
 
-          if (
-            boundary.kind === "polygon" &&
-            boundary.points?.length
-          ) {
+          if (boundary.kind === "polygon" && boundary.points?.length) {
             boundary.points.forEach((point) => {
               bounds.extend(point);
             });
@@ -357,10 +348,7 @@ export default function WorkAreaMap({
        * POLYGON
        */
       if (draw.mode === "polygon") {
-        polyPointsRef.current = [
-          ...polyPointsRef.current,
-          [lat, lng],
-        ];
+        polyPointsRef.current = [...polyPointsRef.current, [lat, lng]];
 
         const newShape: BoundaryShape = {
           kind: "polygon",
@@ -434,11 +422,7 @@ export default function WorkAreaMap({
     /**
      * Polygon
      */
-    if (
-      shape.kind === "polygon" &&
-      shape.points &&
-      shape.points.length > 0
-    ) {
+    if (shape.kind === "polygon" && shape.points && shape.points.length > 0) {
       drawLayerRef.current = L.polygon(shape.points, {
         color: "#1658E5",
         fillColor: "#1658E5",
@@ -457,10 +441,7 @@ export default function WorkAreaMap({
       return;
     }
 
-    map.setView(
-      centerOverride,
-      zoomOverride || map.getZoom(),
-    );
+    map.setView(centerOverride, zoomOverride || map.getZoom());
   }, [centerOverride, zoomOverride]);
 
   return (

@@ -23,8 +23,6 @@ export async function getWorkAreas(
     params,
   });
 
-  console.log("Response", response);
-
   return response.data;
 }
 

@@ -44,6 +44,7 @@ import {
 } from "@/utils/workArea";
 import { createWorkArea } from "@/api/geoFencing/apiGeoFencing";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface Props {
   open: boolean;
@@ -90,6 +91,8 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
   const [ward, setWard] = useState("");
   const [community, setCommunity] = useState("");
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
+
+  const queryClient = useQueryClient();
 
   const [rules, setRules] = useState<CreateWorkAreaPayload["rules"]>(
     INITIAL_WORK_AREA.rules,
@@ -327,6 +330,9 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
 
         if (success) {
           console.log(success);
+          queryClient.invalidateQueries({
+            queryKey: ["work-areas"],
+          });
           toast.success(
             `Work Area ${currentData.name} created successfully!!!`,
           );
@@ -533,7 +539,7 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                           <div className="text-xs text-gray-500">
                             {l.boundary.kind === "circle"
                               ? `Circle · ${l.boundary.radius}m · [${l.boundary.center[0].toFixed(4)}, ${l.boundary.center[1].toFixed(4)}]`
-                              : `Polygon · ${l.boundary.points.length} points`}
+                              : `Polygon · ${l.boundary.coordinates.length} points`}
                           </div>
                         </div>
                         <button
