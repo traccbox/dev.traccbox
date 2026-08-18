@@ -190,6 +190,8 @@ export default function WorkAreas() {
       </div>
 
       {/* Filters */}
+      {/* Filters */}
+      {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
         <div className="md:col-span-2 relative">
           <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
