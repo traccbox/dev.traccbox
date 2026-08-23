@@ -195,7 +195,7 @@ export default function WorkAreaMap({
     layersRef.current = [];
 
     areas.forEach((area) => {
-      const color = TYPE_COLOR[area.type] || "#1658E5";
+      const color = TYPE_COLOR[area.type ?? ""] || "#1658E5";
 
       const isSelected = area.id === selectedId;
 
