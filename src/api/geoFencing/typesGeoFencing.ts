@@ -7,8 +7,13 @@ export interface WorkAreaStats {
   violations_today: number;
 }
 
+export type WorkAreaBoundary =
+  | { kind: "circle"; center: [number, number]; radius: number }
+  | { kind: "polygon"; points: [number, number][] };
+
 export interface WorkArea {
   id: string;
+  boundary?: WorkAreaBoundary;
   name: string;
   description: string;
   type: string;
@@ -43,12 +48,7 @@ export interface GetWorkAreasParams {
 export interface WorkAreaLocation {
   name: string;
   method: string;
-  boundary: {
-    kind: "circle" | "polygon";
-    center?: [number, number];
-    radius?: number;
-    coordinates?: [number, number][];
-  };
+  boundary: WorkAreaBoundary;
   address?: string;
   country?: string;
   state?: string;
