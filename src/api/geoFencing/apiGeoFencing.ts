@@ -1,14 +1,28 @@
 import api from "../AxiosInstance";
 import {
+  AssignEmployeesResponse,
+  CreateLocationPayload,
   CreateWorkAreaPayload,
   CreateWorkAreaResponse,
+  GeoCountry,
+  GeoRegion,
+  GeoSearchResult,
+  GetAssignableEmployeesParams,
+  GetAssignableEmployeesResponse,
+  GetViolationsResponse,
   GetWorkAreaByIDResponse,
   GetWorkAreasParams,
   GetWorkAreasResponse,
   ToggleWorkAreaStatusPayload,
+  UpdateLocationPayload,
   UpdateWorkAreaPayload,
+  WorkAreaAttendance,
+  WorkAreaLocationResponse,
+  WorkAreaPresence,
+  WorkAreaRules,
   WorkAreaStats,
 } from "./typesGeoFencing";
+
 
 export async function getWorkAreaStats(): Promise<WorkAreaStats> {
   const response = await api.get<WorkAreaStats>("/work-areas/stats");
