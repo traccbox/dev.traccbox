@@ -2,7 +2,16 @@ import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { BoundaryShape } from "./types";
-import { WorkArea } from "@/api/geoFencing/typesGeoFencing";
+import { WorkAreaBoundary } from "@/api/geoFencing/typesGeoFencing";
+
+/** Minimal shape the map needs — works for both list items and drafts. */
+export interface MapArea {
+  id: string;
+  name: string;
+  type?: string;
+  boundary?: WorkAreaBoundary | null;
+  locations?: { name: string; boundary: WorkAreaBoundary }[];
+}
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
 
@@ -29,7 +38,7 @@ const TYPE_COLOR: Record<string, string> = {
 };
 
 interface Props {
-  areas: WorkArea[];
+  areas: MapArea[];
   selectedId?: string | null;
   onSelect?: (id: string) => void;
   height?: string | number;
@@ -186,7 +195,7 @@ export default function WorkAreaMap({
     layersRef.current = [];
 
     areas.forEach((area) => {
-      const color = TYPE_COLOR[area.type] || "#1658E5";
+      const color = TYPE_COLOR[area.type ?? ""] || "#1658E5";
 
       const isSelected = area.id === selectedId;
 
@@ -205,12 +214,14 @@ export default function WorkAreaMap({
             label: `${area.name} — ${location.name}`,
             boundary: location.boundary,
           }))
-        : [
-            {
-              label: area.name,
-              boundary: area.boundary,
-            },
-          ];
+        : area.boundary
+          ? [
+              {
+                label: area.name,
+                boundary: area.boundary,
+              },
+            ]
+          : [];
 
       shapes.forEach(({ label, boundary }) => {
         let layer: L.Layer | null = null;
@@ -267,7 +278,9 @@ export default function WorkAreaMap({
 
         const boundaries = selectedArea.locations?.length
           ? selectedArea.locations.map((location) => location.boundary)
-          : [selectedArea.boundary];
+          : selectedArea.boundary
+            ? [selectedArea.boundary]
+            : [];
 
         boundaries.forEach((boundary) => {
           if (boundary.kind === "circle") {

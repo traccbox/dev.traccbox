@@ -17,7 +17,7 @@ import {
   Trash2,
   Plus,
 } from "lucide-react";
-import WorkAreaMap from "./WorkAreaMap";
+import WorkAreaMap, { MapArea } from "./WorkAreaMap";
 import {
   WorkArea,
   WorkAreaType,
@@ -361,19 +361,18 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
   };
 
   // Preview areas: saved locations rendered on any wizard map
-  const previewAreas: WorkArea[] = locations.length
+  const previewAreas: MapArea[] = locations.length
     ? [
         {
           id: "draft",
           name: name || "New Work Area",
           type,
-          status: "active",
           boundary: locations[0].boundary,
-          locations,
-          employees: [],
-          rules,
-          createdAt: "",
-        } as WorkArea,
+          locations: locations.map((l) => ({
+            name: l.name,
+            boundary: l.boundary,
+          })),
+        },
       ]
     : [];
 
@@ -539,7 +538,7 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                           <div className="text-xs text-gray-500">
                             {l.boundary.kind === "circle"
                               ? `Circle · ${l.boundary.radius}m · [${l.boundary.center[0].toFixed(4)}, ${l.boundary.center[1].toFixed(4)}]`
-                              : `Polygon · ${l.boundary.coordinates.length} points`}
+                              : `Polygon · ${l.boundary.points.length} points`}
                           </div>
                         </div>
                         <button
