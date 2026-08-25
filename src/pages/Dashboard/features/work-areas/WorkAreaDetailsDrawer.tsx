@@ -1,15 +1,18 @@
+import { useState } from "react";
 import {
   X,
   Edit,
-  Copy,
   Power,
   Trash2,
   MapPin,
   Users,
   Clock,
+  Plus,
   LucideIcon,
+  Loader2,
+  UserMinus,
 } from "lucide-react";
-import { WorkArea, WORK_AREA_TYPE_OPTIONS } from "./types";
+import { WORK_AREA_TYPE_OPTIONS } from "./types";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteWorkAreaById,
@@ -17,13 +20,30 @@ import {
 } from "@/api/geoFencing/apiGeoFencing";
 import Spinner from "@/components/ui/Spinner";
 import { toast } from "sonner";
+import WorkAreaMap from "./WorkAreaMap";
+import ConfirmDialog from "./components/ConfirmDialog";
+import RulesPanel from "./components/RulesPanel";
+import PresencePanel from "./components/PresencePanel";
+import AttendancePanel from "./components/AttendancePanel";
+import ViolationsPanel from "./components/ViolationsPanel";
+import LocationEditorModal from "./components/LocationEditorModal";
+import AssignEmployeesModal from "./components/AssignEmployeesModal";
+import EditWorkAreaModal from "./components/EditWorkAreaModal";
+import {
+  getApiErrorMessage,
+  useAddLocation,
+  useAssignEmployees,
+  useDeleteLocation,
+  useRemoveEmployee,
+  useToggleWorkAreaStatus,
+  useUpdateLocation,
+  useUpdateWorkArea,
+} from "@/api/geoFencing/hooksGeoFencing";
+import { WorkAreaLocationResponse } from "@/api/geoFencing/typesGeoFencing";
 
 interface Props {
-  // area: WorkArea | null;
   id: string;
   onClose: () => void;
-  // onDelete?: (id: string) => void;
-  onToggle?: (id: string) => void;
 }
 
 const STATUS_STYLE: Record<string, string> = {
@@ -33,20 +53,37 @@ const STATUS_STYLE: Record<string, string> = {
   offline: "bg-gray-100 text-gray-600",
 };
 
-export default function WorkAreaDetailsDrawer({
-  id,
-  onClose,
-  onToggle,
-}: Props) {
-  console.log(id);
+const TABS = [
+  "Overview",
+  "Locations",
+  "Employees",
+  "Rules",
+  "Presence",
+  "Attendance",
+  "Violations",
+] as const;
 
+type Tab = (typeof TABS)[number];
+
+export default function WorkAreaDetailsDrawer({ id, onClose }: Props) {
   const queryClient = useQueryClient();
+  const [tab, setTab] = useState<Tab>("Overview");
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [locationModal, setLocationModal] = useState<{
+    open: boolean;
+    location: WorkAreaLocationResponse | null;
+  }>({ open: false, location: null });
+  const [deleteLocationId, setDeleteLocationId] = useState<string | null>(null);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [removeEmployeeId, setRemoveEmployeeId] = useState<string | null>(null);
 
   const {
-    data: workAreaDetails,
-    isLoading: isLoading,
-    isError: isError,
+    data: area,
+    isLoading,
+    isError,
     error: detailsError,
+    refetch,
   } = useQuery({
     queryKey: ["work-area-details", id],
     queryFn: () => getWorkAreaById(id),
@@ -54,234 +91,438 @@ export default function WorkAreaDetailsDrawer({
 
   const { mutate: onDelete, isPending: isDeleting } = useMutation({
     mutationFn: deleteWorkAreaById,
-
     onSuccess: () => {
       toast.success("Work area deleted successfully");
-
-      // Refetch the work areas list
-      queryClient.invalidateQueries({
-        queryKey: ["work-areas"],
-      });
-
-      // Refetch the statistics
-      queryClient.invalidateQueries({
-        queryKey: ["work-area-stats"],
-      });
-
-      // If the details query is cached
-      queryClient.invalidateQueries({
-        queryKey: ["work-area"],
-      });
-
+      queryClient.invalidateQueries({ queryKey: ["work-areas"] });
+      queryClient.invalidateQueries({ queryKey: ["work-area-stats"] });
       onClose();
     },
-
-    onError: (error) => {
-      console.error("Failed to delete work area:", error);
-      toast.error("Failed to delete work area");
-    },
+    onError: (err) =>
+      toast.error(getApiErrorMessage(err, "Failed to delete work area")),
   });
+
+  const updateArea = useUpdateWorkArea(id);
+  const toggleStatus = useToggleWorkAreaStatus(id);
+  const addLocation = useAddLocation(id);
+  const updateLocation = useUpdateLocation(id);
+  const deleteLocation = useDeleteLocation(id);
+  const assignEmployees = useAssignEmployees(id);
+  const removeEmployee = useRemoveEmployee(id);
 
   if (isLoading) {
     return (
-      <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
-        <Spinner />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="p-6">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
-          <h2 className="font-semibold text-red-700">
-            Failed to load work area information
-          </h2>
-          <p className="mt-1 text-sm text-red-600">
-            Statistics:{" "}
-            {detailsError instanceof Error
-              ? detailsError.message
-              : "Failed to load work area statistics."}
-          </p>
+      <div className="fixed inset-0 z-[90] flex justify-end">
+        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+        <div className="relative bg-white w-full max-w-2xl h-full flex items-center justify-center">
+          <Spinner />
         </div>
       </div>
     );
   }
 
-  const area = workAreaDetails;
-
-  console.log(area);
+  if (isError || !area) {
+    return (
+      <div className="fixed inset-0 z-[90] flex justify-end">
+        <div className="absolute inset-0 bg-black/40" onClick={onClose} />
+        <div className="relative bg-white w-full max-w-2xl h-full p-6">
+          <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+            <h2 className="font-semibold text-red-700">
+              Failed to load work area
+            </h2>
+            <p className="mt-1 text-sm text-red-600">
+              {detailsError instanceof Error
+                ? detailsError.message
+                : "Something went wrong."}
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                onClick={() => refetch()}
+                className="px-4 py-2 rounded-lg bg-[#1658E5] text-white text-sm font-semibold"
+              >
+                Retry
+              </button>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 rounded-lg border text-sm"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const typeLabel =
     WORK_AREA_TYPE_OPTIONS.find((o) => o.value === area.type)?.label ||
     area.type;
-  const inside = area.employees.filter((e) => e.status === "inside").length;
-  const outside = area.employees.filter(
+  const employees = area.employees ?? [];
+  const locations = area.locations ?? [];
+  const inside = employees.filter((e) => e.status === "inside").length;
+  const outside = employees.filter(
     (e) => e.status === "outside" || e.status === "near",
   ).length;
 
   return (
     <div className="fixed inset-0 z-[90] flex justify-end">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white w-full max-w-xl h-full overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-200">
-        <div className="sticky top-0 bg-white border-b px-5 py-4 flex items-start justify-between z-10">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="text-lg font-bold">{area.name}</h3>
-              <span
-                className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
-                  area.status === "active"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-gray-100 text-gray-600"
+      <div className="relative bg-white w-full max-w-2xl h-full overflow-y-auto shadow-2xl animate-in slide-in-from-right duration-200">
+        <div className="sticky top-0 bg-white border-b px-5 pt-4 z-10">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <h3 className="text-lg font-bold">{area.name}</h3>
+                <span
+                  className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                    area.status === "active"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-gray-100 text-gray-600"
+                  }`}
+                >
+                  {String(area.status).toUpperCase()}
+                </span>
+              </div>
+              <p className="text-xs text-gray-500">
+                {typeLabel} · {locations[0]?.name || "No location"}
+              </p>
+            </div>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-lg"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="flex gap-4 mt-3 overflow-x-auto">
+            {TABS.map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`pb-2.5 text-sm whitespace-nowrap border-b-2 ${
+                  tab === t
+                    ? "border-[#1658E5] text-[#1658E5] font-semibold"
+                    : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                {area.status.toUpperCase()}
-              </span>
-            </div>
-            <p className="text-xs text-gray-500">
-              {typeLabel} · {area.locations[0].name || "No address"}
-            </p>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="p-5 space-y-5">
-          {/* Quick actions */}
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { icon: Edit, label: "Edit", color: "text-blue-600" },
-              { icon: Copy, label: "Duplicate", color: "text-purple-600" },
-              {
-                icon: Power,
-                label: area.status === "active" ? "Disable" : "Enable",
-                color: "text-orange-600",
-                onClick: () => onToggle?.(area.id),
-              },
-              {
-                icon: Trash2,
-                label: "Delete",
-                id: "delete",
-                color: "text-red-600",
-                onClick: () => onDelete?.(area.id),
-              },
-            ].map((a, i) => (
-              <button
-                key={i}
-                onClick={a.onClick}
-                disabled={a.id === "delete" && isDeleting}
-                className="flex flex-col items-center gap-1 py-3 border rounded-xl hover:bg-gray-50 disabled:opacity-50"
-              >
-                <a.icon className={`w-4 h-4 ${a.color}`} />
-                <span className="text-[11px] font-medium text-gray-700">
-                  {a.id === "delete"
-                    ? isDeleting
-                      ? "Deleting"
-                      : "Delete"
-                    : a.label}
-                </span>
+                {t}
               </button>
             ))}
           </div>
+        </div>
 
-          {/* Map */}
-          <div>
-            <h4 className="text-sm font-semibold mb-2">Map Preview</h4>
-            {/* <WorkAreaMap areas={[area]} selectedId={area.id} height={220} /> */}
-          </div>
+        <div className="p-5 space-y-5">
+          {tab === "Overview" && (
+            <>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  onClick={() => setEditOpen(true)}
+                  className="flex flex-col items-center gap-1 py-3 border rounded-xl hover:bg-gray-50"
+                >
+                  <Edit className="w-4 h-4 text-blue-600" />
+                  <span className="text-[11px] font-medium text-gray-700">
+                    Edit
+                  </span>
+                </button>
+                <button
+                  onClick={() =>
+                    toggleStatus.mutate(
+                      area.status === "active" ? "inactive" : "active",
+                    )
+                  }
+                  disabled={toggleStatus.isPending}
+                  className="flex flex-col items-center gap-1 py-3 border rounded-xl hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {toggleStatus.isPending ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-orange-600" />
+                  ) : (
+                    <Power className="w-4 h-4 text-orange-600" />
+                  )}
+                  <span className="text-[11px] font-medium text-gray-700">
+                    {area.status === "active" ? "Disable" : "Enable"}
+                  </span>
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  disabled={isDeleting}
+                  className="flex flex-col items-center gap-1 py-3 border rounded-xl hover:bg-gray-50 disabled:opacity-50"
+                >
+                  <Trash2 className="w-4 h-4 text-red-600" />
+                  <span className="text-[11px] font-medium text-gray-700">
+                    {isDeleting ? "Deleting" : "Delete"}
+                  </span>
+                </button>
+              </div>
 
-          {/* Today's Attendance */}
-          <div>
-            <h4 className="text-sm font-semibold mb-2">Today's Attendance</h4>
-            <div className="grid grid-cols-3 gap-2">
-              <StatMini
-                icon={Users}
-                value={area.employees.length}
-                label="Assigned"
-                color="bg-blue-50 text-[#1658E5]"
-              />
-              <StatMini
-                icon={MapPin}
-                value={inside}
-                label="Inside"
-                color="bg-green-50 text-green-600"
-              />
-              <StatMini
-                icon={Clock}
-                value={outside}
-                label="Outside"
-                color="bg-orange-50 text-orange-600"
-              />
-            </div>
-          </div>
+              {area.description && (
+                <p className="text-sm text-gray-600">{area.description}</p>
+              )}
 
-          {/* Employees */}
-          <div>
-            <h4 className="text-sm font-semibold mb-2">Assigned Employees</h4>
-            <div className="border rounded-xl divide-y">
-              {area.employees.length === 0 && (
-                <div className="p-4 text-sm text-gray-500 text-center">
-                  No employees assigned
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Map Preview</h4>
+                <div className="rounded-xl overflow-hidden border">
+                  <WorkAreaMap
+                    areas={[
+                      {
+                        id: area.id,
+                        name: area.name,
+                        type: area.type,
+                        locations: locations.map((l) => ({
+                          name: l.name,
+                          boundary: l.boundary,
+                        })),
+                      },
+                    ]}
+                    selectedId={area.id}
+                    height={220}
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <StatMini
+                  icon={Users}
+                  value={employees.length}
+                  label="Assigned"
+                  color="bg-blue-50 text-[#1658E5]"
+                />
+                <StatMini
+                  icon={MapPin}
+                  value={inside}
+                  label="Inside"
+                  color="bg-green-50 text-green-600"
+                />
+                <StatMini
+                  icon={Clock}
+                  value={outside}
+                  label="Outside"
+                  color="bg-orange-50 text-orange-600"
+                />
+              </div>
+            </>
+          )}
+
+          {tab === "Locations" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">
+                  Locations ({locations.length})
+                </h4>
+                <button
+                  onClick={() => setLocationModal({ open: true, location: null })}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1658E5] hover:underline"
+                >
+                  <Plus className="w-4 h-4" /> Add Location
+                </button>
+              </div>
+
+              {locations.length === 0 ? (
+                <div className="p-8 text-center border rounded-xl">
+                  <MapPin className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm text-gray-500">
+                    No locations yet. Add one to define the geofence.
+                  </p>
+                </div>
+              ) : (
+                <div className="border rounded-xl divide-y">
+                  {locations.map((l) => (
+                    <div
+                      key={l.id}
+                      className="flex items-center gap-3 px-4 py-3"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{l.name}</p>
+                        <p className="text-xs text-gray-500 truncate">
+                          {l.boundary?.kind === "circle"
+                            ? `Circle · ${l.boundary.radius}m`
+                            : `Polygon · ${l.boundary?.points?.length ?? 0} points`}
+                          {l.address ? ` · ${l.address}` : ""}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() =>
+                          setLocationModal({ open: true, location: l })
+                        }
+                        className="p-2 hover:bg-gray-100 rounded-lg"
+                      >
+                        <Edit className="w-4 h-4 text-blue-600" />
+                      </button>
+                      <button
+                        onClick={() => setDeleteLocationId(l.id)}
+                        className="p-2 hover:bg-gray-100 rounded-lg"
+                      >
+                        <Trash2 className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
+                  ))}
                 </div>
               )}
-              {area.employees.map((e) => (
-                <div key={e.id} className="flex items-center gap-3 px-4 py-2.5">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white flex items-center justify-center text-xs font-semibold">
-                    {e.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")
-                      .slice(0, 2)}
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{e.name}</div>
-                    <div className="text-xs text-gray-500">{e.role}</div>
-                  </div>
-                  {e.status && (
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${STATUS_STYLE[e.status]}`}
-                    >
-                      {e.status.toUpperCase()}
-                    </span>
-                  )}
-                </div>
-              ))}
             </div>
-          </div>
+          )}
 
-          {/* Working rules */}
-          <div>
-            <h4 className="text-sm font-semibold mb-2">Working Rules</h4>
-            <div className="border rounded-xl p-4 grid grid-cols-2 gap-y-2 text-sm">
-              <span className="text-gray-500">Days</span>
-              <span className="font-medium">
-                {area.rules.working_days.join(", ") || "---"}
-              </span>
-              <span className="text-gray-500">Hours</span>
-              <span className="font-medium">
-                {area.rules.working_hours.start} –{" "}
-                {area.rules.working_hours.end}
-              </span>
-              <span className="text-gray-500">GPS Accuracy</span>
-              <span className="font-medium">{area.rules.gps_accuracy} m</span>
-              <span className="text-gray-500">Grace Period</span>
-              <span className="font-medium">{area.rules.grace_period} min</span>
-              <span className="text-gray-500">Auto Check-In</span>
-              <span className="font-medium">
-                {area.rules.auto_check_in ? "Yes" : "No"}
-              </span>
-              <span className="text-gray-500">Violation Alerts</span>
-              <span className="font-medium">
-                {area.rules.violation_alerts ? "On" : "Off"}
-              </span>
+          {tab === "Employees" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h4 className="text-sm font-semibold">
+                  Assigned Employees ({employees.length})
+                </h4>
+                <button
+                  onClick={() => setAssignOpen(true)}
+                  className="inline-flex items-center gap-1.5 text-sm font-semibold text-[#1658E5] hover:underline"
+                >
+                  <Plus className="w-4 h-4" /> Assign
+                </button>
+              </div>
+
+              {employees.length === 0 ? (
+                <div className="p-8 text-center border rounded-xl">
+                  <Users className="w-8 h-8 mx-auto mb-2 text-gray-300" />
+                  <p className="text-sm text-gray-500">No employees assigned</p>
+                </div>
+              ) : (
+                <div className="border rounded-xl divide-y">
+                  {employees.map((e) => (
+                    <div
+                      key={e.id}
+                      className="flex items-center gap-3 px-4 py-2.5"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 text-white flex items-center justify-center text-xs font-semibold">
+                        {e.name
+                          ?.split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate">
+                          {e.name}
+                        </div>
+                        <div className="text-xs text-gray-500 truncate">
+                          {[e.role, e.department, e.team]
+                            .filter(Boolean)
+                            .join(" · ") || "—"}
+                        </div>
+                      </div>
+                      {e.status && (
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-semibold ${
+                            STATUS_STYLE[e.status] ?? STATUS_STYLE.offline
+                          }`}
+                        >
+                          {e.status.toUpperCase()}
+                        </span>
+                      )}
+                      <button
+                        onClick={() => setRemoveEmployeeId(e.id)}
+                        className="p-2 hover:bg-gray-100 rounded-lg"
+                        title="Remove from work area"
+                      >
+                        <UserMinus className="w-4 h-4 text-red-600" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-          </div>
+          )}
+
+          {tab === "Rules" && (
+            <RulesPanel workAreaId={id} fallback={area.rules} />
+          )}
+          {tab === "Presence" && <PresencePanel workAreaId={id} />}
+          {tab === "Attendance" && <AttendancePanel workAreaId={id} />}
+          {tab === "Violations" && <ViolationsPanel workAreaId={id} />}
         </div>
       </div>
+
+      <EditWorkAreaModal
+        open={editOpen}
+        saving={updateArea.isPending}
+        initial={{
+          name: area.name,
+          description: area.description,
+          type: area.type,
+          status: area.status === "inactive" ? "inactive" : "active",
+        }}
+        onClose={() => setEditOpen(false)}
+        onSave={(data) =>
+          updateArea.mutate(data, { onSuccess: () => setEditOpen(false) })
+        }
+      />
+
+      {locationModal.open && (
+        <LocationEditorModal
+          open
+          location={locationModal.location}
+          saving={addLocation.isPending || updateLocation.isPending}
+          onClose={() => setLocationModal({ open: false, location: null })}
+          onSave={(payload) => {
+            const done = {
+              onSuccess: () => setLocationModal({ open: false, location: null }),
+            };
+            if (locationModal.location?.id) {
+              updateLocation.mutate(
+                { locationId: locationModal.location.id, data: payload },
+                done,
+              );
+            } else {
+              addLocation.mutate(payload, done);
+            }
+          }}
+        />
+      )}
+
+      <AssignEmployeesModal
+        open={assignOpen}
+        assignedIds={employees.map((e) => e.id)}
+        saving={assignEmployees.isPending}
+        onClose={() => setAssignOpen(false)}
+        onAssign={(ids) =>
+          assignEmployees.mutate(ids, { onSuccess: () => setAssignOpen(false) })
+        }
+      />
+
+      <ConfirmDialog
+        open={confirmDelete}
+        title="Delete work area"
+        message={`"${area.name}" and its geofence configuration will be permanently removed.`}
+        confirmLabel="Delete"
+        loading={isDeleting}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => onDelete(area.id)}
+      />
+
+      <ConfirmDialog
+        open={!!deleteLocationId}
+        title="Remove location"
+        message="This location and its boundary will be removed from the work area."
+        confirmLabel="Remove"
+        loading={deleteLocation.isPending}
+        onCancel={() => setDeleteLocationId(null)}
+        onConfirm={() =>
+          deleteLocationId &&
+          deleteLocation.mutate(deleteLocationId, {
+            onSuccess: () => setDeleteLocationId(null),
+          })
+        }
+      />
+
+      <ConfirmDialog
+        open={!!removeEmployeeId}
+        title="Remove employee"
+        message="This employee will no longer be assigned to this work area."
+        confirmLabel="Remove"
+        loading={removeEmployee.isPending}
+        onCancel={() => setRemoveEmployeeId(null)}
+        onConfirm={() =>
+          removeEmployeeId &&
+          removeEmployee.mutate(removeEmployeeId, {
+            onSuccess: () => setRemoveEmployeeId(null),
+          })
+        }
+      />
     </div>
   );
 }
