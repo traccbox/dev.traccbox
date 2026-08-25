@@ -8,7 +8,8 @@ export default function ViolationsPanel({ workAreaId }: { workAreaId: string }) 
   const limit = 10;
   const { data, isLoading, isError, error, refetch } = useWorkAreaViolations(
     workAreaId,
-    { page, limit },
+    page,
+    limit,
   );
 
   if (isLoading) {
