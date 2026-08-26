@@ -3,6 +3,8 @@ import { Circle, Hexagon, Loader2, X } from "lucide-react";
 import WorkAreaMap, { MapArea } from "../WorkAreaMap";
 import GeoCascade, { GeoSelection } from "./GeoCascade";
 import MapSearchBox from "./MapSearchBox";
+import { useDebounce } from "@/hooks/useDebounce";
+import { usePlaceSuggestions, usePlaceCoordinates } from "@/api/geoFencing/hooksGeoFencing";
 import {
   WorkAreaBoundary,
   WorkAreaLocationResponse,
@@ -59,6 +61,15 @@ export default function LocationEditorModal({
   );
   const [geo, setGeo] = useState<GeoSelection>({});
   const [touched, setTouched] = useState(false);
+
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const debouncedName = useDebounce(name, 400);
+  const { data: suggestionRes, isFetching: suggestionsFetching } = usePlaceSuggestions(
+    debouncedName,
+    suggestionsOpen && debouncedName.trim().length > 1
+  );
+  const nameSuggestions = suggestionRes?.suggestions || [];
+  const resolveCoords = usePlaceCoordinates();
 
   const interactiveDraw = useMemo(
     () => ({ shape, onChange: setShape, mode: drawMode, radius }),
@@ -138,16 +149,55 @@ export default function LocationEditorModal({
 
         <div className="px-6 py-5 space-y-4 max-h-[65vh] overflow-y-auto">
           <div className="grid md:grid-cols-2 gap-4">
-            <div>
+            <div className="relative">
               <label className="block text-sm font-medium mb-1.5">
                 Location Name *
               </label>
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Ikeja HQ"
-                className="w-full px-3 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="relative">
+                <input
+                  value={name}
+                  onChange={(e) => {
+                    setName(e.target.value);
+                    setSuggestionsOpen(true);
+                  }}
+                  onFocus={() => setSuggestionsOpen(true)}
+                  onBlur={() => setTimeout(() => setSuggestionsOpen(false), 250)}
+                  placeholder="e.g. Ikeja HQ"
+                  className="w-full px-3 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                />
+                {(suggestionsFetching || resolveCoords.isPending) && (
+                  <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
+                )}
+              </div>
+              {suggestionsOpen && nameSuggestions.length > 0 && (
+                <div className="absolute left-0 right-0 z-[500] mt-1 bg-white border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                  {nameSuggestions.map((r, i) => (
+                    <button
+                      key={`${r.place_id}-${i}`}
+                      type="button"
+                      disabled={resolveCoords.isPending}
+                      onClick={() => {
+                        resolveCoords.mutate(r.place_id, {
+                          onSuccess: (coords) => {
+                            setName(r.description);
+                            setSuggestionsOpen(false);
+                            setLat(coords.latitude.toString());
+                            setLng(coords.longitude.toString());
+                            setShape({
+                              kind: "circle",
+                              center: [coords.latitude, coords.longitude],
+                              radius,
+                            });
+                          },
+                        });
+                      }}
+                      className="w-full text-left px-3 py-2.5 text-xs hover:bg-blue-50 border-b last:border-b-0 text-gray-800 disabled:opacity-50"
+                    >
+                      {r.description}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
             <div>
               <label className="block text-sm font-medium mb-1.5">Address</label>

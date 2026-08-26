@@ -11,6 +11,12 @@ import {
   Layers,
   Building2,
   LucideIcon,
+  Compass,
+  Crosshair,
+  AlertTriangle,
+  MapPin,
+  AlertCircle,
+  XCircle,
 } from "lucide-react";
 import { WORK_AREA_TYPE_OPTIONS, WorkAreaType, WorkAreaStatus } from "./types";
 import WorkAreaMap from "./WorkAreaMap";
@@ -22,9 +28,11 @@ import {
   getWorkAreas,
   getWorkAreaStats,
 } from "@/api/geoFencing/apiGeoFencing";
+import { useMyWorkAreas, useCheckGeofence, useAssignableEmployees } from "@/api/geoFencing/hooksGeoFencing";
 import { useDebounce } from "@/hooks/useDebounce";
 import Spinner from "@/components/ui/Spinner";
 import { toast } from "sonner";
+import { useAuth } from "@/components/auth/AuthProvider";
 
 const TYPE_DOT: Record<string, string> = {
   office: "bg-blue-500",
@@ -39,6 +47,9 @@ const TYPE_DOT: Record<string, string> = {
 };
 
 export default function WorkAreas() {
+  const { isStaff, user, staff } = useAuth();
+  const companyId = staff?.company_id || user?.id || "";
+  const [activeTab, setActiveTab] = useState<"all" | "mine">(isStaff ? "mine" : "all");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | WorkAreaStatus>(
     "all",
@@ -54,6 +65,73 @@ export default function WorkAreas() {
   const [satellite, setSatellite] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
   const [mapSearch, setMapSearch] = useState("");
+
+  // Geofence Tester State
+  const [testerLat, setTesterLat] = useState("");
+  const [testerLng, setTesterLng] = useState("");
+  const [testerAccuracy, setTesterAccuracy] = useState("10");
+  const [testerEmployeeId, setTesterEmployeeId] = useState("");
+  const [testerQrCode, setTesterQrCode] = useState("");
+  const [testerResult, setTesterResult] = useState<any | null>(null);
+
+  const checkGeofenceMutation = useCheckGeofence();
+  const { data: assignableEmployeesData } = useAssignableEmployees({ limit: 100 });
+  const employeesList = assignableEmployeesData?.data ?? [];
+
+  const handleCheckGeofence = () => {
+    const latNum = parseFloat(testerLat);
+    const lngNum = parseFloat(testerLng);
+    const accNum = parseFloat(testerAccuracy) || 0;
+
+    if (isNaN(latNum) || isNaN(lngNum)) {
+      toast.error("Please enter a valid latitude and longitude.");
+      return;
+    }
+
+    checkGeofenceMutation.mutate(
+      {
+        employee_id: testerEmployeeId,
+        lat: latNum,
+        lng: lngNum,
+        accuracy: accNum,
+        company_id: companyId,
+        qr_code: testerQrCode,
+      },
+      {
+        onSuccess: (data) => {
+          setTesterResult(data);
+          toast.success("Geofence check completed!");
+        },
+        onError: (err: any) => {
+          console.error("Geofence check failed:", err);
+          setTesterResult(null);
+        },
+      }
+    );
+  };
+
+  const handleGetCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    toast.info("Retrieving your current location...");
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setTesterLat(position.coords.latitude.toFixed(6));
+        setTesterLng(position.coords.longitude.toFixed(6));
+        if (position.coords.accuracy) {
+          setTesterAccuracy(Math.round(position.coords.accuracy).toString());
+        }
+        toast.success("Location retrieved!");
+      },
+      (error) => {
+        console.error("Error getting location:", error);
+        toast.error(`Failed to get location: ${error.message}`);
+      }
+    );
+  };
 
   const debouncedSearch = useDebounce(search, 500);
 
@@ -84,7 +162,16 @@ export default function WorkAreas() {
         page,
         limit,
       }),
+    enabled: activeTab === "all",
   });
+
+  // Get My Work Areas
+  const {
+    data: myWorkAreasResponse,
+    isLoading: isLoadingMyWorkAreas,
+    isError: isMyWorkAreasError,
+    error: myWorkAreasError,
+  } = useMyWorkAreas(activeTab === "mine");
 
   // Get AREA STATS
   const {
@@ -95,39 +182,41 @@ export default function WorkAreas() {
   } = useQuery({
     queryKey: ["work-area-stats"],
     queryFn: getWorkAreaStats,
+    enabled: !isStaff,
   });
 
-  // Delete Work Area
+  const stats = workAreaStats || {
+    total_areas: 0,
+    active_areas: 0,
+    inactive_areas: 0,
+    employees_assigned: 0,
+    employees_inside: 0,
+    violations_today: 0,
+  };
 
+  // Delete Work Area
   const { mutate: onDelete, isPending: isDeleting } = useMutation({
     mutationFn: deleteWorkAreaById,
-
     onSuccess: () => {
       toast.success("Work area deleted successfully");
-
-      // Refetch the work areas list
-      queryClient.invalidateQueries({
-        queryKey: ["work-areas"],
-      });
-
-      // Refetch the statistics
-      queryClient.invalidateQueries({
-        queryKey: ["work-area-stats"],
-      });
-
-      // If the details query is cached
-      queryClient.invalidateQueries({
-        queryKey: ["work-area"],
-      });
+      queryClient.invalidateQueries({ queryKey: ["work-areas"] });
+      queryClient.invalidateQueries({ queryKey: ["my-work-areas"] });
+      queryClient.invalidateQueries({ queryKey: ["work-area-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["work-area"] });
     },
-
     onError: (error) => {
       console.error("Failed to delete work area:", error);
       toast.error("Failed to delete work area");
     },
   });
 
-  if (isLoadingWorkAreas || isLoadingStats) {
+  const isLoading = activeTab === "mine" ? isLoadingMyWorkAreas : isLoadingWorkAreas;
+  const isError = activeTab === "mine" ? isMyWorkAreasError : isWorkAreasError;
+  const error = activeTab === "mine" ? myWorkAreasError : workAreasError;
+  const showStatsLoading = !isStaff && isLoadingStats;
+  const showStatsError = !isStaff && isStatsError;
+
+  if (isLoading || showStatsLoading) {
     return (
       <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
         <Spinner />
@@ -135,7 +224,7 @@ export default function WorkAreas() {
     );
   }
 
-  if (isWorkAreasError || isStatsError) {
+  if (isError || showStatsError) {
     return (
       <div className="p-6">
         <div className="rounded-xl border border-red-200 bg-red-50 p-5">
@@ -143,16 +232,16 @@ export default function WorkAreas() {
             Failed to load work area information
           </h2>
 
-          {isWorkAreasError && (
+          {isError && (
             <p className="mt-2 text-sm text-red-600">
               Work areas:{" "}
-              {workAreasError instanceof Error
-                ? workAreasError.message
+              {error instanceof Error
+                ? error.message
                 : "Failed to load work areas."}
             </p>
           )}
 
-          {isStatsError && (
+          {showStatsError && (
             <p className="mt-1 text-sm text-red-600">
               Statistics:{" "}
               {statsError instanceof Error
@@ -164,7 +253,8 @@ export default function WorkAreas() {
       </div>
     );
   }
-  const areas = workAreasResponse?.data ?? [];
+
+  const areas = (activeTab === "mine" ? myWorkAreasResponse?.data : workAreasResponse?.data) ?? [];
   console.log("HI", areas);
 
   const detailsArea = detailsId
@@ -181,12 +271,47 @@ export default function WorkAreas() {
             Create and manage virtual work locations for your teams
           </p>
         </div>
-        <button
-          onClick={() => setWizardOpen(true)}
-          className="inline-flex items-center gap-2 bg-[#1658E5] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl"
-        >
-          <Plus className="w-4 h-4" /> Create Work Area
-        </button>
+      </div>
+
+      {/* Tabs & Actions */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-1 gap-3">
+        <div className="flex bg-gray-100 p-1 rounded-xl w-fit">
+          <button
+            onClick={() => {
+              setActiveTab("all");
+              setPage(1);
+            }}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === "all"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            All Work Areas
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab("mine");
+              setPage(1);
+            }}
+            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              activeTab === "mine"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-900"
+            }`}
+          >
+            My Assigned Areas
+          </button>
+        </div>
+
+        {!isStaff && (
+          <button
+            onClick={() => setWizardOpen(true)}
+            className="inline-flex items-center gap-2 bg-[#1658E5] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl"
+          >
+            <Plus className="w-4 h-4" /> Create Work Area
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -235,26 +360,46 @@ export default function WorkAreas() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <StatCard
-          icon={MapPinned}
-          label="Total Work Areas"
-          value={workAreaStats.total_areas ?? 0}
-          tint="from-blue-500 to-blue-700"
-        />
-        <StatCard
-          icon={CheckCircle2}
-          label="Active Work Areas"
-          value={workAreaStats.active_areas ?? 0}
-          tint="from-emerald-500 to-emerald-700"
-        />
-        <StatCard
-          icon={Users}
-          label="Assigned Employees"
-          value={workAreaStats.employees_assigned ?? 0}
-          tint="from-purple-500 to-purple-700"
-        />
-      </div>
+      {!isStaff && (
+        <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-4">
+          <StatCard
+            icon={MapPinned}
+            label="Total Work Areas"
+            value={stats.total_areas ?? 0}
+            tint="from-blue-500 to-blue-700"
+          />
+          <StatCard
+            icon={CheckCircle2}
+            label="Active Work Areas"
+            value={stats.active_areas ?? 0}
+            tint="from-emerald-500 to-emerald-700"
+          />
+          <StatCard
+            icon={AlertTriangle}
+            label="Inactive Work Areas"
+            value={stats.inactive_areas ?? 0}
+            tint="from-amber-500 to-amber-700"
+          />
+          <StatCard
+            icon={Users}
+            label="Assigned Employees"
+            value={stats.employees_assigned ?? 0}
+            tint="from-purple-500 to-purple-700"
+          />
+          <StatCard
+            icon={MapPin}
+            label="Employees Inside"
+            value={stats.employees_inside ?? 0}
+            tint="from-cyan-500 to-cyan-700"
+          />
+          <StatCard
+            icon={XCircle}
+            label="Violations Today"
+            value={stats.violations_today ?? 0}
+            tint="from-rose-500 to-rose-700"
+          />
+        </div>
+      )}
 
       {/* Panels */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
@@ -386,17 +531,183 @@ export default function WorkAreas() {
         </div>
       </div>
 
+      {/* Geofence Tester */}
+      <div className="bg-white border rounded-2xl p-5 shadow-sm space-y-4">
+        <div>
+          <h3 className="text-sm font-bold text-gray-950 flex items-center gap-2">
+            <Compass className="w-5 h-5 text-[#1658E5]" />
+            Geofence Tester & Validation Tool
+          </h3>
+          <p className="text-[11px] text-gray-500 mt-1">
+            Test and verify whether a coordinate falls inside any active work area. 
+            You can use manual inputs or fetch your browser's current location.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Latitude</label>
+            <input
+              type="number"
+              step="any"
+              value={testerLat}
+              onChange={(e) => setTesterLat(e.target.value)}
+              placeholder="e.g. 6.6019"
+              className="w-full px-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Longitude</label>
+            <input
+              type="number"
+              step="any"
+              value={testerLng}
+              onChange={(e) => setTesterLng(e.target.value)}
+              placeholder="e.g. 3.3512"
+              className="w-full px-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Accuracy (m)</label>
+            <input
+              type="number"
+              value={testerAccuracy}
+              onChange={(e) => setTesterAccuracy(e.target.value)}
+              placeholder="e.g. 15"
+              className="w-full px-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800"
+            />
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-600">Staff Member (Optional)</label>
+            <select
+              value={testerEmployeeId}
+              onChange={(e) => setTesterEmployeeId(e.target.value)}
+              className="w-full px-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800"
+            >
+              <option value="">-- Generic Check --</option>
+              {employeesList.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {emp.name} ({emp.role || "Staff"})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-bold uppercase tracking-wider text-gray-600">QR Code (Optional)</label>
+            <input
+              type="text"
+              value={testerQrCode}
+              onChange={(e) => setTesterQrCode(e.target.value)}
+              placeholder="QR Code payload"
+              className="w-full px-3 py-1.5 border rounded-lg text-xs outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-800"
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleGetCurrentLocation}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 border rounded-lg text-xs font-semibold text-gray-700 bg-gray-50 hover:bg-gray-100 transition-colors"
+          >
+            <Crosshair className="w-3.5 h-3.5 text-gray-500" />
+            Get My Location
+          </button>
+          <button
+            type="button"
+            onClick={handleCheckGeofence}
+            disabled={checkGeofenceMutation.isPending}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg text-xs font-semibold text-white bg-[#1658E5] hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+          >
+            {checkGeofenceMutation.isPending ? "Checking..." : "Run Geofence Check"}
+          </button>
+        </div>
+
+        {/* Tester Results Display */}
+        {testerResult && (
+          <div
+            className={`mt-4 border p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition-all ${
+              testerResult.inside
+                ? "bg-green-50 border-green-200 text-green-800"
+                : "bg-red-50 border-red-200 text-red-800"
+            }`}
+          >
+            <div className="flex items-start gap-3">
+              {testerResult.inside ? (
+                <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              ) : (
+                <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              )}
+              <div>
+                <h4 className="text-xs font-bold flex items-center gap-2">
+                  {testerResult.inside ? "Inside Geofence" : "Outside Geofence"}
+                  <span
+                    className={`text-[9px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
+                      testerResult.can_clock_in
+                        ? "bg-green-200 text-green-900"
+                        : "bg-red-200 text-red-900"
+                    }`}
+                  >
+                    {testerResult.can_clock_in ? "Can Clock In" : "Cannot Clock In"}
+                  </span>
+                </h4>
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 mt-2 text-[11px] opacity-90">
+                  {testerResult.work_area_id && (
+                    <p>
+                      <strong>Work Area ID:</strong> {testerResult.work_area_id}
+                    </p>
+                  )}
+                  {testerResult.location_id && (
+                    <p>
+                      <strong>Location ID:</strong> {testerResult.location_id}
+                    </p>
+                  )}
+                  {testerResult.distance_from_edge !== undefined && (
+                    <p>
+                      <strong>Distance from Edge:</strong> {Math.round(testerResult.distance_from_edge)} meters
+                    </p>
+                  )}
+                  {testerResult.reason && (
+                    <p className="sm:col-span-2">
+                      <strong>Reason:</strong> {testerResult.reason}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            {testerResult.inside && testerResult.work_area_id && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (testerResult.work_area_id) {
+                    setSelectedId(testerResult.work_area_id);
+                  }
+                }}
+                className="self-start md:self-center px-3 py-1 border rounded-lg text-xs font-semibold bg-white text-green-800 hover:bg-green-100 transition-colors whitespace-nowrap"
+              >
+                Highlight Area
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       <CreateWorkAreaWizard
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
       />
-      <WorkAreaDetailsDrawer
-        id={detailsId}
-        onClose={() => setDetailsId(null)}
-        // area={detailsArea}
-        // onDelete={handleDelete}
-        // onToggle={handleToggle}
-      />
+      {detailsId && (
+        <WorkAreaDetailsDrawer
+          id={detailsId}
+          onClose={() => setDetailsId(null)}
+        />
+      )}
     </div>
   );
 }

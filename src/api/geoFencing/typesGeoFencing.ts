@@ -241,3 +241,41 @@ export interface GetViolationsResponse {
 
 export type CreateLocationPayload = Omit<WorkAreaLocation, "id">;
 export type UpdateLocationPayload = Partial<CreateLocationPayload>;
+
+/* ---------- Geofence Check payloads ---------- */
+
+export interface GeofenceCheckRequest {
+  employee_id: string;
+  lat: number;
+  lng: number;
+  accuracy: number;
+  company_id: string;
+  qr_code: string;
+}
+
+export interface GeofenceCheckResponse {
+  inside: boolean;
+  work_area_id?: string | null;
+  location_id?: string | null;
+  distance_from_edge?: number | null;
+  can_clock_in?: boolean;
+  reason?: string | null;
+}
+
+/* ---------- Places ---------- */
+
+export interface PlaceSuggestion {
+  description: string;
+  place_id: string;
+}
+
+export interface PlaceSuggestionsResponse {
+  status: string;
+  query: string;
+  suggestions: PlaceSuggestion[];
+}
+
+export interface PlaceCoordinatesResponse {
+  latitude: number;
+  longitude: number;
+}

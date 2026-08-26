@@ -26,6 +26,10 @@ import {
   updateWorkAreaById,
   updateWorkAreaLocation,
   updateWorkAreaRules,
+  getMyWorkAreas,
+  checkGeofence,
+  suggestPlaces,
+  getPlaceCoordinates,
 } from "./apiGeoFencing";
 import {
   CreateLocationPayload,
@@ -33,6 +37,7 @@ import {
   UpdateLocationPayload,
   UpdateWorkAreaPayload,
   WorkAreaRules,
+  GeofenceCheckRequest,
 } from "./typesGeoFencing";
 
 export function getApiErrorMessage(error: unknown, fallback: string): string {
@@ -293,3 +298,36 @@ export function useUpdateRules(workAreaId: string) {
       toast.error(getApiErrorMessage(error, "Failed to update rules")),
   });
 }
+
+export const useMyWorkAreas = (enabled = true) =>
+  useQuery({
+    queryKey: ["my-work-areas"],
+    queryFn: getMyWorkAreas,
+    enabled,
+  });
+
+export const useCheckGeofence = () => {
+  return useMutation({
+    mutationFn: checkGeofence,
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "Failed to check geofence"));
+    },
+  });
+};
+
+export const usePlaceSuggestions = (input: string, enabled = true) =>
+  useQuery({
+    queryKey: ["place-suggestions", input],
+    queryFn: () => suggestPlaces(input),
+    enabled: enabled && input.trim().length > 1,
+    staleTime: 5 * 60 * 1000,
+  });
+
+export const usePlaceCoordinates = () => {
+  return useMutation({
+    mutationFn: (placeId: string) => getPlaceCoordinates(placeId),
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, "Failed to get coordinates"));
+    },
+  });
+};

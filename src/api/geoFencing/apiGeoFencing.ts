@@ -13,6 +13,8 @@ import {
   GetWorkAreaByIDResponse,
   GetWorkAreasParams,
   GetWorkAreasResponse,
+  GeofenceCheckRequest,
+  GeofenceCheckResponse,
   ToggleWorkAreaStatusPayload,
   UpdateLocationPayload,
   UpdateWorkAreaPayload,
@@ -21,6 +23,8 @@ import {
   WorkAreaPresence,
   WorkAreaRules,
   WorkAreaStats,
+  PlaceSuggestionsResponse,
+  PlaceCoordinatesResponse,
 } from "./typesGeoFencing";
 
 
@@ -272,4 +276,39 @@ export async function getCommunities(ward: string): Promise<GeoRegion[]> {
 export async function geoSearch(q: string): Promise<GeoSearchResult[]> {
   const response = await api.get("/geo/search", { params: { q } });
   return unwrapList<GeoSearchResult>(response.data);
+}
+
+export async function getMyWorkAreas(): Promise<GetWorkAreasResponse> {
+  const response = await api.get<GetWorkAreasResponse>("/work-areas/mine");
+  return response.data;
+}
+
+export async function checkGeofence(
+  data: GeofenceCheckRequest,
+): Promise<GeofenceCheckResponse> {
+  const response = await api.post<GeofenceCheckResponse>(
+    "/work-areas/check",
+    data,
+  );
+  return response.data;
+}
+
+export async function suggestPlaces(
+  input: string,
+  language = "en",
+): Promise<PlaceSuggestionsResponse> {
+  const response = await api.get<PlaceSuggestionsResponse>("/places/suggest", {
+    params: { input, language },
+  });
+  return response.data;
+}
+
+export async function getPlaceCoordinates(
+  placeId: string,
+): Promise<PlaceCoordinatesResponse> {
+  const response = await api.get<PlaceCoordinatesResponse>(
+    "/places/place-coordinates",
+    { params: { place_id: placeId } },
+  );
+  return response.data;
 }

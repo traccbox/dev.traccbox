@@ -16,6 +16,7 @@ import {
   Hexagon,
   Trash2,
   Plus,
+  Loader2,
 } from "lucide-react";
 import WorkAreaMap, { MapArea } from "./WorkAreaMap";
 import {
@@ -43,6 +44,17 @@ import {
   WORK_AREA_STORAGE_KEY,
 } from "@/utils/workArea";
 import { createWorkArea } from "@/api/geoFencing/apiGeoFencing";
+import {
+  useCountries,
+  useStates,
+  useLgas,
+  useWards,
+  useCommunities,
+  usePlaceSuggestions,
+  usePlaceCoordinates,
+} from "@/api/geoFencing/hooksGeoFencing";
+import MapSearchBox from "./components/MapSearchBox";
+import { useDebounce } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -110,30 +122,48 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
     [shape, drawMode, radius],
   );
 
-  // ---- administrative cascade ----
-  const countryNode = useMemo(() => findNode(ADMIN_TREE, country), [country]);
-  const stateNode = useMemo(
-    () => findNode(countryNode?.children, state),
-    [countryNode, state],
+  // ---- dynamic administrative cascade ----
+  const { data: countriesData = [] } = useCountries();
+
+  const selectedCountryObj = countriesData.find((c) => c.name === country);
+  const selectedCountryCode = selectedCountryObj?.code;
+
+  const { data: statesData = [] } = useStates(selectedCountryCode);
+  const selectedStateObj = statesData.find((s) => s.name === state);
+  const selectedStateId = selectedStateObj?.id;
+
+  const { data: lgasData = [] } = useLgas(selectedStateId);
+  const selectedLgaObj = lgasData.find((l) => l.name === lga);
+  const selectedLgaId = selectedLgaObj?.id;
+
+  const { data: wardsData = [] } = useWards(selectedLgaId);
+  const selectedWardObj = wardsData.find((w) => w.name === ward);
+  const selectedWardId = selectedWardObj?.id;
+
+  const { data: communitiesData = [] } = useCommunities(selectedWardId);
+  const selectedCommunityObj = communitiesData.find((c) => c.name === community);
+
+  const [drawCenterOverride, setDrawCenterOverride] = useState<[number, number] | undefined>(undefined);
+  const [drawZoomOverride, setDrawZoomOverride] = useState<number | undefined>(undefined);
+
+  const [wizardSugOpen, setWizardSugOpen] = useState(false);
+  const debouncedLocName = useDebounce(locName, 400);
+  const { data: wizardSugRes, isFetching: wizardSugFetching } = usePlaceSuggestions(
+    debouncedLocName,
+    wizardSugOpen && debouncedLocName.trim().length > 1
   );
-  const lgaNode = useMemo(
-    () => findNode(stateNode?.children, lga),
-    [stateNode, lga],
-  );
-  const wardNode = useMemo(
-    () => findNode(lgaNode?.children, ward),
-    [lgaNode, ward],
-  );
-  const communityNode = useMemo(
-    () => findNode(wardNode?.children, community),
-    [wardNode, community],
-  );
+  const wizardSuggestions = wizardSugRes?.suggestions || [];
+  const wizardResolveCoords = usePlaceCoordinates();
 
   const { user } = useAuth();
   const companyId = user?.id;
 
   const adminFocus =
-    communityNode || wardNode || lgaNode || stateNode || countryNode;
+    selectedCommunityObj ||
+    selectedWardObj ||
+    selectedLgaObj ||
+    selectedStateObj ||
+    selectedCountryObj;
 
   const {
     data: teamMembers = [],
@@ -607,12 +637,53 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
               {method === "draw" && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <input
-                      value={locName}
-                      onChange={(e) => setLocName(e.target.value)}
-                      placeholder="Location name (optional)"
-                      className="flex-1 min-w-[200px] px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    <div className="relative flex-1 min-w-[200px]">
+                      <div className="relative">
+                        <input
+                          value={locName}
+                          onChange={(e) => {
+                            setLocName(e.target.value);
+                            setWizardSugOpen(true);
+                          }}
+                          onFocus={() => setWizardSugOpen(true)}
+                          onBlur={() => setTimeout(() => setWizardSugOpen(false), 250)}
+                          placeholder="Location name (optional)"
+                          className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                        />
+                        {(wizardSugFetching || wizardResolveCoords.isPending) && (
+                          <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
+                        )}
+                      </div>
+                      {wizardSugOpen && wizardSuggestions.length > 0 && (
+                        <div className="absolute left-0 right-0 z-[500] mt-1 bg-white border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                          {wizardSuggestions.map((r, i) => (
+                            <button
+                              key={`${r.place_id}-${i}`}
+                              type="button"
+                              disabled={wizardResolveCoords.isPending}
+                              onClick={() => {
+                                wizardResolveCoords.mutate(r.place_id, {
+                                  onSuccess: (coords) => {
+                                    setLocName(r.description);
+                                    setWizardSugOpen(false);
+                                    setDrawCenterOverride([coords.latitude, coords.longitude]);
+                                    setDrawZoomOverride(15);
+                                    setShape({
+                                      kind: "circle",
+                                      center: [coords.latitude, coords.longitude],
+                                      radius,
+                                    });
+                                  },
+                                });
+                              }}
+                              className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 border-b last:border-b-0 text-gray-800 disabled:opacity-50"
+                            >
+                              {r.description}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                     <div className="flex items-center gap-1 border rounded-lg p-1 bg-gray-50">
                       <button
                         onClick={() => {
@@ -682,11 +753,23 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     </div>
                   )}
 
+                  <MapSearchBox
+                    onPick={({ lat: la, lng: ln }) => {
+                      setDrawMode("circle");
+                      setShape({ kind: "circle", center: [la, ln], radius });
+                      setDrawCenterOverride([la, ln]);
+                      setDrawZoomOverride(15);
+                    }}
+                    placeholder="Search a place to centre the map…"
+                  />
+
                   <div className="rounded-xl overflow-hidden border">
                     <WorkAreaMap
                       areas={previewAreas}
                       height={380}
                       interactiveDraw={interactiveDraw}
+                      centerOverride={drawCenterOverride}
+                      zoomOverride={drawZoomOverride}
                     />
                   </div>
 
@@ -726,7 +809,7 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     <AdminSelect
                       label="Country *"
                       value={country}
-                      options={selectOptions(ADMIN_TREE)}
+                      options={selectOptions(countriesData)}
                       onChange={(v) => {
                         setCountry(v);
                         setState("");
@@ -739,7 +822,7 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     <AdminSelect
                       label="State *"
                       value={state}
-                      options={selectOptions(countryNode?.children)}
+                      options={selectOptions(statesData)}
                       disabled={!country}
                       onChange={(v) => {
                         setState(v);
@@ -752,7 +835,7 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     <AdminSelect
                       label="Local Government *"
                       value={lga}
-                      options={selectOptions(stateNode?.children)}
+                      options={selectOptions(lgasData)}
                       disabled={!state}
                       onChange={(v) => {
                         setLga(v);
@@ -764,7 +847,7 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     <AdminSelect
                       label="Ward"
                       value={ward}
-                      options={selectOptions(lgaNode?.children)}
+                      options={selectOptions(wardsData)}
                       disabled={!lga}
                       onChange={(v) => {
                         setWard(v);
@@ -775,7 +858,7 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     <AdminSelect
                       label="Community"
                       value={community}
-                      options={selectOptions(wardNode?.children)}
+                      options={selectOptions(communitiesData)}
                       disabled={!ward}
                       onChange={(v) => {
                         setCommunity(v);
@@ -842,15 +925,55 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     >
                       ← Change method
                     </button>
-                    <div>
+                    <div className="relative">
                       <label className="block text-sm font-medium mb-1.5">
                         Location name
                       </label>
-                      <input
-                        value={locName}
-                        onChange={(e) => setLocName(e.target.value)}
-                        className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500"
-                      />
+                      <div className="relative">
+                        <input
+                          value={locName}
+                          onChange={(e) => {
+                            setLocName(e.target.value);
+                            setWizardSugOpen(true);
+                          }}
+                          onFocus={() => setWizardSugOpen(true)}
+                          onBlur={() => setTimeout(() => setWizardSugOpen(false), 250)}
+                          placeholder="e.g. Ikeja HQ"
+                          className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                        />
+                        {(wizardSugFetching || wizardResolveCoords.isPending) && (
+                          <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
+                        )}
+                      </div>
+                      {wizardSugOpen && wizardSuggestions.length > 0 && (
+                        <div className="absolute left-0 right-0 z-[500] mt-1 bg-white border rounded-lg shadow-lg max-h-56 overflow-y-auto">
+                          {wizardSuggestions.map((r, i) => (
+                            <button
+                              key={`${r.place_id}-${i}`}
+                              type="button"
+                              disabled={wizardResolveCoords.isPending}
+                              onClick={() => {
+                                wizardResolveCoords.mutate(r.place_id, {
+                                  onSuccess: (coords) => {
+                                    setLocName(r.description);
+                                    setWizardSugOpen(false);
+                                    setLat(coords.latitude.toString());
+                                    setLng(coords.longitude.toString());
+                                    setShape({
+                                      kind: "circle",
+                                      center: [coords.latitude, coords.longitude],
+                                      radius,
+                                    });
+                                  },
+                                });
+                              }}
+                              className="w-full text-left px-3 py-2.5 text-xs hover:bg-blue-50 border-b last:border-b-0 text-gray-800 disabled:opacity-50"
+                            >
+                              {r.description}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-medium mb-1.5">

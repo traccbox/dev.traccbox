@@ -284,11 +284,15 @@ export default function WorkAreaMap({
 
         boundaries.forEach((boundary) => {
           if (boundary.kind === "circle") {
-            const circle = L.circle(boundary.center, {
-              radius: boundary.radius,
-            });
+            const lat = boundary.center[0];
+            const lng = boundary.center[1];
+            const radius = boundary.radius;
 
-            bounds.extend(circle.getBounds());
+            const latOffset = radius / 111111;
+            const lngOffset = radius / (111111 * Math.cos((lat * Math.PI) / 180));
+
+            bounds.extend([lat - latOffset, lng - lngOffset]);
+            bounds.extend([lat + latOffset, lng + lngOffset]);
           }
 
           if (boundary.kind === "polygon" && boundary.points?.length) {
