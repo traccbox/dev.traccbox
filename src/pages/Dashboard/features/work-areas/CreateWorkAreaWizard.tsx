@@ -87,6 +87,8 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
 
   const [locName, setLocName] = useState("");
 
+
+
   const [method, setMethod] = useState<"draw" | "admin" | "manual" | null>(
     null,
   );
