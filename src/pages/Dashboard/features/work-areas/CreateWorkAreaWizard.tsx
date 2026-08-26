@@ -61,7 +61,6 @@ import { useQueryClient } from "@tanstack/react-query";
 interface Props {
   open: boolean;
   onClose: () => void;
-  // onCreate: (wa: WorkArea) => void;
 }
 
 const STEPS = [
@@ -393,17 +392,17 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
   // Preview areas: saved locations rendered on any wizard map
   const previewAreas: MapArea[] = locations.length
     ? [
-        {
-          id: "draft",
-          name: name || "New Work Area",
-          type,
-          boundary: locations[0].boundary,
-          locations: locations.map((l) => ({
-            name: l.name,
-            boundary: l.boundary,
-          })),
-        },
-      ]
+      {
+        id: "draft",
+        name: name || "New Work Area",
+        type,
+        boundary: locations[0].boundary,
+        locations: locations.map((l) => ({
+          name: l.name,
+          boundary: l.boundary,
+        })),
+      },
+    ]
     : [];
 
   const selectOptions = (list?: { name: string }[]) =>
@@ -438,13 +437,12 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                 <React.Fragment key={s.id}>
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
-                        isDone
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${isDone
                           ? "bg-green-500 text-white"
                           : isActive
                             ? "bg-[#1658E5] text-white shadow-lg shadow-blue-500/30"
                             : "bg-gray-100 text-gray-400"
-                      }`}
+                        }`}
                     >
                       {isDone ? (
                         <Check className="w-4 h-4" />
@@ -528,11 +526,10 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                           type: o.value,
                         });
                       }}
-                      className={`px-3 py-2.5 text-sm rounded-lg border-2 text-left transition-all ${
-                        type === o.value
+                      className={`px-3 py-2.5 text-sm rounded-lg border-2 text-left transition-all ${type === o.value
                           ? "border-[#1658E5] bg-blue-50 text-[#1658E5] font-semibold"
                           : "border-gray-200 hover:border-gray-300 text-gray-700"
-                      }`}
+                        }`}
                     >
                       {o.label}
                     </button>
@@ -899,10 +896,10 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                             shape ||
                             (adminFocus?.center
                               ? {
-                                  kind: "circle",
-                                  center: adminFocus.center,
-                                  radius,
-                                }
+                                kind: "circle",
+                                center: adminFocus.center,
+                                radius,
+                              }
                               : null),
                           onChange: (s) => setShape(s),
                           mode: "circle",
