@@ -438,10 +438,10 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                   <div className="flex items-center gap-2">
                     <div
                       className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${isDone
-                          ? "bg-green-500 text-white"
-                          : isActive
-                            ? "bg-[#1658E5] text-white shadow-lg shadow-blue-500/30"
-                            : "bg-gray-100 text-gray-400"
+                        ? "bg-green-500 text-white"
+                        : isActive
+                          ? "bg-[#1658E5] text-white shadow-lg shadow-blue-500/30"
+                          : "bg-gray-100 text-gray-400"
                         }`}
                     >
                       {isDone ? (
@@ -527,8 +527,8 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                         });
                       }}
                       className={`px-3 py-2.5 text-sm rounded-lg border-2 text-left transition-all ${type === o.value
-                          ? "border-[#1658E5] bg-blue-50 text-[#1658E5] font-semibold"
-                          : "border-gray-200 hover:border-gray-300 text-gray-700"
+                        ? "border-[#1658E5] bg-blue-50 text-[#1658E5] font-semibold"
+                        : "border-gray-200 hover:border-gray-300 text-gray-700"
                         }`}
                     >
                       {o.label}
