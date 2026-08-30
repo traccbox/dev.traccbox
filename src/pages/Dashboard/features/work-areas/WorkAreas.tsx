@@ -21,7 +21,7 @@ import {
 import { WORK_AREA_TYPE_OPTIONS, WorkAreaType, WorkAreaStatus } from "./types";
 import WorkAreaMap from "./WorkAreaMap";
 import CreateWorkAreaWizard from "./CreateWorkAreaWizard";
-import WorkAreaDetailsDrawer from "./WorkAreaDetailsDrawer";
+import WorkAreaDashboard from "./WorkAreaDashboard";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   deleteWorkAreaById,
@@ -224,6 +224,15 @@ export default function WorkAreas() {
     );
   }
 
+  if (detailsId) {
+    return (
+      <WorkAreaDashboard
+        id={detailsId}
+        onClose={() => setDetailsId(null)}
+      />
+    );
+  }
+
   if (isError || showStatsError) {
     return (
       <div className="p-6">
@@ -257,9 +266,7 @@ export default function WorkAreas() {
   const areas = (activeTab === "mine" ? myWorkAreasResponse?.data : workAreasResponse?.data) ?? [];
   console.log("HI", areas);
 
-  const detailsArea = detailsId
-    ? areas.find((a) => a.id === detailsId) || null
-    : null;
+
 
   return (
     <div className="p-4 md:p-6 space-y-5">
@@ -421,12 +428,8 @@ export default function WorkAreas() {
             {areas.map((a) => (
               <div
                 key={a.id}
-                onClick={() => setSelectedId(a.id)}
-                className={`group px-4 py-3 cursor-pointer transition-colors ${
-                  selectedId === a.id
-                    ? "bg-blue-50 border-l-4 border-[#1658E5]"
-                    : "hover:bg-gray-50 border-l-4 border-transparent"
-                }`}
+                onClick={() => setDetailsId(a.id)}
+                className="group px-4 py-3 cursor-pointer transition-colors hover:bg-gray-50 border-l-4 border-transparent"
               >
                 <div className="flex items-start gap-3">
                   <div
@@ -467,19 +470,9 @@ export default function WorkAreas() {
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        setDetailsId(a.id);
-                      }}
-                      className="p-1.5 hover:bg-blue-100 rounded-md text-blue-600"
-                      title="View / Edit"
-                    >
-                      <Edit className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
                         onDelete(a.id);
                       }}
-                      className="p-1.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:text-gray-500 rounded-md text-red-600"
+                      className="p-1.5 hover:bg-red-100 disabled:cursor-not-allowed disabled:text-gray-500 rounded-md text-red-600 cursor-pointer"
                       title="Delete"
                       disabled={isDeleting}
                     >
@@ -702,12 +695,6 @@ export default function WorkAreas() {
         open={wizardOpen}
         onClose={() => setWizardOpen(false)}
       />
-      {detailsId && (
-        <WorkAreaDetailsDrawer
-          id={detailsId}
-          onClose={() => setDetailsId(null)}
-        />
-      )}
     </div>
   );
 }

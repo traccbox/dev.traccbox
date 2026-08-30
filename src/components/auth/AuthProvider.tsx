@@ -24,6 +24,10 @@ export interface User {
   profile_pic: string | null;
   subscription: string | null;
   verified_email: boolean;
+  city?: string | null;
+  zip_code?: string | null;
+  currency?: string | null;
+  image_url?: string | null;
 }
 
 export type PermissionsMap = Record<string, Record<string, boolean>>;

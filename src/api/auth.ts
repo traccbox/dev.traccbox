@@ -146,16 +146,22 @@ export async function forgottenPasswordUpdate(
   }
 }
 
+export interface UpdateCompanyPayload {
+  company_name: string;
+  company_industry: string;
+  phone_number: string;
+  address: string;
+  city?: string;
+  zip_code?: string;
+  country: string;
+  currency?: string;
+  image_url?: string;
+  logo_url?: string;
+}
+
 export async function updateCompanyInfo(
   company_id: string,
-  data: {
-    company_name: string;
-    company_industry: string;
-    phone_number: string;
-    address: string;
-    country: string;
-    logo_url?: string;
-  },
+  data: UpdateCompanyPayload,
 ) {
   console.log(company_id, "Data Going to Backend=====", data);
   try {
