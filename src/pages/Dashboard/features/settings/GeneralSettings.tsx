@@ -28,6 +28,7 @@ const GeneralSettings: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string>("");
+  console.log("user data: ", user)
 
   const getInitialState = () => ({
     company_name: user?.company_name || "",

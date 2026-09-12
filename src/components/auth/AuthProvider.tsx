@@ -92,6 +92,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const getUserFromToken = (token: string): User | null => {
   try {
     const decoded = jwtDecode<User>(token);
+    console.log("Decoded user:", decoded);
     return {
       id: decoded.id,
       email: decoded.email,
@@ -251,7 +252,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         typeof axiosError.response?.data?.detail === "string"
           ? axiosError.response.data.detail
           : JSON.stringify(axiosError.response?.data?.detail) ||
-              "Staff login failed"
+          "Staff login failed"
       );
       setLoading(false);
       return {

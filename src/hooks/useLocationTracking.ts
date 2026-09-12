@@ -1,4 +1,15 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { getAccessToken } from "@/utils/authUtils";
+
+export interface GeofenceInfo {
+  inside: boolean;
+  work_area_id?: string | null;
+  location_id?: string | null;
+  distance_from_edge?: number | null;
+  can_clock_in?: boolean;
+  reason?: string | null;
+  violation_opened?: boolean;
+}
 
 export interface StaffLocation {
   latitude: number;
@@ -6,6 +17,7 @@ export interface StaffLocation {
   timestamp: string;
   task_status?: string;
   address?: string;
+  geofence?: GeofenceInfo;
 }
 
 export interface StaffLocations {
@@ -26,11 +38,27 @@ export interface SingleLocationUpdate {
 
 interface UseLocationTrackingOptions {
   companyId: string | null;
+  token?: string | null;
   enabled?: boolean;
 }
 
+const getWsBaseUrl = (): string => {
+  const envBase = import.meta.env.VITE_API_BASE;
+  if (envBase) {
+    try {
+      const url = new URL(envBase);
+      const protocol = url.protocol === "https:" ? "wss:" : "ws:";
+      return `${protocol}//${url.host}`;
+    } catch {
+      // fallback if invalid URL format
+    }
+  }
+  return "wss://api.traccbox.com";
+};
+
 export const useLocationTracking = ({
   companyId,
+  token,
   enabled = true,
 }: UseLocationTrackingOptions) => {
   const [staffLocations, setStaffLocations] = useState<StaffLocations>({});
@@ -71,13 +99,22 @@ export const useLocationTracking = ({
   const connect = useCallback(() => {
     if (!companyId || !enabled) return;
 
+    const activeToken = token || getAccessToken();
+    if (!activeToken) {
+      console.warn("⚠️ No access token available for WebSocket connection");
+      setError("No access token available for location tracking connection.");
+      setIsConnected(false);
+      return;
+    }
+
     // Close existing connection if any
     if (wsRef.current) {
       wsRef.current.close();
     }
 
     try {
-      const wsUrl = `wss://api.traccbox.com/ws/admin/${companyId}`;
+      const wsBase = getWsBaseUrl();
+      const wsUrl = `${wsBase}/ws/admin/${companyId}?token=${encodeURIComponent(activeToken)}`;
       console.log("🔌 Attempting WebSocket connection to:", wsUrl);
       const ws = new WebSocket(wsUrl);
 
@@ -103,7 +140,14 @@ export const useLocationTracking = ({
           console.log("📥 WebSocket Message Received (raw):", event.data);
           const rawData = JSON.parse(event.data);
 
-          // Check if it's a single staff location update format
+          // Check if it's an error frame (e.g., invalid token, unauthorized, or staff not online)
+          if (rawData.status === "error") {
+            console.warn("⚠️ WebSocket Error Frame Received:", rawData.message);
+            setError(rawData.message || "Error received from location service");
+            return;
+          }
+
+          // Check if it's a single staff location update format (handles get_one reply and unsolicited push)
           if (rawData.staff_id && rawData.location) {
             const singleUpdate = rawData as SingleLocationUpdate;
             console.log("📥 Single Staff Location Update Received:", {
@@ -120,17 +164,13 @@ export const useLocationTracking = ({
                 longitude: singleUpdate.location.longitude,
                 timestamp: singleUpdate.location.timestamp,
                 task_status: singleUpdate.location.task_status,
-              });
-              console.log("📊 Updated staff locations state:", {
-                previous_count: Object.keys(prev).length,
-                new_count: Object.keys(updated).length,
-                total_staff: Object.keys(updated).length,
+                geofence: singleUpdate.location.geofence,
               });
               return updated;
             });
           }
           // Check if it's a bulk locations response format
-          else if (rawData.status && rawData.locations) {
+          else if (rawData.status === "success" && rawData.locations) {
             const data = rawData as LocationTrackingResponse;
             console.log("📥 Bulk Locations Response Received:", {
               status: data.status,
@@ -142,37 +182,14 @@ export const useLocationTracking = ({
               full_response: data,
             });
 
-            if (data.status === "success" && data.locations) {
-              console.log(
-                "✅ Processing location data for staff:",
-                Object.keys(data.locations),
-              );
-              setStaffLocations((prev) => {
-                // Merge new locations with existing ones
-                const updated = { ...prev };
-                Object.keys(data.locations).forEach((staffId) => {
-                  const location = data.locations[staffId];
-                  console.log(`📍 Location update for ${staffId}:`, {
-                    latitude: location.latitude,
-                    longitude: location.longitude,
-                    timestamp: location.timestamp,
-                    task_status: location.task_status,
-                  });
-                  updated[staffId] = location;
-                });
-                console.log("📊 Updated staff locations state:", {
-                  previous_count: Object.keys(prev).length,
-                  new_count: Object.keys(updated).length,
-                  total_staff: Object.keys(updated).length,
-                });
-                return updated;
+            setStaffLocations((prev) => {
+              const updated = { ...prev };
+              Object.keys(data.locations).forEach((staffId) => {
+                const location = data.locations[staffId];
+                updated[staffId] = location;
               });
-            } else {
-              console.warn(
-                "⚠️ WebSocket response status not 'success' or missing locations:",
-                data,
-              );
-            }
+              return updated;
+            });
           } else {
             console.warn("⚠️ Unknown WebSocket message format:", rawData);
           }
@@ -202,6 +219,17 @@ export const useLocationTracking = ({
         });
         setIsConnected(false);
 
+        // Code 1008 indicates Policy Violation / Auth Failure
+        if (event.code === 1008) {
+          console.error(
+            "❌ WebSocket closed with code 1008 (Policy Violation / Auth Failure). Stopping reconnect attempts.",
+          );
+          setError(
+            "Authentication failed or unauthorized to view live locations (Close code 1008).",
+          );
+          return;
+        }
+
         // Attempt to reconnect if enabled and not manually closed
         if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current += 1;
@@ -228,7 +256,7 @@ export const useLocationTracking = ({
       setError("Failed to establish WebSocket connection");
       setIsConnected(false);
     }
-  }, [companyId, enabled]);
+  }, [companyId, token, enabled]);
 
   const disconnect = useCallback(() => {
     console.log("🔌 Disconnecting WebSocket...");
@@ -258,12 +286,13 @@ export const useLocationTracking = ({
     [sendMessage],
   );
 
-  // Connect on mount and when companyId or enabled changes
+  // Connect on mount and when companyId, token, or enabled changes
   useEffect(() => {
     console.log("🔄 Location Tracking Hook Effect:", {
       companyId,
       enabled,
-      shouldConnect: companyId && enabled,
+      hasToken: !!(token || getAccessToken()),
+      shouldConnect: companyId && enabled && !!(token || getAccessToken()),
     });
 
     if (companyId && enabled) {
@@ -271,7 +300,6 @@ export const useLocationTracking = ({
       connect();
     } else {
       console.log("❌ Conditions not met - Disconnecting WebSocket");
-      // Disconnect if companyId is null or enabled is false
       disconnect();
     }
 
@@ -279,7 +307,7 @@ export const useLocationTracking = ({
       console.log("🧹 Cleanup: Disconnecting WebSocket on unmount");
       disconnect();
     };
-  }, [companyId, enabled, connect, disconnect]);
+  }, [companyId, token, enabled, connect, disconnect]);
 
   return {
     staffLocations,
@@ -291,3 +319,4 @@ export const useLocationTracking = ({
     reconnect: connect,
   };
 };
+

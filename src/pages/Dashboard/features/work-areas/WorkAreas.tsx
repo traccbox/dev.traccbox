@@ -166,12 +166,13 @@ export default function WorkAreas() {
   });
 
   // Get My Work Areas
+  const currentStaffId = staff?.id || user?.id;
   const {
     data: myWorkAreasResponse,
     isLoading: isLoadingMyWorkAreas,
     isError: isMyWorkAreasError,
     error: myWorkAreasError,
-  } = useMyWorkAreas(activeTab === "mine");
+  } = useMyWorkAreas(currentStaffId, activeTab === "mine");
 
   // Get AREA STATS
   const {

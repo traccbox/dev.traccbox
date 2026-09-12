@@ -299,11 +299,11 @@ export function useUpdateRules(workAreaId: string) {
   });
 }
 
-export const useMyWorkAreas = (enabled = true) =>
+export const useMyWorkAreas = (staffId?: string, enabled = true) =>
   useQuery({
-    queryKey: ["my-work-areas"],
-    queryFn: getMyWorkAreas,
-    enabled,
+    queryKey: ["my-work-areas", staffId],
+    queryFn: () => getMyWorkAreas(staffId),
+    enabled: enabled && !!staffId,
   });
 
 export const useCheckGeofence = () => {

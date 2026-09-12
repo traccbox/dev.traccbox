@@ -278,8 +278,10 @@ export async function geoSearch(q: string): Promise<GeoSearchResult[]> {
   return unwrapList<GeoSearchResult>(response.data);
 }
 
-export async function getMyWorkAreas(): Promise<GetWorkAreasResponse> {
-  const response = await api.get<GetWorkAreasResponse>("/work-areas/mine");
+export async function getMyWorkAreas(staffId?: string): Promise<GetWorkAreasResponse> {
+  const response = await api.get<GetWorkAreasResponse>("/work-areas/mine", {
+    params: staffId ? { staff_id: staffId } : undefined,
+  });
   return response.data;
 }
 

@@ -4,6 +4,7 @@ import {
   StaffLocations,
 } from "@/hooks/useLocationTracking";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getAccessToken } from "@/utils/authUtils";
 
 interface LocationTrackingContextType {
   staffLocations: StaffLocations;
@@ -20,24 +21,26 @@ const LocationTrackingContext = createContext<
 export const LocationTrackingProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { user } = useAuth();
-  const companyId = user?.id || null;
+  const { user, staff, token } = useAuth();
+  const companyId = staff?.company_id || user?.id || null;
+  const authToken = token || getAccessToken();
 
   console.log("🌐 LocationTrackingProvider initialized:", {
     companyId,
-    enabled: !!companyId,
-    userEmail: user?.email,
+    enabled: !!companyId && !!authToken,
+    userEmail: user?.email || staff?.email,
   });
- 
+
   const {
     staffLocations,
-    isConnected, 
+    isConnected,
     error,
     requestAllStaff,
     requestSingleStaff,
   } = useLocationTracking({
     companyId,
-    enabled: !!companyId, // Only connect when user is logged in
+    token: authToken,
+    enabled: !!companyId && !!authToken,
   });
 
   return (
