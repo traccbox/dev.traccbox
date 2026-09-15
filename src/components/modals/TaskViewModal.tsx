@@ -172,15 +172,15 @@ const TaskViewModal: React.FC<TaskViewModalProps> = ({
           </div>
 
           {/* Location */}
-          {task.location && (
+          {(task.location || ((task.lat ?? task.latitude) !== undefined && (task.lng ?? task.longitude) !== undefined)) && (
             <div className="flex items-start gap-3">
               <MapPin className="w-4 h-4 text-gray-400 mt-1 flex-shrink-0" />
               <div className="flex-1">
                 <p className="text-sm font-medium text-gray-900">Location</p>
-                <p className="text-sm text-gray-600 mt-1">{task.location}</p>
-                {task.latitude && task.longitude && (
-                  <p className="text-xs text-gray-500 mt-1">
-                    📍 {task.latitude.toFixed(4)}, {task.longitude.toFixed(4)}
+                {task.location && <p className="text-sm text-gray-600 mt-1">{task.location}</p>}
+                {(task.lat ?? task.latitude) !== undefined && (task.lng ?? task.longitude) !== undefined && (task.lat ?? task.latitude) !== null && (task.lng ?? task.longitude) !== null && (
+                  <p className="text-xs text-gray-500 mt-1 font-mono">
+                    📍 Lat: {Number(task.lat ?? task.latitude).toFixed(5)}, Lng: {Number(task.lng ?? task.longitude).toFixed(5)}
                   </p>
                 )}
               </div>

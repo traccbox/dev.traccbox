@@ -10,13 +10,15 @@ export interface TaskCreate {
   customer_phone: string;
   description?: string | null;
   location?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   date: string;
-  time?: string | null; 
+  time?: string | null;
   priority?: "important" | "normal" | "low";
   attachment?: string[] | null;
   status?: "pending" | "completed" | "overdue" | null;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface EditTask {
@@ -26,12 +28,14 @@ export interface EditTask {
   customer_phone: string;
   description?: string | null;
   location?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   date: string;
   time?: string | null;
   priority?: "important" | "normal" | "low";
   attachment?: string[] | null;
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface TaskResponse {
@@ -42,13 +46,15 @@ export interface TaskResponse {
   customer_phone: string;
   description?: string | null;
   location?: string | null;
+  lat?: number | null;
+  lng?: number | null;
   date: string;
   time?: string | null;
   priority: string;
   attachment?: string[] | null;
   status: "pending" | "completed" | "overdue";
-  latitude?: number;
-  longitude?: number;
+  latitude?: number | null;
+  longitude?: number | null;
   staff_id: string;
   staff_name?: string;
 }
@@ -62,8 +68,26 @@ export interface PlaceSuggestion {
   language?: string;
 }
 
-export interface PlaceSuggestionResponse {
+export interface PlaceSuggestionItem {
   description: string;
+  place_id: string;
+}
+
+export interface PlaceSuggestionResponse {
+  status?: string;
+  query?: string;
+  suggestions?: PlaceSuggestionItem[];
+  description?: string;
+  latitude?: number;
+  longitude?: number;
+  lat?: number;
+  lng?: number;
+  place_id?: string;
+}
+
+export interface PlaceCoordinatesResponse {
+  lat?: number;
+  lng?: number;
   latitude?: number;
   longitude?: number;
 }
@@ -151,8 +175,8 @@ const taskService = {
 
 // Places API Service
 const placesService = {
-  suggestPlaces: async (input: string, language: string) => {
-    console.log("Apl Suggest Location", input, "And EN=", language);
+  suggestPlaces: async (input: string, language: string = "en") => {
+    console.log("Api Suggest Location", input, "And lang=", language);
     try {
       const response = await api.get("/places/suggest", {
         params: {
@@ -164,6 +188,21 @@ const placesService = {
       return response.data;
     } catch (error) {
       console.error("Error fetching place suggestions:", error);
+      throw error;
+    }
+  },
+
+  getPlaceCoordinates: async (placeId: string) => {
+    try {
+      const response = await api.get("/places/place-coordinates", {
+        params: {
+          place_id: placeId,
+        },
+      });
+      console.log("PlaceCoordinatesResponse=", response.data);
+      return response.data as PlaceCoordinatesResponse;
+    } catch (error) {
+      console.error("Error fetching place coordinates:", error);
       throw error;
     }
   },

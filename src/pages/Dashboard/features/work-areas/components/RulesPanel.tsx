@@ -54,11 +54,6 @@ export default function RulesPanel({ workAreaId, fallback }: Props) {
   const update = (updates: Partial<WorkAreaRules>) =>
     setDraft({ ...draft, ...updates });
 
-  const invalidHours =
-    !!draft.working_hours?.start &&
-    !!draft.working_hours?.end &&
-    draft.working_hours.start >= draft.working_hours.end;
-
   return (
     <div className="space-y-5">
       <div>
@@ -163,15 +158,9 @@ export default function RulesPanel({ workAreaId, fallback }: Props) {
         ))}
       </div>
 
-      {invalidHours && (
-        <p className="text-sm text-red-600">
-          End time must be later than start time.
-        </p>
-      )}
-
       <button
         onClick={() => save(draft)}
-        disabled={isPending || invalidHours}
+        disabled={isPending}
         className="inline-flex items-center gap-2 bg-[#1658E5] text-white px-5 py-2.5 rounded-lg text-sm font-semibold hover:bg-blue-700 disabled:opacity-60"
       >
         {isPending ? (

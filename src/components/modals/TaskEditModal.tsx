@@ -9,6 +9,10 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { TaskResponse, EditTask } from "@/api/field-Sales-repsApi/TaskService";
+import {
+  usePlaceSuggestions,
+  usePlaceCoordinates,
+} from "@/api/field-Sales-repsApi/hooks";
 
 interface TaskEditModalProps {
   task: TaskResponse | null;
@@ -35,7 +39,14 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
     date: "",
     time: "",
     priority: "",
+    lat: "" as string | number,
+    lng: "" as string | number,
   });
+
+  const [showSuggestions, setShowSuggestions] = useState(false);
+  const { data: placeSuggestions, isLoading: suggestionsLoading } =
+    usePlaceSuggestions(formData.location);
+  const getPlaceCoordinatesMutation = usePlaceCoordinates();
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -51,6 +62,8 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
         date: task.date || "",
         time: task.time || "",
         priority: task.priority || "",
+        lat: task.lat ?? task.latitude ?? "",
+        lng: task.lng ?? task.longitude ?? "",
       });
       setErrors({});
     }
@@ -67,6 +80,40 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
     // Clear error when user starts typing
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: "" }));
+    }
+
+    if (name === "location") {
+      setShowSuggestions(value.length > 2);
+    }
+  };
+
+  const handleSuggestionSelect = async (suggestion: any) => {
+    const desc = suggestion.description || "";
+    setFormData((prev) => ({ ...prev, location: desc }));
+    setShowSuggestions(false);
+
+    if (suggestion.place_id) {
+      try {
+        const res = await getPlaceCoordinatesMutation.mutateAsync(
+          suggestion.place_id
+        );
+        const lat = res.latitude ?? res.lat;
+        const lng = res.longitude ?? res.lng;
+        if (
+          lat !== undefined &&
+          lng !== undefined &&
+          lat !== null &&
+          lng !== null
+        ) {
+          setFormData((prev) => ({
+            ...prev,
+            lat: Number(lat),
+            lng: Number(lng),
+          }));
+        }
+      } catch (err) {
+        console.error("Error fetching place coordinates:", err);
+      }
     }
   };
 
@@ -104,6 +151,9 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
 
     if (!validateForm() || !task) return;
 
+    const latNum = formData.lat !== "" && formData.lat !== null ? Number(formData.lat) : null;
+    const lngNum = formData.lng !== "" && formData.lng !== null ? Number(formData.lng) : null;
+
     const editData: EditTask = {
       task_title: formData.task_title,
       task_type: formData.task_type,
@@ -114,8 +164,10 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
       date: formData.date,
       time: formData.time || null,
       priority: formData.priority as "important" | "normal" | "low",
-      ...(task.latitude && { latitude: task.latitude }),
-      ...(task.longitude && { longitude: task.longitude }),
+      lat: latNum,
+      lng: lngNum,
+      latitude: latNum,
+      longitude: lngNum,
     };
 
     onSave(task.id, editData);
@@ -297,7 +349,7 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
           </div>
 
           {/* Location */}
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Location
             </label>
@@ -306,9 +358,49 @@ const TaskEditModal: React.FC<TaskEditModalProps> = ({
               name="location"
               value={formData.location}
               onChange={handleInputChange}
+              onFocus={() => {
+                if (formData.location.length > 2) setShowSuggestions(true);
+              }}
+              placeholder="Search or enter location..."
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
               disabled={isLoading}
             />
+
+            {/* Suggestions Dropdown */}
+            {showSuggestions &&
+              (Array.isArray(placeSuggestions)
+                ? placeSuggestions.length > 0
+                : (placeSuggestions?.suggestions?.length ?? 0) > 0) && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-30 max-h-60 overflow-y-auto">
+                  {suggestionsLoading && (
+                    <div className="p-3 text-center text-gray-500 text-xs">
+                      Loading suggestions...
+                    </div>
+                  )}
+                  {(Array.isArray(placeSuggestions)
+                    ? placeSuggestions
+                    : placeSuggestions?.suggestions || []
+                  ).map((suggestion: any, index: number) => (
+                    <button
+                      key={index}
+                      type="button"
+                      onClick={() => handleSuggestionSelect(suggestion)}
+                      className="w-full px-4 py-2.5 text-left hover:bg-gray-50 focus:bg-gray-50 focus:outline-none border-b border-gray-100 last:border-b-0 flex items-center gap-2"
+                    >
+                      <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                      <span className="text-sm text-gray-700">
+                        {suggestion.description}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+            {formData.lat !== "" && formData.lng !== "" && formData.lat !== null && formData.lng !== null && (
+              <p className="text-xs text-gray-500 mt-1">
+                📍 Coordinates set: Lat {Number(formData.lat).toFixed(4)}, Lng {Number(formData.lng).toFixed(4)}
+              </p>
+            )}
           </div>
 
           {/* Description */}

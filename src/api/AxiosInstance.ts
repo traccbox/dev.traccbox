@@ -15,7 +15,6 @@ api.interceptors.request.use((config) => {
     .split("; ")
     .find((row) => row.startsWith("access_token="))
     ?.split("=")[1];
-  console.log("access token", accessToken);
 
   if (accessToken) {
     config.headers.Authorization = `Bearer ${accessToken}`;

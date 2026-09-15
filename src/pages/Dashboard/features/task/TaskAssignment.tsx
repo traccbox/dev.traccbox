@@ -11,10 +11,12 @@ import { useStaffData } from "@/api/settingsApi/hooks/useStaffData";
 import {
   useCreateTask,
   usePlaceSuggestions,
+  usePlaceCoordinates,
 } from "@/api/field-Sales-repsApi/hooks";
 import {
   TaskCreate,
   PlaceSuggestionResponse,
+  PlaceSuggestionItem,
 } from "@/api/field-Sales-repsApi/TaskService";
 import LeafletMap from "@/components/maps/LeafletMap";
 import { useAuth } from "@/components/auth/AuthProvider";
@@ -33,14 +35,17 @@ export default function TaskAssignment() {
   console.log("Fetched staff Data for task=", staffData);
   // Initialize mutations
   const createTaskMutation = useCreateTask();
+  const getPlaceCoordinatesMutation = usePlaceCoordinates();
 
   // Place suggestions hook
   const [placeInput, setPlaceInput] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedLocation, setSelectedLocation] = useState("");
   const [selectedCoordinates, setSelectedCoordinates] = useState<{
-    latitude: number;
-    longitude: number;
+    lat: number;
+    lng: number;
+    latitude?: number;
+    longitude?: number;
   } | null>(null);
   const { data: placeSuggestions, isLoading: suggestionsLoading } =
     usePlaceSuggestions(placeInput);
@@ -121,30 +126,56 @@ export default function TaskAssignment() {
     }
   };
 
-  // const handleFileChange = (e) => {
-  //   setFormData((prev) => ({ ...prev, attachment: e.target.files[0] }));
-  // };
-
   // Handle location suggestion selection
-  const handleLocationSelect = (suggestion: PlaceSuggestionResponse) => {
-    setFormData((prev) => ({ ...prev, location: suggestion.description }));
-    setSelectedLocation(suggestion.description);
+  const handleLocationSelect = async (
+    suggestion: PlaceSuggestionItem | PlaceSuggestionResponse
+  ) => {
+    const desc = suggestion.description || "";
+    setFormData((prev) => ({ ...prev, location: desc }));
+    setSelectedLocation(desc);
     setShowSuggestions(false);
-    setPlaceInput(suggestion.description);
+    setPlaceInput(desc);
 
-    // Set coordinates if available
-    //   if (suggestion.latitude && suggestion.longitude) {
-    //     setSelectedCoordinates({
-    //       latitude: suggestion.latitude,
-    //       longitude: suggestion.longitude,
-    //     });
-    //   }
-    // };
-    if (!suggestion.latitude && !suggestion.longitude) {
-      setSelectedCoordinates({
-        latitude: 6.5244,
-        longitude: 3.3792,
-      });
+    const placeId = (suggestion as any).place_id;
+
+    if (placeId) {
+      try {
+        const res = await getPlaceCoordinatesMutation.mutateAsync(placeId);
+        const lat = res.latitude ?? res.lat;
+        const lng = res.longitude ?? res.lng;
+        if (
+          lat !== undefined &&
+          lng !== undefined &&
+          lat !== null &&
+          lng !== null
+        ) {
+          setSelectedCoordinates({
+            lat: Number(lat),
+            lng: Number(lng),
+            latitude: Number(lat),
+            longitude: Number(lng),
+          });
+        }
+      } catch (err) {
+        console.error("Error fetching place coordinates:", err);
+      }
+    } else {
+      // Fallback if suggestion already carries lat/lng directly
+      const sugLat = (suggestion as any).lat ?? (suggestion as any).latitude;
+      const sugLng = (suggestion as any).lng ?? (suggestion as any).longitude;
+      if (
+        sugLat !== undefined &&
+        sugLng !== undefined &&
+        sugLat !== null &&
+        sugLng !== null
+      ) {
+        setSelectedCoordinates({
+          lat: Number(sugLat),
+          lng: Number(sugLng),
+          latitude: Number(sugLat),
+          longitude: Number(sugLng),
+        });
+      }
     }
   };
 
@@ -172,7 +203,6 @@ export default function TaskAssignment() {
       date: "",
       time: "",
       priority: "",
-      // attachment: null,
     });
     setErrors({});
     setPlaceInput("");
@@ -180,11 +210,6 @@ export default function TaskAssignment() {
     setSelectedCoordinates(null);
     setShowSuggestions(false);
     setSuccessMessage("");
-  };
-
-  const handleSaveDraft = () => {
-    console.log("Saving draft...", formData);
-    alert("Draft saved successfully!");
   };
 
   const handleAssignTask = async () => {
@@ -211,16 +236,14 @@ export default function TaskAssignment() {
         customer_phone: formData.customerPhone,
         description: formData.description || null,
         location: formData.location || null,
+        lat: selectedCoordinates ? selectedCoordinates.lat : null,
+        lng: selectedCoordinates ? selectedCoordinates.lng : null,
+        latitude: selectedCoordinates ? selectedCoordinates.lat : null,
+        longitude: selectedCoordinates ? selectedCoordinates.lng : null,
         date: formData.date,
         time: formData.time || null,
         priority: priorityMap[formData.priority] || "normal",
-        // attachment: formData.attachment ? [formData.attachment.name] : null,
         status: "pending",
-        // Include coordinates if available
-        ...(selectedCoordinates && {
-          latitude: selectedCoordinates.latitude,
-          longitude: selectedCoordinates.longitude,
-        }),
       };
 
       await createTaskMutation.mutateAsync(taskData);
@@ -458,8 +481,9 @@ export default function TaskAssignment() {
 
                   {/* Location Suggestions Dropdown */}
                   {showSuggestions &&
-                    placeSuggestions?.status === "success" &&
-                    placeSuggestions.suggestions?.length > 0 && (
+                    (Array.isArray(placeSuggestions)
+                      ? placeSuggestions.length > 0
+                      : (placeSuggestions?.suggestions?.length ?? 0) > 0) && (
                       <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-20 max-h-60 overflow-y-auto">
                         {suggestionsLoading && (
                           <div className="p-3 text-center text-gray-500">
@@ -469,11 +493,13 @@ export default function TaskAssignment() {
                             </p>
                           </div>
                         )}
-                        {placeSuggestions.suggestions.map(
-                          (
-                            suggestion: PlaceSuggestionResponse,
-                            index: number,
-                          ) => (
+                        {(Array.isArray(placeSuggestions)
+                          ? placeSuggestions
+                          : placeSuggestions?.suggestions || []
+                        ).map((suggestion: any, index: number) => {
+                          const latVal = suggestion.lat ?? suggestion.latitude;
+                          const lngVal = suggestion.lng ?? suggestion.longitude;
+                          return (
                             <button
                               key={index}
                               type="button"
@@ -486,26 +512,16 @@ export default function TaskAssignment() {
                                   <span className="text-sm text-gray-700">
                                     {suggestion.description}
                                   </span>
-                                  {(suggestion as PlaceSuggestionResponse)
-                                    .latitude &&
-                                    (suggestion as PlaceSuggestionResponse)
-                                      .longitude && (
-                                      <div className="text-xs text-gray-500 mt-1">
-                                        📍{" "}
-                                        {(
-                                          suggestion as PlaceSuggestionResponse
-                                        ).latitude!.toFixed(4)}
-                                        ,{" "}
-                                        {(
-                                          suggestion as PlaceSuggestionResponse
-                                        ).longitude!.toFixed(4)}
-                                      </div>
-                                    )}
+                                  {latVal !== undefined && lngVal !== undefined && latVal !== null && lngVal !== null && (
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      📍 {Number(latVal).toFixed(4)}, {Number(lngVal).toFixed(4)}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             </button>
-                          ),
-                        )}
+                          );
+                        })}
                       </div>
                     )}
 
@@ -649,10 +665,10 @@ export default function TaskAssignment() {
                     className="border border-gray-300 rounded-lg overflow-hidden bg-gray-100"
                     style={{ height: "200px" }}
                   >
-                    {selectedCoordinates ? (
+                    {selectedCoordinates && selectedCoordinates.lat && selectedCoordinates.lng ? (
                       <LeafletMap
-                        latitude={selectedCoordinates.latitude}
-                        longitude={selectedCoordinates.longitude}
+                        latitude={selectedCoordinates.lat}
+                        longitude={selectedCoordinates.lng}
                         locationName={formData.location}
                         height="200px"
                       />
@@ -682,8 +698,8 @@ export default function TaskAssignment() {
                       <span className="text-gray-700">{formData.location}</span>
                       {selectedCoordinates && (
                         <div className="text-xs text-gray-500 mt-1">
-                          📍 {selectedCoordinates.latitude.toFixed(4)},{" "}
-                          {selectedCoordinates.longitude.toFixed(4)}
+                          📍 {selectedCoordinates.lat.toFixed(4)},{" "}
+                          {selectedCoordinates.lng.toFixed(4)}
                         </div>
                       )}
                     </div>
