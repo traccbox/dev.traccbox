@@ -378,6 +378,7 @@ const PermissionsSection = ({
   );
 };
 
+/*
 const SecuritySection = ({
   password,
   setPassword,
@@ -470,6 +471,7 @@ const SecuritySection = ({
     </div>
   );
 };
+*/
 
 const FooterActions: React.FC<{
   onSave: () => void;
@@ -578,6 +580,7 @@ const UserRoles = () => {
       return;
     }
 
+    /*
     if (activeTab === "standard" && !password.trim()) {
       toast({
         title: "Error",
@@ -585,6 +588,7 @@ const UserRoles = () => {
       });
       return;
     }
+    */
 
     setLoading(true);
 
@@ -757,7 +761,7 @@ const UserRoles = () => {
             permissions={permissions}
             setPermissions={setPermissions}
           />
-          <SecuritySection
+          {/* <SecuritySection
             password={password}
             setPassword={setPassword}
             forceChange={forceChange}
@@ -766,7 +770,7 @@ const UserRoles = () => {
             setTwoFactor={setTwoFactor}
             sendInvite={sendInvite}
             setSendInvite={setSendInvite}
-          />
+          /> */}
         </>
       )}
 
