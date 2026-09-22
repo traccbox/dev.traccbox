@@ -58,6 +58,12 @@ const Navbar = () => {
           >
             About
           </a>
+          <a
+            href="#industries"
+            className="text-gray-700 hover:text-traccbox-500 transition-colors"
+          >
+            Industries
+          </a>
           {/* <a
             href="#blog"
             className="text-gray-700 hover:text-traccbox-500 transition-colors"
@@ -126,6 +132,13 @@ const Navbar = () => {
             onClick={() => setIsMenuOpen(false)}
           >
             About
+          </a>
+          <a
+            href="#industries"
+            className="block text-gray-700 hover:text-traccbox-500 transition-colors py-2"
+            onClick={() => setIsMenuOpen(false)}
+          >
+            Industries
           </a>
           {/* <a
             href="#blog"
