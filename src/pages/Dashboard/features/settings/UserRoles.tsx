@@ -285,8 +285,8 @@ const RoleAssignmentSection: React.FC<{
             key={role.key}
             type="button"
             className={`border rounded-lg p-4 text-left transition-all h-full flex flex-col justify-between shadow-sm hover:border-purple-700 focus:outline-none ${selectedRole === role.key
-                ? "border-purple-700 bg-purple-50"
-                : "border-gray-200 bg-white"
+              ? "border-purple-700 bg-purple-50"
+              : "border-gray-200 bg-white"
               }`}
             onClick={() => setSelectedRole(role.key)}
           >
@@ -489,8 +489,8 @@ const FooterActions: React.FC<{
     </button>
     <button
       className={`px-8 py-3 rounded-lg font-semibold text-lg transition ${loading || !isFormValid
-          ? "bg-gray-400 text-white cursor-not-allowed"
-          : "bg-purple-700 text-white hover:bg-purple-800"
+        ? "bg-gray-400 text-white cursor-not-allowed"
+        : "bg-purple-700 text-white hover:bg-purple-800"
         }`}
       onClick={onSave}
       disabled={loading || !isFormValid}
@@ -711,8 +711,8 @@ const UserRoles = () => {
           type="button"
           onClick={() => setActiveTab("standard")}
           className={`px-4 py-2 rounded-lg font-semibold ${activeTab === "standard"
-              ? "bg-purple-700 text-white"
-              : "bg-white border border-gray-300 text-gray-700"
+            ? "bg-purple-700 text-white"
+            : "bg-white border border-gray-300 text-gray-700"
             }`}
         >
           Standard User
@@ -721,8 +721,8 @@ const UserRoles = () => {
           type="button"
           onClick={() => setActiveTab("fieldWorker")}
           className={`px-4 py-2 rounded-lg font-semibold ${activeTab === "fieldWorker"
-              ? "bg-purple-700 text-white"
-              : "bg-white border border-gray-300 text-gray-700"
+            ? "bg-purple-700 text-white"
+            : "bg-white border border-gray-300 text-gray-700"
             }`}
         >
           Field Worker (No Email)
@@ -738,8 +738,8 @@ const UserRoles = () => {
           }}
           // onClick={handleBulkUpload}
           className={`px-4 py-2 rounded-lg font-semibold ${activeTab === "bulkUpload"
-              ? "bg-purple-700 text-white"
-              : "bg-white border border-gray-300 text-gray-700"
+            ? "bg-purple-700 text-white"
+            : "bg-white border border-gray-300 text-gray-700"
             }`}
         >
           Bulk Upload
@@ -761,6 +761,7 @@ const UserRoles = () => {
             permissions={permissions}
             setPermissions={setPermissions}
           />
+
           {/* <SecuritySection
             password={password}
             setPassword={setPassword}
