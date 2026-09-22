@@ -3,18 +3,30 @@ import { Link } from "react-router-dom";
 import {
   ArrowRight,
   BadgeCheck,
+  BarChart3,
   Building2,
   Check,
+  ClipboardList,
+  Clock,
+  LogIn,
   MapPinned,
+  Medal,
   Route,
+  ShieldAlert,
   ShieldCheck,
   Smartphone,
   Store,
+  Timer,
+  Trophy,
   Truck,
+  UserPlus,
   Users,
+  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import industryImage from "@/assets/traccbox-industry-solutions.jpg";
+import constructionImage from "@/assets/industry-construction.jpg";
+import logisticsImage from "@/assets/industry-logistics.jpg";
+import fintechImage from "@/assets/industry-fintech.jpg";
 
 type IndustryKey = "construction" | "logistics" | "field-sales";
 
@@ -25,6 +37,8 @@ type Industry = {
   eyebrow: string;
   description: string;
   value: string;
+  image: string;
+  imageAlt: string;
   Icon: typeof Building2;
   features: Array<{ title: string; description: string; Icon: typeof Building2 }>;
 };
@@ -36,29 +50,51 @@ const industries: Industry[] = [
     title: "Keep every site, shift and worker accountable",
     eyebrow: "Construction & Security",
     description:
-      "Manage site-based teams, security personnel and temporary workers across multiple locations from one trusted view.",
-    value: "Verified attendance, accurate work hours and payroll-ready records.",
+      "A workforce management solution for site-based workers, security personnel and temporary staff across multiple locations.",
+    value: "Site attendance, workforce verification, working-hour tracking, compliance and daily payment records.",
+    image: constructionImage,
+    imageAlt: "Security guard verifying worker check-in with a phone at a construction site entrance",
     Icon: Building2,
     features: [
       {
-        title: "Geofenced attendance",
-        description: "Allow clock-in and clock-out only at approved sites.",
+        title: "Digital Clock-In & Clock-Out",
+        description: "Record staff arrival and departure times directly from approved work locations.",
+        Icon: LogIn,
+      },
+      {
+        title: "Geofencing & Site Validation",
+        description: "Employees can only clock in and out within designated sites, facilities or security locations.",
         Icon: MapPinned,
       },
       {
-        title: "Digital staff ID",
-        description: "Generate unique QR codes for fast on-site verification.",
+        title: "Automated Staff ID & Unique QR Code",
+        description: "Digital staff IDs with unique QR codes for quick identification and attendance verification.",
         Icon: BadgeCheck,
       },
       {
-        title: "Hours & earnings",
-        description: "Calculate working hours and daily earnings summaries.",
-        Icon: ShieldCheck,
+        title: "Late & Absence Monitoring",
+        description: "Automatically identify late arrivals, missed shifts and absent staff.",
+        Icon: ShieldAlert,
       },
       {
-        title: "Rapid registration",
-        description: "Register temporary workers on the day they arrive.",
-        Icon: Users,
+        title: "On-the-Day Staff Registration",
+        description: "Register new or temporary workers on-site and instantly generate their profile and QR code.",
+        Icon: UserPlus,
+      },
+      {
+        title: "End-of-Day Payslip / Earnings Summary",
+        description: "Daily earnings summary based on approved attendance, working hours and payment rules.",
+        Icon: Wallet,
+      },
+      {
+        title: "Working Hours Calculation",
+        description: "Automatically calculate the total number of hours each worker spends on-site.",
+        Icon: Timer,
+      },
+      {
+        title: "Attendance & Payroll Data",
+        description: "Structured attendance records that support payroll calculations, deductions and reporting.",
+        Icon: ClipboardList,
       },
     ],
   },
@@ -66,31 +102,48 @@ const industries: Industry[] = [
     key: "logistics",
     shortLabel: "Logistics & Delivery",
     title: "Move teams and deliveries with total visibility",
-    eyebrow: "Logistics, Distribution & Supply Chain",
+    eyebrow: "Logistics, Distribution, Delivery & Supply Chain",
     description:
-      "Coordinate drivers, riders and field personnel while improving route efficiency, task execution and daily accountability.",
-    value: "Faster routes, stronger compliance and measurable delivery performance.",
+      "An operational tracking solution for drivers, riders and field personnel that improves delivery efficiency and task execution.",
+    value: "Route efficiency, task execution, driver/rider accountability, route compliance and performance improvement.",
+    image: logisticsImage,
+    imageAlt: "Logistics coordinator tracking delivery routes on a tablet at a distribution warehouse",
     Icon: Truck,
     features: [
       {
-        title: "Route optimization",
-        description: "Plan efficient journeys that reduce travel time.",
+        title: "Digital Clock-In & Clock-Out",
+        description: "Track when drivers, riders and operational staff begin and end their shifts.",
+        Icon: LogIn,
+      },
+      {
+        title: "Route Optimization",
+        description: "Recommend efficient routes to reduce travel time and optimize daily operations.",
         Icon: Route,
       },
       {
-        title: "Live task tracking",
-        description: "Assign deliveries and monitor completion in real time.",
-        Icon: Smartphone,
+        title: "Task Assignment & Completion Tracking",
+        description: "Assign deliveries, pickups or tasks and monitor completion status in real time.",
+        Icon: ClipboardList,
       },
       {
-        title: "Route compliance",
-        description: "Identify deviations from approved routes quickly.",
-        Icon: MapPinned,
+        title: "KPI & Task Performance Tracking",
+        description: "Measure completed tasks, delivery volumes, completion rates and other operational KPIs.",
+        Icon: BarChart3,
       },
       {
-        title: "Performance insights",
-        description: "Compare task volume, completion rates and team KPIs.",
-        Icon: BadgeCheck,
+        title: "Route Violation Monitoring",
+        description: "Identify deviations from assigned or approved routes and improve route compliance.",
+        Icon: ShieldAlert,
+      },
+      {
+        title: "Performance-Based Gamification",
+        description: "Leaderboards, badges and performance rankings to motivate drivers and riders.",
+        Icon: Trophy,
+      },
+      {
+        title: "Operational Performance Insights",
+        description: "Visibility into individual and team performance for better decision-making.",
+        Icon: BarChart3,
       },
     ],
   },
@@ -100,29 +153,46 @@ const industries: Industry[] = [
     title: "Turn field activity into market growth",
     eyebrow: "Fintech, FMCG & Telecommunications",
     description:
-      "Give sales representatives, agents and promoters the structure to cover territories, capture opportunities and deliver results.",
-    value: "Better territory coverage, customer acquisition and KPI performance.",
+      "A field workforce and market execution solution for sales representatives, agents, promoters and field teams across territories.",
+    value: "Field workforce management, territory coverage, market execution, lead/customer acquisition and KPI tracking.",
+    image: fintechImage,
+    imageAlt: "Field sales representatives and telecom agents working with retailers in a busy market",
     Icon: Store,
     features: [
       {
-        title: "Territory geofencing",
-        description: "Create boundaries around markets, regions and territories.",
+        title: "Automated Staff ID & Unique QR Code",
+        description: "Employee or agent profiles with unique QR codes for identification and workforce management.",
+        Icon: BadgeCheck,
+      },
+      {
+        title: "Market & Regional Geofencing",
+        description: "Digital boundaries around markets, territories, regions or assigned operating locations.",
         Icon: MapPinned,
       },
       {
-        title: "Market assignments",
-        description: "Place every rep in the right market or operating region.",
+        title: "Staff Assignment by Market or Region",
+        description: "Assign sales reps, agents or field workers to specific markets, territories or regions.",
         Icon: Users,
       },
       {
-        title: "Lead generation",
-        description: "Capture prospects and customers from field activity.",
-        Icon: Smartphone,
+        title: "Lead & Customer Generation",
+        description: "Capture and manage leads, prospects or customers generated by field teams.",
+        Icon: UserPlus,
       },
       {
-        title: "KPIs & leaderboards",
-        description: "Motivate teams with visible goals, badges and rankings.",
-        Icon: BadgeCheck,
+        title: "Gamification & Leaderboards",
+        description: "Motivate field teams through badges, rankings and performance-based recognition.",
+        Icon: Medal,
+      },
+      {
+        title: "KPI & Performance Tracking",
+        description: "Track sales, customer acquisition, lead generation, market visits and task completion.",
+        Icon: BarChart3,
+      },
+      {
+        title: "Market Execution Visibility",
+        description: "Manager visibility into field activities and performance across markets, regions and teams.",
+        Icon: Smartphone,
       },
     ],
   },
@@ -180,14 +250,19 @@ const IndustrySolutionsSection = () => {
           className="overflow-hidden rounded-xl border border-border bg-card shadow-2xl"
         >
           <div className="relative min-h-[310px] overflow-hidden md:min-h-[420px]">
-            <img
-              src={industryImage}
-              alt="Construction, logistics and field sales teams using TraccBox in their daily work"
-              className="absolute inset-0 h-full w-full object-cover"
-              loading="lazy"
-              width={1536}
-              height={896}
-            />
+            {industries.map((industry) => (
+              <img
+                key={industry.key}
+                src={industry.image}
+                alt={industry.imageAlt}
+                className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-500 ${
+                  industry.key === activeKey ? "opacity-100" : "opacity-0"
+                }`}
+                loading="lazy"
+                width={1536}
+                height={896}
+              />
+            ))}
             <div className="absolute inset-0 bg-gradient-to-t from-traccbox-900 via-traccbox-900/25 to-transparent" />
             <img
               src="/assets/logo.png"
