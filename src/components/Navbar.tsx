@@ -7,6 +7,13 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
 
+  const closeMenuAndScroll = (sectionId: string) => {
+    setIsMenuOpen(false);
+    window.setTimeout(() => {
+      document.getElementById(sectionId)?.scrollIntoView({ behavior: "smooth" });
+    }, 220);
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       if (window.scrollY > 10) {
@@ -136,7 +143,10 @@ const Navbar = () => {
           <a
             href="#industries"
             className="block text-gray-700 hover:text-traccbox-500 transition-colors py-2"
-            onClick={() => setIsMenuOpen(false)}
+            onClick={(event) => {
+              event.preventDefault();
+              closeMenuAndScroll("industries");
+            }}
           >
             Industries
           </a>
