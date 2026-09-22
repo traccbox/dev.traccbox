@@ -102,6 +102,14 @@ const Footer = () => {
               </li>
               <li>
                 <a
+                  href="#industries"
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
+                  Industry Solutions
+                </a>
+              </li>
+              <li>
+                <a
                   href="#blog"
                   className="text-gray-400 hover:text-white transition-colors"
                 >

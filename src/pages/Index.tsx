@@ -11,6 +11,7 @@ import AboutSection from "@/components/AboutSection";
 import OnboardingSection from "@/components/OnboardingSection";
 import BlogSection from "@/components/BlogSection";
 import Footer from "@/components/Footer";
+import IndustrySolutionsSection from "@/components/IndustrySolutionsSection";
 import AOS from "aos";
 import "aos/dist/aos.css";
 import WaitlistSection from "@/components/WaitlistSection";
@@ -28,6 +29,7 @@ const Index = () => {
       <main>
         <HeroSection />
         <FeaturesSection />
+        <IndustrySolutionsSection />
         {/* <PricingSection /> */}
         {/* <TrialSection /> */}
         <OnboardingSection />
