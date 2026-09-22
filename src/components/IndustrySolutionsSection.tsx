@@ -14,7 +14,6 @@ import {
   Users,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import brandLogo from "@/assets/traccbox-brand-logo.png.asset.json";
 import industryImage from "@/assets/traccbox-industry-solutions.jpg";
 
 type IndustryKey = "construction" | "logistics" | "field-sales";
@@ -135,7 +134,7 @@ const IndustrySolutionsSection = () => {
     industries.find((industry) => industry.key === activeKey) ?? industries[0];
 
   return (
-    <section id="industries" className="overflow-hidden bg-background py-20 md:py-28">
+    <section id="industries" className="scroll-mt-16 overflow-hidden bg-background py-20 md:scroll-mt-20 md:py-28">
       <div className="container mx-auto px-4 md:px-6">
         <div className="mx-auto mb-10 max-w-3xl text-center md:mb-14">
           <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-traccbox-500">
@@ -191,7 +190,7 @@ const IndustrySolutionsSection = () => {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-traccbox-900 via-traccbox-900/25 to-transparent" />
             <img
-              src={brandLogo.url}
+              src="/assets/logo.png"
               alt="TraccBox"
               className="absolute left-5 top-5 h-auto w-32 rounded-md bg-background/90 p-2 shadow-lg backdrop-blur-sm md:left-8 md:top-8 md:w-40"
               loading="lazy"
