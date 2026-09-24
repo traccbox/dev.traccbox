@@ -32,6 +32,7 @@ import { MOCK_EMPLOYEES } from "./mockData";
 import { ADMIN_TREE, findNode } from "./adminData";
 import { useStaffData } from "@/api/settingsApi/hooks/useStaffData";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
 import {
   CreateWorkAreaPayload,
   WorkAreaLocation,
@@ -1109,9 +1110,7 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                   </p>
 
                   <p className="mt-1 text-xs text-red-600">
-                    {error instanceof Error
-                      ? error.message
-                      : "Unable to retrieve team members."}
+                    {getApiErrorMessage(error, "Unable to retrieve team members.")}
                   </p>
                 </div>
               )}

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Loader2, Search, Users, X } from "lucide-react";
-import { useAssignableEmployees } from "@/api/geoFencing/hooksGeoFencing";
+import { useAssignableEmployees, getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
 import { useDebounce } from "@/hooks/useDebounce";
 import Pagination from "@/components/dashboard/Pagination";
 
@@ -106,9 +106,7 @@ export default function AssignEmployeesModal({
             {isError && (
               <div className="p-6 text-center">
                 <p className="text-sm text-red-600 mb-2">
-                  {error instanceof Error
-                    ? error.message
-                    : "Failed to load employees."}
+                  {getApiErrorMessage(error, "Failed to load employees.")}
                 </p>
                 <button
                   onClick={() => refetch()}

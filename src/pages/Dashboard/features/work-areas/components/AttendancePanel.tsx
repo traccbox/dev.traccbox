@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
-import { useWorkAreaAttendance } from "@/api/geoFencing/hooksGeoFencing";
+import { useWorkAreaAttendance, getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
 
 function isoDaysAgo(days: number) {
   const d = new Date();
@@ -54,7 +54,7 @@ export default function AttendancePanel({ workAreaId }: { workAreaId: string }) 
       {!invalidRange && isError && (
         <div className="p-6 text-center border rounded-xl">
           <p className="text-sm text-red-600 mb-2">
-            {error instanceof Error ? error.message : "Failed to load attendance."}
+            {getApiErrorMessage(error, "Failed to load attendance.")}
           </p>
           <button
             onClick={() => refetch()}

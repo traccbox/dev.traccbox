@@ -42,6 +42,8 @@ import PlanComparison from "./pages/Dashboard/features/subscription/PlanComparis
 import TrialConfiguration from "./pages/Dashboard/features/subscription/TrialConfiguration";
 import CallHistory from "./pages/Dashboard/features/communication/CallHistory";
 
+import DashboardIndexRedirect from "@/components/auth/DashboardIndexRedirect";
+
 const gate = (mod: string, act: string, element: React.ReactNode) => (
   <RequirePermission module={mod} action={act}>{element}</RequirePermission>
 );
@@ -87,7 +89,7 @@ const App = () => (
             <Route path="/staff-verify" element={<StaffVerification />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />}>
-                <Route index element={gate("core_dashboard_report", "view_dashboard", <Home />)} />
+                <Route index element={<DashboardIndexRedirect />} />
                 <Route path="settings/general" element={gate("user_role_management", "view_users", <GeneralSettings />)} />
                  <Route path="settings/roles" element={<UserRolesLayout />}>
                   <Route index element={gate("user_role_management", "assign_roles", <UserRoles />)} />
@@ -103,7 +105,7 @@ const App = () => (
                   path="location-tracking"
                   element={gate("core_dashboard_report", "view_dashboard", <LocationTracking />)}
                 />
-                <Route path="work-areas" element={gate("order_task_management", "view_orders", <WorkAreas />)} />
+                <Route path="work-areas" element={gate("work_area_management", "view_work_areas", <WorkAreas />)} />
                 <Route path="performance/logs" element={gate("core_dashboard_report", "view_reports", <PerformanceLogs />)} />
                 <Route path="performance/reports" element={gate("core_dashboard_report", "view_reports", <Reports />)} />
                 <Route path="travel-monitoring" element={gate("core_dashboard_report", "view_dashboard", <TravelMonitoring />)} />

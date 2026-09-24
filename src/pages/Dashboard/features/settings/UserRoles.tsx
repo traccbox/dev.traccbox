@@ -761,7 +761,6 @@ const UserRoles = () => {
             permissions={permissions}
             setPermissions={setPermissions}
           />
-
           {/* <SecuritySection
             password={password}
             setPassword={setPassword}

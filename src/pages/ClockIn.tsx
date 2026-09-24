@@ -61,14 +61,15 @@ const ClockIn: React.FC = () => {
 
     // Check if token is still valid
     if (!isTokenValid(currentToken)) {
-      setAuthError("Your session has expired. Please login again.");
+      setAuthError("Your session has expired. Please log in again.");
       const returnUrl = `${location.pathname}${location.search}`;
       try {
         localStorage.setItem("return_url", returnUrl);
       } catch (error) {
         console.error("Could not save return URL", error);
       }
-      navigate(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
+      sessionStorage.setItem("session_expired", "true");
+      navigate(`/login?reason=expired&returnUrl=${encodeURIComponent(returnUrl)}`);
       return;
     }
 

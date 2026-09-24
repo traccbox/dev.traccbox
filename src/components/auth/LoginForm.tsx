@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm, UseFormReturn } from "react-hook-form";
 import {
   Form,
@@ -11,9 +11,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Alert, AlertTitle, AlertDescription } from "@/components/ui/alert";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, Clock } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
 import { toast } from "sonner";
@@ -220,16 +221,15 @@ const StaffForm = ({ staffForm, onSubmit, loading, error }: StaffFormProps) => {
 
 const LoginForm = () => {
   const [userType, setUserType] = useState<UserType>("admin");
-
   const [showPassword, setShowPassword] = useState(false);
-
   const [loading, setLoading] = useState(false);
+  const [sessionExpiredMessage, setSessionExpiredMessage] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   let returnUrl = searchParams.get("returnUrl") || "/dashboard";
-  
+
   if (!searchParams.get("returnUrl")) {
     const storedReturnUrl = localStorage.getItem("return_url");
     if (storedReturnUrl) {
@@ -238,6 +238,20 @@ const LoginForm = () => {
   }
 
   const { login, staffLogin, error } = useAuth();
+
+  useEffect(() => {
+    const reason = searchParams.get("reason");
+    const isExpiredQuery = reason === "expired" || searchParams.get("expired") === "true";
+    const isExpiredState = (location.state as { sessionExpired?: boolean })?.sessionExpired;
+    const isExpiredSessionStorage = sessionStorage.getItem("session_expired") === "true";
+
+    if (isExpiredQuery || isExpiredState || isExpiredSessionStorage) {
+      const msg = "Your session has expired. Please log in again to continue.";
+      setSessionExpiredMessage(msg);
+      toast.error(msg, { id: "session-expired-toast" });
+      sessionStorage.removeItem("session_expired");
+    }
+  }, [location.search, location.state]);
 
   const adminForm = useForm<AdminLoginFormValues>({
     resolver: zodResolver(adminLoginSchema),
@@ -263,6 +277,7 @@ const LoginForm = () => {
     if (success) {
       try {
         localStorage.removeItem("return_url");
+        sessionStorage.removeItem("session_expired");
       } catch (error) {
         console.error("Could not remove return_url", error);
       }
@@ -292,6 +307,18 @@ const LoginForm = () => {
 
   return (
     <div>
+      {sessionExpiredMessage && (
+        <Alert className="mb-6 border-amber-300 bg-amber-50 text-amber-900 flex items-start space-x-3 p-4 rounded-xl shadow-sm">
+          <Clock className="h-5 w-5 text-amber-600 mt-0.5 flex-shrink-0" />
+          <div>
+            <AlertTitle className="font-semibold text-amber-950 text-sm">Session Expired</AlertTitle>
+            <AlertDescription className="text-amber-800 text-sm mt-0.5">
+              {sessionExpiredMessage}
+            </AlertDescription>
+          </div>
+        </Alert>
+      )}
+
       <UserTypeSelector userType={userType} setUserType={setUserType} />
 
       {userType === "admin" ? (

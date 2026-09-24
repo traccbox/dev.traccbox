@@ -1,6 +1,8 @@
 import { useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthProvider";
+import Cookies from "js-cookie";
+import { isTokenValid } from "@/utils/authUtils";
 
 // List of public routes where you want to redirect authenticated users away from
 const PUBLIC_ROUTES = [
@@ -18,7 +20,14 @@ const GlobalAuthRedirect: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!user || !token) return;
+    const activeToken = token || Cookies.get("access_token") || localStorage.getItem("access_token");
+    const storedStaff = localStorage.getItem("staff_data");
+    const storedUser = localStorage.getItem("user_data");
+    const isAuthenticated = Boolean(
+      (user || storedStaff || storedUser) && activeToken && isTokenValid(activeToken)
+    );
+
+    if (!isAuthenticated) return;
 
     const searchParams = new URLSearchParams(location.search);
     const returnUrl = searchParams.get("returnUrl");

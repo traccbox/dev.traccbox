@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AlertTriangle, Loader2 } from "lucide-react";
-import { useWorkAreaViolations } from "@/api/geoFencing/hooksGeoFencing";
+import { useWorkAreaViolations, getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
 import Pagination from "@/components/dashboard/Pagination";
 
 export default function ViolationsPanel({ workAreaId }: { workAreaId: string }) {
@@ -24,7 +24,7 @@ export default function ViolationsPanel({ workAreaId }: { workAreaId: string }) 
     return (
       <div className="p-6 text-center border rounded-xl">
         <p className="text-sm text-red-600 mb-2">
-          {error instanceof Error ? error.message : "Failed to load violations."}
+          {getApiErrorMessage(error, "Failed to load violations.")}
         </p>
         <button
           onClick={() => refetch()}

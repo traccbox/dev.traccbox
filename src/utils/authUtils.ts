@@ -12,6 +12,8 @@ export interface DecodedUser {
   [key: string]: any;
 }
 
+const REFRESH_TOKEN_KEY = "refresh_token";
+
 /**
  * Get the access token from cookies or localStorage
  */
@@ -25,6 +27,47 @@ export const getAccessToken = (): string | null => {
   if (tokenFromStorage) return tokenFromStorage;
 
   return null;
+};
+
+/**
+ * Get the refresh token from cookies or localStorage
+ */
+export const getRefreshToken = (): string | null => {
+  const tokenFromCookie = Cookies.get(REFRESH_TOKEN_KEY);
+  if (tokenFromCookie) return tokenFromCookie;
+
+  const tokenFromStorage = localStorage.getItem(REFRESH_TOKEN_KEY);
+  if (tokenFromStorage) return tokenFromStorage;
+
+  return null;
+};
+
+/**
+ * Set auth tokens in cookies and localStorage
+ */
+export const setAuthTokens = (accessToken: string, refreshToken?: string) => {
+  Cookies.set(TOKEN_KEY, accessToken, { expires: 7 });
+  localStorage.setItem(TOKEN_KEY, accessToken);
+
+  if (refreshToken) {
+    Cookies.set(REFRESH_TOKEN_KEY, refreshToken, { expires: 7 });
+    localStorage.setItem(REFRESH_TOKEN_KEY, refreshToken);
+  }
+
+  // Update staff_data if present
+  try {
+    const rawStaff = localStorage.getItem("staff_data");
+    if (rawStaff) {
+      const parsedStaff = JSON.parse(rawStaff);
+      parsedStaff.access_token = accessToken;
+      if (refreshToken) {
+        parsedStaff.refresh_token = refreshToken;
+      }
+      localStorage.setItem("staff_data", JSON.stringify(parsedStaff));
+    }
+  } catch (err) {
+    console.error("Error updating staff_data tokens:", err);
+  }
 };
 
 /**

@@ -84,12 +84,13 @@ const StaffVerification = () => {
         );
         return;
       }
-      if (res?.role === "sales") {
+      const normalizedRole = (res?.role || "").toLowerCase().trim();
+      if (normalizedRole === "sales" || normalizedRole === "sales rep") {
         navigate("/sales-rep-demo");
       } else {
         // Web dashboard staff (manager, HR, etc.) — persist full session + permissions
         authenticateStaff(res as unknown as Parameters<typeof authenticateStaff>[0]);
-        navigate("/dashboard");
+        navigate("/dashboard", { replace: true });
       }
     } catch (error: unknown) {
       let message = "Invalid verification code. Please try again.";

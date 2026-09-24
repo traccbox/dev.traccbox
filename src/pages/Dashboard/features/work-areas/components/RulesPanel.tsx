@@ -3,6 +3,7 @@ import { Loader2, Save } from "lucide-react";
 import {
   useUpdateRules,
   useWorkAreaRules,
+  getApiErrorMessage,
 } from "@/api/geoFencing/hooksGeoFencing";
 import { WorkAreaRules } from "@/api/geoFencing/typesGeoFencing";
 import { RULE_OPTIONS } from "@/utils/workArea";
@@ -37,7 +38,7 @@ export default function RulesPanel({ workAreaId, fallback }: Props) {
     return (
       <div className="p-6 text-center border rounded-xl">
         <p className="text-sm text-red-600 mb-2">
-          {error instanceof Error ? error.message : "Failed to load rules."}
+          {getApiErrorMessage(error, "Failed to load rules.")}
         </p>
         <button
           onClick={() => refetch()}

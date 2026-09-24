@@ -28,7 +28,7 @@ import {
   getWorkAreas,
   getWorkAreaStats,
 } from "@/api/geoFencing/apiGeoFencing";
-import { useMyWorkAreas, useCheckGeofence, useAssignableEmployees } from "@/api/geoFencing/hooksGeoFencing";
+import { useMyWorkAreas, useCheckGeofence, useAssignableEmployees, getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
 import { useDebounce } from "@/hooks/useDebounce";
 import Spinner from "@/components/ui/Spinner";
 import { toast } from "sonner";
@@ -47,9 +47,24 @@ const TYPE_DOT: Record<string, string> = {
 };
 
 export default function WorkAreas() {
-  const { isStaff, user, staff } = useAuth();
+  const { isStaff, user, staff, hasPermission } = useAuth();
   const companyId = staff?.company_id || user?.id || "";
-  const [activeTab, setActiveTab] = useState<"all" | "mine">(isStaff ? "mine" : "all");
+
+  const canViewAllWorkAreas = useMemo(() => {
+    if (!isStaff) return true;
+    const role = (staff?.role || "").toLowerCase();
+    if (["admin", "super_admin", "owner"].includes(role)) return true;
+    if (
+      hasPermission("work_area_management", "manage_work_areas") ||
+      hasPermission("work_area_management", "create_work_areas") ||
+      hasPermission("work_area_management", "view_all_work_areas")
+    ) {
+      return true;
+    }
+    return false;
+  }, [isStaff, staff?.role, hasPermission]);
+
+  const [activeTab, setActiveTab] = useState<"all" | "mine">(() => (canViewAllWorkAreas ? "all" : "mine"));
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | WorkAreaStatus>(
     "all",
@@ -245,18 +260,17 @@ export default function WorkAreas() {
           {isError && (
             <p className="mt-2 text-sm text-red-600">
               Work areas:{" "}
-              {error instanceof Error
-                ? error.message
-                : "Failed to load work areas."}
+              {getApiErrorMessage(
+                activeTab === "mine" ? myWorkAreasError : workAreasError,
+                "Failed to load work areas."
+              )}
             </p>
           )}
 
           {showStatsError && (
             <p className="mt-1 text-sm text-red-600">
               Statistics:{" "}
-              {statsError instanceof Error
-                ? statsError.message
-                : "Failed to load work area statistics."}
+              {getApiErrorMessage(statsError, "Failed to load work area statistics.")}
             </p>
           )}
         </div>
@@ -284,19 +298,21 @@ export default function WorkAreas() {
       {/* Tabs & Actions */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between border-b pb-1 gap-3">
         <div className="flex bg-gray-100 p-1 rounded-xl w-fit">
-          <button
-            onClick={() => {
-              setActiveTab("all");
-              setPage(1);
-            }}
-            className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              activeTab === "all"
-                ? "bg-white text-gray-900 shadow-sm"
-                : "text-gray-500 hover:text-gray-900"
-            }`}
-          >
-            All Work Areas
-          </button>
+          {canViewAllWorkAreas && (
+            <button
+              onClick={() => {
+                setActiveTab("all");
+                setPage(1);
+              }}
+              className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                activeTab === "all"
+                  ? "bg-white text-gray-900 shadow-sm"
+                  : "text-gray-500 hover:text-gray-900"
+              }`}
+            >
+              All Work Areas
+            </button>
+          )}
           <button
             onClick={() => {
               setActiveTab("mine");
@@ -312,7 +328,7 @@ export default function WorkAreas() {
           </button>
         </div>
 
-        {!isStaff && (
+        {(!isStaff || hasPermission("work_area_management", "create_work_areas")) && (
           <button
             onClick={() => setWizardOpen(true)}
             className="inline-flex items-center gap-2 bg-[#1658E5] text-white px-4 py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 shadow-lg shadow-blue-500/25 transition-all hover:shadow-xl"

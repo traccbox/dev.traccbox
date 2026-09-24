@@ -1,5 +1,5 @@
 import { Loader2, RefreshCw } from "lucide-react";
-import { useWorkAreaPresence } from "@/api/geoFencing/hooksGeoFencing";
+import { useWorkAreaPresence, getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
 
 const STATUS_STYLE: Record<string, string> = {
   inside: "bg-green-100 text-green-700",
@@ -24,7 +24,7 @@ export default function PresencePanel({ workAreaId }: { workAreaId: string }) {
     return (
       <div className="p-6 text-center border rounded-xl">
         <p className="text-sm text-red-600 mb-2">
-          {error instanceof Error ? error.message : "Failed to load presence."}
+          {getApiErrorMessage(error, "Failed to load presence.")}
         </p>
         <button
           onClick={() => refetch()}

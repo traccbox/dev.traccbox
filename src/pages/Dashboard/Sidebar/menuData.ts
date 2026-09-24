@@ -30,7 +30,7 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     label: "Work Areas",
     icon: "MapPinned",
     to: "/dashboard/work-areas",
-    permission: ["order_task_management", "view_orders"],
+    permission: ["work_area_management", "view_work_areas"],
   },
   {
     label: "Field Sales Reps",

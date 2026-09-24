@@ -136,9 +136,7 @@ export default function WorkAreaDashboard({ id, onClose }: Props) {
             Failed to load work area dashboard
           </h2>
           <p className="mt-1 text-sm text-red-600">
-            {detailsError instanceof Error
-              ? detailsError.message
-              : "Something went wrong."}
+            {getApiErrorMessage(detailsError, "Something went wrong.")}
           </p>
           <div className="mt-4 flex gap-3">
             <button

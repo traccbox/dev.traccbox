@@ -40,20 +40,8 @@ import {
   GeofenceCheckRequest,
 } from "./typesGeoFencing";
 
-export function getApiErrorMessage(error: unknown, fallback: string): string {
-  const anyError = error as {
-    response?: { data?: { message?: string; detail?: unknown } };
-    message?: string;
-  };
-  const data = anyError?.response?.data;
-  if (data?.message) return data.message;
-  if (typeof data?.detail === "string") return data.detail;
-  if (Array.isArray(data?.detail)) {
-    const first = data.detail[0] as { msg?: string };
-    if (first?.msg) return first.msg;
-  }
-  return anyError?.message || fallback;
-}
+import { getApiErrorMessage } from "@/utils/errorUtils";
+export { getApiErrorMessage };
 
 /* ---------------- geo hooks ---------------- */
 
