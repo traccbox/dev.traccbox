@@ -1,0 +1,2 @@
+- [ ] Implement payout API types/client and dashboard + worker-facing MVP views from the uploaded specification.
+- [ ] Verify feature navigation, interactions, responsive rendering, and build diagnostics; audit acceptance criteria and suggested endpoint coverage.

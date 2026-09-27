@@ -1,0 +1,1 @@
+- Keep the daily attendance and payout feature isolated under `src/pages/Dashboard/features/payout/` with its typed API under `src/api/payout/`, so it can evolve without disturbing existing attendance and work-area flows.
