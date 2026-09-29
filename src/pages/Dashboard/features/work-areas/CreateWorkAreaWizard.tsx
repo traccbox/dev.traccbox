@@ -28,8 +28,8 @@ import {
   // WorkAreaRules,
   // WorkAreaLocation,
 } from "./types";
-import { MOCK_EMPLOYEES } from "./mockData";
-import { ADMIN_TREE, findNode } from "./adminData";
+// import { MOCK_EMPLOYEES } from "./mockData";
+// import { ADMIN_TREE, findNode } from "./adminData";
 import { useStaffData } from "@/api/settingsApi/hooks/useStaffData";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
@@ -88,8 +88,6 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
 
   const [locName, setLocName] = useState("");
 
-
-
   const [method, setMethod] = useState<"draw" | "admin" | "manual" | null>(
     null,
   );
@@ -143,17 +141,24 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
   const selectedWardId = selectedWardObj?.id;
 
   const { data: communitiesData = [] } = useCommunities(selectedWardId);
-  const selectedCommunityObj = communitiesData.find((c) => c.name === community);
+  const selectedCommunityObj = communitiesData.find(
+    (c) => c.name === community,
+  );
 
-  const [drawCenterOverride, setDrawCenterOverride] = useState<[number, number] | undefined>(undefined);
-  const [drawZoomOverride, setDrawZoomOverride] = useState<number | undefined>(undefined);
+  const [drawCenterOverride, setDrawCenterOverride] = useState<
+    [number, number] | undefined
+  >(undefined);
+  const [drawZoomOverride, setDrawZoomOverride] = useState<number | undefined>(
+    undefined,
+  );
 
   const [wizardSugOpen, setWizardSugOpen] = useState(false);
   const debouncedLocName = useDebounce(locName, 400);
-  const { data: wizardSugRes, isFetching: wizardSugFetching } = usePlaceSuggestions(
-    debouncedLocName,
-    wizardSugOpen && debouncedLocName.trim().length > 1
-  );
+  const { data: wizardSugRes, isFetching: wizardSugFetching } =
+    usePlaceSuggestions(
+      debouncedLocName,
+      wizardSugOpen && debouncedLocName.trim().length > 1,
+    );
   const wizardSuggestions = wizardSugRes?.suggestions || [];
   const wizardResolveCoords = usePlaceCoordinates();
 
@@ -355,8 +360,6 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
         }
       }
 
-      console.log("Creating work area:", currentData);
-
       try {
         const success = await createWorkArea(currentData);
 
@@ -395,17 +398,17 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
   // Preview areas: saved locations rendered on any wizard map
   const previewAreas: MapArea[] = locations.length
     ? [
-      {
-        id: "draft",
-        name: name || "New Work Area",
-        type,
-        boundary: locations[0].boundary,
-        locations: locations.map((l) => ({
-          name: l.name,
-          boundary: l.boundary,
-        })),
-      },
-    ]
+        {
+          id: "draft",
+          name: name || "New Work Area",
+          type,
+          boundary: locations[0].boundary,
+          locations: locations.map((l) => ({
+            name: l.name,
+            boundary: l.boundary,
+          })),
+        },
+      ]
     : [];
 
   const selectOptions = (list?: { name: string }[]) =>
@@ -440,12 +443,13 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                 <React.Fragment key={s.id}>
                   <div className="flex items-center gap-2">
                     <div
-                      className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${isDone
-                        ? "bg-green-500 text-white"
-                        : isActive
-                          ? "bg-[#1658E5] text-white shadow-lg shadow-blue-500/30"
-                          : "bg-gray-100 text-gray-400"
-                        }`}
+                      className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-colors ${
+                        isDone
+                          ? "bg-green-500 text-white"
+                          : isActive
+                            ? "bg-[#1658E5] text-white shadow-lg shadow-blue-500/30"
+                            : "bg-gray-100 text-gray-400"
+                      }`}
                     >
                       {isDone ? (
                         <Check className="w-4 h-4" />
@@ -529,10 +533,11 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                           type: o.value,
                         });
                       }}
-                      className={`px-3 py-2.5 text-sm rounded-lg border-2 text-left transition-all ${type === o.value
-                        ? "border-[#1658E5] bg-blue-50 text-[#1658E5] font-semibold"
-                        : "border-gray-200 hover:border-gray-300 text-gray-700"
-                        }`}
+                      className={`px-3 py-2.5 text-sm rounded-lg border-2 text-left transition-all ${
+                        type === o.value
+                          ? "border-[#1658E5] bg-blue-50 text-[#1658E5] font-semibold"
+                          : "border-gray-200 hover:border-gray-300 text-gray-700"
+                      }`}
                     >
                       {o.label}
                     </button>
@@ -646,11 +651,14 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                             setWizardSugOpen(true);
                           }}
                           onFocus={() => setWizardSugOpen(true)}
-                          onBlur={() => setTimeout(() => setWizardSugOpen(false), 250)}
+                          onBlur={() =>
+                            setTimeout(() => setWizardSugOpen(false), 250)
+                          }
                           placeholder="Location name (optional)"
                           className="w-full px-3 py-2 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                         />
-                        {(wizardSugFetching || wizardResolveCoords.isPending) && (
+                        {(wizardSugFetching ||
+                          wizardResolveCoords.isPending) && (
                           <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
                         )}
                       </div>
@@ -666,11 +674,17 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                                   onSuccess: (coords) => {
                                     setLocName(r.description);
                                     setWizardSugOpen(false);
-                                    setDrawCenterOverride([coords.latitude, coords.longitude]);
+                                    setDrawCenterOverride([
+                                      coords.latitude,
+                                      coords.longitude,
+                                    ]);
                                     setDrawZoomOverride(15);
                                     setShape({
                                       kind: "circle",
-                                      center: [coords.latitude, coords.longitude],
+                                      center: [
+                                        coords.latitude,
+                                        coords.longitude,
+                                      ],
                                       radius,
                                     });
                                   },
@@ -899,10 +913,10 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                             shape ||
                             (adminFocus?.center
                               ? {
-                                kind: "circle",
-                                center: adminFocus.center,
-                                radius,
-                              }
+                                  kind: "circle",
+                                  center: adminFocus.center,
+                                  radius,
+                                }
                               : null),
                           onChange: (s) => setShape(s),
                           mode: "circle",
@@ -937,11 +951,14 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                             setWizardSugOpen(true);
                           }}
                           onFocus={() => setWizardSugOpen(true)}
-                          onBlur={() => setTimeout(() => setWizardSugOpen(false), 250)}
+                          onBlur={() =>
+                            setTimeout(() => setWizardSugOpen(false), 250)
+                          }
                           placeholder="e.g. Ikeja HQ"
                           className="w-full px-3 py-2.5 border rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
                         />
-                        {(wizardSugFetching || wizardResolveCoords.isPending) && (
+                        {(wizardSugFetching ||
+                          wizardResolveCoords.isPending) && (
                           <Loader2 className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 animate-spin" />
                         )}
                       </div>
@@ -961,7 +978,10 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                                     setLng(coords.longitude.toString());
                                     setShape({
                                       kind: "circle",
-                                      center: [coords.latitude, coords.longitude],
+                                      center: [
+                                        coords.latitude,
+                                        coords.longitude,
+                                      ],
                                       radius,
                                     });
                                   },
@@ -1110,7 +1130,10 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                   </p>
 
                   <p className="mt-1 text-xs text-red-600">
-                    {getApiErrorMessage(error, "Unable to retrieve team members.")}
+                    {getApiErrorMessage(
+                      error,
+                      "Unable to retrieve team members.",
+                    )}
                   </p>
                 </div>
               )}
