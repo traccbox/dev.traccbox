@@ -2,11 +2,18 @@
 
 import api from "../AxiosInstance";
 import {
+  BranchPerformanceReportRow,
+  EmployeePerformanceReportRow,
   GetPerformanceFiltersResponse,
   GetPerformanceLogsParams,
   GetPerformanceLogsResponse,
   GetPerformanceReportParams,
   GetPerformanceReportResponse,
+  PerformanceReportRowMap,
+  PerformanceReportTableParams,
+  PerformanceReportTableResponse,
+  PerformanceReportType,
+  TeamPerformanceReportRow,
 } from "./types";
 
 export async function getPerformanceLogs(
@@ -39,6 +46,21 @@ export async function getPerformanceReport(
     },
   );
 
-  console.log(response.data, "Testing performance logs");
+  return response.data;
+}
+
+
+export async function getPerformanceReportTable<
+  T extends PerformanceReportType,
+>(
+  reportType: T,
+  params: PerformanceReportTableParams,
+): Promise<PerformanceReportTableResponse<PerformanceReportRowMap[T]>> {
+  const response = await api.get<
+    PerformanceReportTableResponse<PerformanceReportRowMap[T]>
+  >(`/performance/reports/${reportType}`, {
+    params,
+  });
+
   return response.data;
 }

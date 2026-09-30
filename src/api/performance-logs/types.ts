@@ -1,5 +1,8 @@
 // api/performance/typesPerformance.ts
 
+import { PeriodType } from "@/pages/Dashboard/features/performance/Reports";
+import { TableKey } from "@/pages/Dashboard/features/performance/ReportTable";
+
 export interface PerformanceLog {
   id: string;
   employee_id: string;
@@ -60,7 +63,6 @@ export interface PerformanceLogFilters {
   teams: string[];
   activities: string[];
   statuses: string[];
-
 }
 
 export interface GetPerformanceFiltersResponse {
@@ -145,3 +147,58 @@ export interface GetPerformanceReportParams {
   department?: string;
   employee_id?: string;
 }
+
+export type PerformanceReportType = "employee" | "branch" | "team";
+
+export interface PerformanceReportTableParams {
+  // period: "daily" | "weekly" | "monthly" | "custom";
+  period: PeriodType;
+  start_date?: string;
+  end_date?: string;
+  branch?: string;
+  team?: string;
+  department?: string;
+  employee_id?: string;
+  page?: number;
+  per_page?: number;
+}
+
+export interface PerformanceReportTableMeta {
+  page: number;
+  per_page: number;
+  total: number;
+  total_pages: number;
+}
+
+export interface EmployeePerformanceReportRow {
+  employee_id: string | null;
+  employee: string;
+  visits: number;
+  score: number;
+}
+
+export interface BranchPerformanceReportRow {
+  branch: string;
+  employees: number;
+  visits: number;
+  orders: number;
+  distance_km: number;
+  attendance_percent: number;
+}
+
+export interface TeamPerformanceReportRow {
+  label: string;
+  score: number;
+}
+
+export interface PerformanceReportTableResponse<T> {
+  status: string;
+  data: T[];
+  meta: PerformanceReportTableMeta;
+}
+
+export type PerformanceReportRowMap = {
+  employee: EmployeePerformanceReportRow;
+  branch: BranchPerformanceReportRow;
+  team: TeamPerformanceReportRow;
+};

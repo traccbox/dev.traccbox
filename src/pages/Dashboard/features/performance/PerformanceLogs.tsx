@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -18,23 +18,14 @@ import {
   ErrorState,
   TableSkeleton,
 } from "@/components/dashboard/States";
-import { ACTIVITY_TYPES, LogFilters } from "@/api/mock/performanceLogs";
-import {
-  BRANCHES,
-  DEPARTMENTS,
-  EMPLOYEES,
-  TEAMS,
-  TERRITORIES,
-} from "@/api/mock/orgData";
-import { exportCSV, exportPDF } from "@/utils/exportData";
+import { LogFilters } from "@/api/mock/performanceLogs";
+import { TERRITORIES } from "@/api/mock/orgData";
 import {
   getPerformanceFilters,
   getPerformanceLogs,
 } from "@/api/performance-logs/apiPerformance";
 import Spinner from "@/components/ui/Spinner";
 import { PerformanceLog } from "@/api/performance-logs/types";
-import { useStaffData } from "@/api/settingsApi/hooks/useStaffData";
-import { useAuth } from "@/components/auth/AuthProvider";
 import { downloadPerformanceReport } from "@/utils/performanceUtils";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -85,9 +76,6 @@ const PerformanceLogs: React.FC = () => {
   const [filters, setFilters] = useState<LogFilters>({});
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-
-  const { user } = useAuth();
-  const companyId = user?.id;
 
   const debouncedSearch = useDebounce(search, 500);
 
