@@ -13,6 +13,8 @@ import {
   CreditCard,
   MapPin,
   Calendar,
+  Landmark,
+  Banknote,
 } from "lucide-react";
 import type { DailyPayout, PayoutSlip } from "@/api/payout/types";
 import { toast } from "sonner";
@@ -48,6 +50,12 @@ export default function PayoutSlipModal({ open, payout, slip, onClose }: Props) 
   const clockOutStatus = slip?.clock_out?.status || payout?.attendance?.clock_out_status || "verified";
   const clockInTime = payout?.attendance?.clock_in_time || "07:55 AM";
   const clockOutTime = payout?.attendance?.clock_out_time || "03:30 PM";
+
+  // Payment Method details
+  const method = payout?.payment_method || payout?.worker?.payment_method || (slip as any)?.payment_method || "transfer";
+  const bankName = payout?.bank_name || payout?.worker?.bank_name || (slip as any)?.bank_name;
+  const accountNumber = payout?.account_number || payout?.worker?.account_number || (slip as any)?.account_number;
+  const accountName = payout?.account_name || payout?.worker?.account_name || (slip as any)?.account_name || workerName;
 
   const hoursInt = Math.floor(hoursWorked);
   const minutesInt = Math.round((hoursWorked - hoursInt) * 60);
@@ -158,7 +166,7 @@ export default function PayoutSlipModal({ open, payout, slip, onClose }: Props) 
                   {status === "paid"
                     ? `Payment confirmed ${paymentRef ? `(Ref: ${paymentRef})` : ""}`
                     : status === "approved"
-                    ? "Approved by Site Admin — Pending Bank Transfer"
+                    ? "Approved by Site Admin — Pending Bank Transfer / Disbursal"
                     : "Attendance verified — Awaiting Admin Approval"}
                 </p>
               </div>
@@ -214,6 +222,27 @@ export default function PayoutSlipModal({ open, payout, slip, onClose }: Props) 
                 {dateStr}
               </div>
               <span className="text-[10px] text-slate-600">Standard Workday</span>
+            </div>
+          </div>
+
+          {/* Payment Method & Bank Account Details */}
+          <div className="p-4 bg-blue-50/60 border border-blue-200/80 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1">
+                {method === "transfer" ? <Landmark className="w-3.5 h-3.5 text-blue-600" /> : <Banknote className="w-3.5 h-3.5 text-emerald-600" />}
+                Payment Disbursal Method: {method === "transfer" ? "Bank Transfer" : "Cash Disbursal"}
+              </span>
+              {method === "transfer" && (bankName || accountNumber) ? (
+                <div className="mt-1 font-semibold text-slate-800 flex items-center gap-2">
+                  <span>Bank: <strong>{bankName || "Access Bank"}</strong></span>
+                  <span>·</span>
+                  <span>Acc: <strong className="font-mono text-blue-700">{accountNumber || "0123456789"}</strong></span>
+                  <span>·</span>
+                  <span>Name: <strong>{accountName}</strong></span>
+                </div>
+              ) : (
+                <p className="mt-1 text-slate-600 font-medium">Physical Cash Voucher Disbursement</p>
+              )}
             </div>
           </div>
 

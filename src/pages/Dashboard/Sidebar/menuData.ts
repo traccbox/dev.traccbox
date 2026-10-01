@@ -42,6 +42,11 @@ export const sidebarMenus: SidebarMenuConfig[] = [
         permission: ["work_area_management", "view_work_areas"],
       },
       {
+        label: "Pay Slips & Disbursal",
+        to: "/dashboard/payout/payslips",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
         label: "Site Geofences",
         to: "/dashboard/payout/sites",
         permission: ["work_area_management", "view_work_areas"],

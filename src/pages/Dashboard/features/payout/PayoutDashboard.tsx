@@ -7,14 +7,16 @@ import {
   Smartphone,
   ShieldCheck,
   Calendar,
+  FileText,
 } from "lucide-react";
 import DailyPayoutBoard from "./components/DailyPayoutBoard";
+import PaySlipDashboard from "./components/PaySlipDashboard";
 import SiteGeofenceSetup from "./components/SiteGeofenceSetup";
 import WorkerRegistration from "./components/WorkerRegistration";
 import DailyAttendanceBoard from "./components/DailyAttendanceBoard";
 import WorkerClockInPortal from "./components/WorkerClockInPortal";
 
-export type PayoutTab = "board" | "sites" | "workers" | "attendance" | "clockin";
+export type PayoutTab = "board" | "payslip" | "sites" | "workers" | "attendance" | "clockin";
 
 interface Props {
   initialTab?: PayoutTab;
@@ -25,6 +27,7 @@ export default function PayoutDashboard({ initialTab = "board" }: Props) {
 
   const tabs = [
     { id: "board", label: "Payout Dashboard", icon: Banknote },
+    { id: "payslip", label: "Pay Slip & Disbursal", icon: FileText },
     { id: "sites", label: "Site & Geofences", icon: Building2 },
     { id: "workers", label: "Register Workers", icon: Users },
     { id: "attendance", label: "Attendance Logs", icon: Clock },
@@ -90,6 +93,7 @@ export default function PayoutDashboard({ initialTab = "board" }: Props) {
       {/* Tab Contents */}
       <div className="mt-4">
         {activeTab === "board" && <DailyPayoutBoard />}
+        {activeTab === "payslip" && <PaySlipDashboard />}
         {activeTab === "sites" && <SiteGeofenceSetup />}
         {activeTab === "workers" && <WorkerRegistration />}
         {activeTab === "attendance" && <DailyAttendanceBoard />}

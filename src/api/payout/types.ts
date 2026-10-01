@@ -1,5 +1,6 @@
 export type PayoutStatus = "pending" | "approved" | "paid";
 export type GeofenceStatus = "verified" | "rejected" | "flagged" | "unverified" | "unable_to_verify";
+export type PaymentMethod = "cash" | "transfer";
 
 export interface PayoutSite {
   id: string;
@@ -14,13 +15,19 @@ export interface PayoutSite {
 
 export interface DailyWorker {
   id: string;
+  staff_id?: string;
   name: string;
   phone: string;
+  email?: string;
   role?: string;
   site_id?: string;
   site?: PayoutSite | string;
   daily_wage: number;
   standard_hours: number;
+  payment_method?: PaymentMethod;
+  bank_name?: string;
+  account_number?: string;
+  account_name?: string;
   status?: string;
   registered_at?: string;
 }
@@ -52,6 +59,7 @@ export interface DailyAttendance {
 export interface DailyPayout {
   id: string;
   worker_id: string;
+  staff_id?: string;
   worker_name?: string;
   worker?: DailyWorker;
   attendance_id?: string;
@@ -65,8 +73,13 @@ export interface DailyPayout {
   amount: number;
   status: PayoutStatus;
   reference: string;
+  payment_method?: PaymentMethod;
+  bank_name?: string;
+  account_number?: string;
+  account_name?: string;
   attendance?: DailyAttendance;
   generated_at?: string;
+  approved_at?: string;
   paid_at?: string;
   payment_reference?: string;
 }
@@ -87,6 +100,7 @@ export interface ListOptions {
   to?: string;
   site_id?: string;
   status?: string;
+  payment_method?: string;
 }
 
 export interface LocationInput {
@@ -96,12 +110,17 @@ export interface LocationInput {
 }
 
 export interface RegisterWorkerInput {
+  staff_id?: string;
   name: string;
   phone: string;
   role: string;
   site_id: string;
   daily_wage: number;
   standard_hours: number;
+  payment_method?: PaymentMethod;
+  bank_name?: string;
+  account_number?: string;
+  account_name?: string;
 }
 
 export interface CreateSiteInput {
@@ -118,6 +137,7 @@ export interface PayoutSlip {
   payout_reference?: string;
   worker_name?: string;
   worker_id?: string;
+  staff_id?: string;
   role?: string;
   site_name?: string;
   work_date?: string;
@@ -128,7 +148,14 @@ export interface PayoutSlip {
   hourly_rate?: number;
   workday_type?: string;
   amount?: number;
+  payment_method?: PaymentMethod;
+  bank_name?: string;
+  account_number?: string;
+  account_name?: string;
   status?: PayoutStatus;
   generated_at?: string;
+  approved_at?: string;
+  paid_at?: string;
+  payment_reference?: string;
   [key: string]: unknown;
 }
