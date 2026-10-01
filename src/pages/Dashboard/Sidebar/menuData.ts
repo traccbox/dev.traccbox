@@ -33,6 +33,37 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     permission: ["work_area_management", "view_work_areas"],
   },
   {
+    label: "Daily Attendance & Payout",
+    icon: "Banknote",
+    submenus: [
+      {
+        label: "Payout Board",
+        to: "/dashboard/payout",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
+        label: "Site Geofences",
+        to: "/dashboard/payout/sites",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
+        label: "Same-Day Workers",
+        to: "/dashboard/payout/workers",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
+        label: "Attendance Logs",
+        to: "/dashboard/payout/attendance",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
+        label: "Worker Clock-In Portal",
+        to: "/dashboard/payout/clock-in-portal",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+    ],
+  },
+  {
     label: "Field Sales Reps",
     icon: "Users",
     submenus: [

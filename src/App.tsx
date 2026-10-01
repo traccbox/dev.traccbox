@@ -42,13 +42,12 @@ import PlanComparison from "./pages/Dashboard/features/subscription/PlanComparis
 import TrialConfiguration from "./pages/Dashboard/features/subscription/TrialConfiguration";
 import CallHistory from "./pages/Dashboard/features/communication/CallHistory";
 
+import PayoutFeature from "./pages/Dashboard/features/payout";
 import DashboardIndexRedirect from "@/components/auth/DashboardIndexRedirect";
 
 const gate = (mod: string, act: string, element: React.ReactNode) => (
   <RequirePermission module={mod} action={act}>{element}</RequirePermission>
 );
-
-
 
 const queryClient = new QueryClient();
 const PageTracking = () => {
@@ -90,6 +89,7 @@ const App = () => (
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<Dashboard />}>
                 <Route index element={<DashboardIndexRedirect />} />
+                <Route path="payout/*" element={gate("work_area_management", "view_work_areas", <PayoutFeature />)} />
                 <Route path="settings/general" element={gate("user_role_management", "view_users", <GeneralSettings />)} />
                  <Route path="settings/roles" element={<UserRolesLayout />}>
                   <Route index element={gate("user_role_management", "assign_roles", <UserRoles />)} />
