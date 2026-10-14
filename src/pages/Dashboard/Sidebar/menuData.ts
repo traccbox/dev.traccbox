@@ -8,6 +8,8 @@ export interface SidebarSubmenu {
   to: string;
   comingSoon?: boolean;
   permission?: PermissionKey;
+  /** Set to true to hide this submenu item until its API is integrated */
+  hidden?: boolean;
 }
 
 export interface SidebarMenuConfig {
@@ -17,6 +19,8 @@ export interface SidebarMenuConfig {
   submenus?: SidebarSubmenu[];
   comingSoon?: boolean;
   permission?: PermissionKey;
+  /** Set to true to hide this menu from the sidebar until its API is integrated */
+  hidden?: boolean;
 }
 
 export const sidebarMenus: SidebarMenuConfig[] = [
@@ -32,9 +36,13 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     to: "/dashboard/work-areas",
     permission: ["work_area_management", "view_work_areas"],
   },
+
+  // ─── NOT YET INTEGRATED ──────────────────────────────────────────────────
+  // To enable a module: delete its `hidden: true` line.
   {
     label: "Daily Attendance & Payout",
     icon: "Banknote",
+    hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Payout Board",
@@ -68,6 +76,8 @@ export const sidebarMenus: SidebarMenuConfig[] = [
       },
     ],
   },
+  // ─────────────────────────────────────────────────────────────────────────
+
   {
     label: "Field Sales Reps",
     icon: "Users",
@@ -89,9 +99,12 @@ export const sidebarMenus: SidebarMenuConfig[] = [
       },
     ],
   },
+
+  // ─── NOT YET INTEGRATED ──────────────────────────────────────────────────
   {
     label: "Performance",
     icon: "TrendingUp",
+    hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Performance Logs",
@@ -108,12 +121,14 @@ export const sidebarMenus: SidebarMenuConfig[] = [
   {
     label: "Travel Monitoring",
     icon: "Navigation",
+    hidden: true, // ← remove this line to show
     to: "/dashboard/travel-monitoring",
     permission: ["core_dashboard_report", "view_dashboard"],
   },
   {
     label: "Communication",
     icon: "PhoneCall",
+    hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Call History",
@@ -125,6 +140,7 @@ export const sidebarMenus: SidebarMenuConfig[] = [
   {
     label: "Subscription",
     icon: "CreditCard",
+    hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Current Plan",
@@ -148,6 +164,8 @@ export const sidebarMenus: SidebarMenuConfig[] = [
       },
     ],
   },
+  // ─────────────────────────────────────────────────────────────────────────
+
   {
     label: "Settings & Integrations",
     icon: "Settings",
@@ -170,3 +188,9 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     ],
   },
 ];
+
+/**
+ * Sidebar menus with hidden items filtered out.
+ * Use this export in Sidebar.tsx — swap `sidebarMenus` for `activeMenus`.
+ */
+export const activeMenus = sidebarMenus.filter((m) => !m.hidden);

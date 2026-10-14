@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { sidebarMenus } from "./menuData";
+import { activeMenus } from "./menuData";
 import SidebarMenu from "./SidebarMenu";
 import { Link, useLocation } from "react-router-dom";
 import { LogOut, Menu } from "lucide-react";
@@ -11,8 +11,8 @@ const Sidebar: React.FC = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { hasPermission, isStaff } = useAuth();
   const menus = useMemo(() => {
-    if (!isStaff) return sidebarMenus;
-    return sidebarMenus
+    if (!isStaff) return activeMenus;
+    return activeMenus
       .map((menu) => {
         if (menu.submenus?.length) {
           const filtered = menu.submenus.filter(
@@ -26,7 +26,7 @@ const Sidebar: React.FC = () => {
         }
         return menu;
       })
-      .filter(Boolean) as typeof sidebarMenus;
+      .filter(Boolean) as typeof activeMenus;
   }, [hasPermission, isStaff]);
   const isMobile = useIsMobile();
   const location = useLocation();
