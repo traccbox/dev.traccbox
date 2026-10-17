@@ -74,8 +74,8 @@ const App = () => (
           <GlobalAuthRedirect />
           <Routes>
             <Route path="/" element={<Index />} />
-            <Route path="/company$&-admin-signup" element={<Signup />} />
-            <Route path="/signup" element={<Signup />} />
+            {/* <Route path="/company$&-admin-signup" element={<Signup />} />
+            <Route path="/signup" element={<Signup />} /> */}
             <Route path="/company$&-admin-login" element={<Login />} />
             <Route path="/login" element={<Login />} />
 
@@ -91,7 +91,7 @@ const App = () => (
                 <Route index element={<DashboardIndexRedirect />} />
                 <Route path="payout/*" element={gate("work_area_management", "view_work_areas", <PayoutFeature />)} />
                 <Route path="settings/general" element={gate("user_role_management", "view_users", <GeneralSettings />)} />
-                 <Route path="settings/roles" element={<UserRolesLayout />}>
+                <Route path="settings/roles" element={<UserRolesLayout />}>
                   <Route index element={gate("user_role_management", "assign_roles", <UserRoles />)} />
                   <Route path="bulk-upload" element={gate("user_role_management", "add_edit_users", <BulkUpload />)} />
                 </Route>

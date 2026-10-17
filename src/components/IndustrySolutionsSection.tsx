@@ -292,11 +292,11 @@ const IndustrySolutionsSection = () => {
                 {activeIndustry.description}
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <Link to="/signup" className="w-full sm:w-auto">
+                <a href="https://wa.me/2349063880674" target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
                   <Button className="w-full gap-2 bg-traccbox-500 px-6 text-primary-foreground hover:bg-traccbox-600">
-                    Start free trial <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    Request a Demo <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </Button>
-                </Link>
+                </a>
                 <Button asChild variant="outline" className="w-full border-traccbox-200 text-traccbox-700 sm:w-auto">
                   <a href="#contact">Talk to our team</a>
                 </Button>
