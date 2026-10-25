@@ -9,7 +9,8 @@ export interface WorkAreaStats {
 
 export type WorkAreaBoundary =
   | { kind: "circle"; center: [number, number]; radius: number }
-  | { kind: "polygon"; points: [number, number][] };
+  | { kind: "polygon"; points: [number, number][] }
+  | { kind: "multipolygon"; rings: [number, number][][] };
 
 export interface WorkArea {
   id: string;
@@ -48,7 +49,14 @@ export interface GetWorkAreasParams {
 export interface WorkAreaLocation {
   name: string;
   method: string;
-  boundary: WorkAreaBoundary;
+  /**
+   * Either `boundary` or `admin_region_id` must be provided when creating/updating
+   * a location, but not both. Send `admin_region_id` to let the backend resolve the
+   * real state/LGA polygon; send `boundary` for draw or manual flows.
+   */
+  boundary?: WorkAreaBoundary;
+  /** Use instead of `boundary` when the admin hierarchy flow picks a real region. */
+  admin_region_id?: string;
   address?: string;
   country?: string;
   state?: string;
@@ -131,6 +139,11 @@ export interface ToggleWorkAreaStatusPayload {
   status: "active" | "inactive";
 }
 
+export interface ToggleWorkAreaStatusResponse {
+  id: string;
+  status: "active" | "inactive";
+}
+
 /* ---------- Geo (administrative hierarchy + search) ---------- */
 
 export interface GeoCountry {
@@ -145,6 +158,8 @@ export interface GeoRegion {
   name: string;
   center?: [number, number];
   zoom?: number;
+  /** True when a real imported boundary polygon is available for this region. */
+  has_boundary?: boolean;
 }
 
 export interface GeoSearchResult {
@@ -249,8 +264,10 @@ export interface GeofenceCheckRequest {
   lat: number;
   lng: number;
   accuracy: number;
-  company_id: string;
-  qr_code: string;
+  /** @deprecated The backend no longer requires this — kept optional for legacy callers. */
+  company_id?: string;
+  /** @deprecated The backend no longer requires this — kept optional for legacy callers. */
+  qr_code?: string;
 }
 
 export interface GeofenceCheckResponse {

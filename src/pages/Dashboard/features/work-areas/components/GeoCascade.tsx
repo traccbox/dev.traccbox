@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import {
   useCommunities,
   useCountries,
@@ -12,8 +12,12 @@ export interface GeoSelection {
   countryName?: string;
   stateId?: string;
   stateName?: string;
+  /** Whether the selected state has a real imported boundary polygon. */
+  stateHasBoundary?: boolean;
   lgaId?: string;
   lgaName?: string;
+  /** Whether the selected LGA has a real imported boundary polygon. */
+  lgaHasBoundary?: boolean;
   wardId?: string;
   wardName?: string;
   communityId?: string;
@@ -40,7 +44,7 @@ function Field({
   label: string;
   value: string;
   onChange: (v: string) => void;
-  options: { id: string; name: string }[];
+  options: { id: string; name: string; hasBoundary?: boolean }[];
   loading?: boolean;
   error?: boolean;
   disabled?: boolean;
@@ -62,6 +66,7 @@ function Field({
         {options.map((o) => (
           <option key={o.id} value={o.id}>
             {o.name}
+            {o.hasBoundary === false ? " ⚠ no boundary" : ""}
           </option>
         ))}
       </select>
@@ -81,6 +86,14 @@ export default function GeoCascade({ value, onChange }: Props) {
   const lgas = useLgas(value.stateId);
   const wards = useWards(value.lgaId);
   const communities = useCommunities(value.wardId);
+
+  /**
+   * Ward data is not seeded yet — /geo/wards always returns [].
+   * When that's the case, degrade to a free-text input.
+   * The `ward` field on a Location is a plain string either way.
+   */
+  const wardOptions = wards.data ?? [];
+  const wardDropdownEmpty = !wards.isFetching && wardOptions.length === 0 && !!value.lgaId;
 
   return (
     <div className="space-y-3">
@@ -109,15 +122,21 @@ export default function GeoCascade({ value, onChange }: Props) {
         value={value.stateId || ""}
         loading={states.isFetching}
         error={states.isError}
-        options={(states.data || []).map((s) => ({ id: s.id, name: s.name }))}
+        options={(states.data || []).map((s) => ({
+          id: s.id,
+          name: s.name,
+          hasBoundary: s.has_boundary,
+        }))}
         onChange={(id) => {
           const region = (states.data || []).find((s) => s.id === id);
           onChange({
             ...value,
             stateId: id || undefined,
             stateName: region?.name,
+            stateHasBoundary: region?.has_boundary,
             lgaId: undefined,
             lgaName: undefined,
+            lgaHasBoundary: undefined,
             wardId: undefined,
             wardName: undefined,
             communityId: undefined,
@@ -135,13 +154,18 @@ export default function GeoCascade({ value, onChange }: Props) {
         value={value.lgaId || ""}
         loading={lgas.isFetching}
         error={lgas.isError}
-        options={(lgas.data || []).map((s) => ({ id: s.id, name: s.name }))}
+        options={(lgas.data || []).map((s) => ({
+          id: s.id,
+          name: s.name,
+          hasBoundary: s.has_boundary,
+        }))}
         onChange={(id) => {
           const region = (lgas.data || []).find((s) => s.id === id);
           onChange({
             ...value,
             lgaId: id || undefined,
             lgaName: region?.name,
+            lgaHasBoundary: region?.has_boundary,
             wardId: undefined,
             wardName: undefined,
             communityId: undefined,
@@ -152,32 +176,61 @@ export default function GeoCascade({ value, onChange }: Props) {
         }}
       />
 
-      <Field
-        label="Ward"
-        placeholder={value.lgaId ? "Select ward" : "Select an LGA first"}
-        disabled={!value.lgaId}
-        value={value.wardId || ""}
-        loading={wards.isFetching}
-        error={wards.isError}
-        options={(wards.data || []).map((s) => ({ id: s.id, name: s.name }))}
-        onChange={(id) => {
-          const region = (wards.data || []).find((s) => s.id === id);
-          onChange({
-            ...value,
-            wardId: id || undefined,
-            wardName: region?.name,
-            communityId: undefined,
-            communityName: undefined,
-            center: region?.center ?? value.center,
-            zoom: region?.zoom ?? value.zoom,
-          });
-        }}
-      />
+      {/* Ward — degrades to free-text when the dropdown comes back empty */}
+      <div>
+        <label className="block text-sm font-medium mb-1.5 flex items-center gap-2">
+          Ward
+          {wards.isFetching && <Loader2 className="w-3.5 h-3.5 animate-spin text-gray-400" />}
+        </label>
+        {wardDropdownEmpty ? (
+          <>
+            <input
+              type="text"
+              value={value.wardName || ""}
+              onChange={(e) =>
+                onChange({ ...value, wardId: undefined, wardName: e.target.value || undefined })
+              }
+              placeholder="Type ward name (optional)"
+              disabled={!value.lgaId}
+              className="w-full px-3 py-2.5 border rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
+            />
+            <p className="text-xs text-amber-600 mt-1 flex items-center gap-1">
+              <AlertTriangle className="w-3 h-3" />
+              Ward list not available — enter manually.
+            </p>
+          </>
+        ) : (
+          <select
+            value={value.wardId || ""}
+            disabled={!value.lgaId || wards.isFetching}
+            onChange={(e) => {
+              const region = wardOptions.find((s) => s.id === e.target.value);
+              onChange({
+                ...value,
+                wardId: e.target.value || undefined,
+                wardName: region?.name,
+                communityId: undefined,
+                communityName: undefined,
+                center: region?.center ?? value.center,
+                zoom: region?.zoom ?? value.zoom,
+              });
+            }}
+            className="w-full px-3 py-2.5 border rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50 disabled:text-gray-400"
+          >
+            <option value="">{value.lgaId ? "Select ward" : "Select an LGA first"}</option>
+            {wardOptions.map((o) => (
+              <option key={o.id} value={o.id}>
+                {o.name}
+              </option>
+            ))}
+          </select>
+        )}
+      </div>
 
       <Field
         label="Community"
-        placeholder={value.wardId ? "Select community" : "Select a ward first"}
-        disabled={!value.wardId}
+        placeholder={value.wardId || value.wardName ? "Select community" : "Select a ward first"}
+        disabled={!value.wardId && !value.wardName}
         value={value.communityId || ""}
         loading={communities.isFetching}
         error={communities.isError}

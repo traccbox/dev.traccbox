@@ -224,46 +224,48 @@ export default function WorkAreaMap({
           : [];
 
       shapes.forEach(({ label, boundary }) => {
-        let layer: L.Layer | null = null;
-
         if (boundary.kind === "circle") {
-          layer = L.circle(boundary.center, {
+          const layer = L.circle(boundary.center, {
             radius: boundary.radius,
             color,
             weight,
             fillColor: color,
             fillOpacity,
           });
+          layer.bindTooltip(label, { direction: "top" });
+          layer.on("click", () => { onSelect?.(area.id); });
+          layer.addTo(map);
+          layersRef.current.push(layer);
         }
 
-        if (
-          boundary.kind === "polygon" &&
-          boundary.points &&
-          boundary.points.length > 0
-        ) {
-          layer = L.polygon(boundary.points, {
+        if (boundary.kind === "polygon" && boundary.points && boundary.points.length > 0) {
+          const layer = L.polygon(boundary.points, {
             color,
             weight,
             fillColor: color,
             fillOpacity,
           });
+          layer.bindTooltip(label, { direction: "top" });
+          layer.on("click", () => { onSelect?.(area.id); });
+          layer.addTo(map);
+          layersRef.current.push(layer);
         }
 
-        if (!layer) {
-          return;
+        if (boundary.kind === "multipolygon" && boundary.rings && boundary.rings.length > 0) {
+          boundary.rings.forEach((ring, ringIdx) => {
+            if (!ring || ring.length < 3) return;
+            const layer = L.polygon(ring, {
+              color,
+              weight,
+              fillColor: color,
+              fillOpacity,
+            });
+            layer.bindTooltip(ringIdx === 0 ? label : `${label} (part ${ringIdx + 1})`, { direction: "top" });
+            layer.on("click", () => { onSelect?.(area.id); });
+            layer.addTo(map);
+            layersRef.current.push(layer);
+          });
         }
-
-        layer.bindTooltip(label, {
-          direction: "top",
-        });
-
-        layer.on("click", () => {
-          onSelect?.(area.id);
-        });
-
-        layer.addTo(map);
-
-        layersRef.current.push(layer);
       });
     });
 
@@ -298,6 +300,12 @@ export default function WorkAreaMap({
           if (boundary.kind === "polygon" && boundary.points?.length) {
             boundary.points.forEach((point) => {
               bounds.extend(point);
+            });
+          }
+
+          if (boundary.kind === "multipolygon" && boundary.rings?.length) {
+            boundary.rings.forEach((ring) => {
+              ring.forEach((point) => bounds.extend(point));
             });
           }
         });

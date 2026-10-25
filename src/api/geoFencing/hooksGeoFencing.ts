@@ -185,6 +185,7 @@ export function useToggleWorkAreaStatus(workAreaId: string) {
       toggleWorkAreaStatusById(workAreaId, { status }),
     onSuccess: (_data, status) => {
       toast.success(`Work area ${status === "active" ? "enabled" : "disabled"}`);
+      // Invalidate all related queries so the UI reflects the new status
       invalidate();
     },
     onError: (error) =>
