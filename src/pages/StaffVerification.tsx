@@ -85,7 +85,7 @@ const StaffVerification = () => {
         return;
       }
       const normalizedRole = (res?.role || "").toLowerCase().trim();
-      if (normalizedRole === "sales" || normalizedRole === "sales rep") {
+      if (normalizedRole === "sales_rep" || normalizedRole === "sales rep") {
         navigate("/sales-rep-demo");
       } else {
         // Web dashboard staff (manager, HR, etc.) — persist full session + permissions

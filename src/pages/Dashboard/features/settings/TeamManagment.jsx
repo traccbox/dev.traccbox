@@ -415,34 +415,30 @@ const TeamManagement = () => {
                     <div className="flex items-center justify-between w-full gap-2 mb-2">
                       <div className="flex items-center gap-1">
                         <div
-                          className={`w-2 h-2 ${
-                            member.is_active ? "bg-green-500" : "bg-gray-400"
-                          } rounded-full`}
+                          className={`w-2 h-2 ${member.is_active ? "bg-green-500" : "bg-gray-400"
+                            } rounded-full`}
                         ></div>
                         <span
-                          className={`text-xs ${
-                            member.is_active
+                          className={`text-xs ${member.is_active
                               ? "text-green-600"
                               : "text-gray-600"
-                          } font-medium`}
+                            } font-medium`}
                         >
                           {member.is_active ? "Active" : "Inactive"}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <div
-                          className={`w-2 h-2 ${
-                            member.accept_invitation
+                          className={`w-2 h-2 ${member.accept_invitation
                               ? "bg-purple-500"
                               : "bg-gray-400"
-                          } rounded-full`}
+                            } rounded-full`}
                         ></div>
                         <span
-                          className={`text-xs ${
-                            member.accept_invitation
+                          className={`text-xs ${member.accept_invitation
                               ? "text-purple-600"
                               : "text-gray-600"
-                          } font-medium`}
+                            } font-medium`}
                         >
                           {member.accept_invitation ? "Verified" : "Pending"}
                         </span>
@@ -451,7 +447,7 @@ const TeamManagement = () => {
                   </div>
 
                   {/* Attendance Status */}
-                  {member.role.toLowerCase() === "sales" && (
+                  {member.role.toLowerCase() === "sales_rep" && (
                     <div className="border-t border-gray-200 pt-3 mt-2">
                       <div className="flex flex-col items-center gap-2">
                         <h4 className="font-medium text-sm text-gray-700">
@@ -475,13 +471,12 @@ const TeamManagement = () => {
                             <>
                               <div className="flex items-center gap-2 w-full justify-center">
                                 <div
-                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium w-full text-center ${
-                                    attendance.isCheckedIn
+                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium w-full text-center ${attendance.isCheckedIn
                                       ? attendance.checkOutTime
                                         ? "bg-blue-100 text-blue-800 border border-blue-200"
                                         : "bg-green-100 text-green-800 border border-green-200"
                                       : "bg-red-50 text-red-800 border border-red-200"
-                                  }`}
+                                    }`}
                                 >
                                   {attendance.isCheckedIn
                                     ? attendance.checkOutTime
