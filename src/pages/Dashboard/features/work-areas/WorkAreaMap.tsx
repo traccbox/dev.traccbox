@@ -10,7 +10,7 @@ export interface MapArea {
   name: string;
   type?: string;
   boundary?: WorkAreaBoundary | null;
-  locations?: { name: string; boundary: WorkAreaBoundary }[];
+  locations?: { name: string; boundary?: WorkAreaBoundary | null }[];
 }
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -210,10 +210,12 @@ export default function WorkAreaMap({
         label: string;
         boundary: BoundaryShape;
       }[] = area.locations?.length
-        ? area.locations.map((location) => ({
-            label: `${area.name} — ${location.name}`,
-            boundary: location.boundary,
-          }))
+        ? area.locations
+            .filter((location) => location.boundary)
+            .map((location) => ({
+              label: `${area.name} — ${location.name}`,
+              boundary: location.boundary as WorkAreaBoundary,
+            }))
         : area.boundary
           ? [
               {
@@ -279,7 +281,9 @@ export default function WorkAreaMap({
         const bounds = L.latLngBounds([]);
 
         const boundaries = selectedArea.locations?.length
-          ? selectedArea.locations.map((location) => location.boundary)
+          ? selectedArea.locations
+              .map((location) => location.boundary)
+              .filter((b): b is WorkAreaBoundary => !!b)
           : selectedArea.boundary
             ? [selectedArea.boundary]
             : [];

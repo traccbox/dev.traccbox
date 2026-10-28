@@ -178,6 +178,7 @@ export interface GeoListResponse<T> {
 export interface AssignableEmployee {
   id: string;
   name: string;
+  email?: string | null;
   role?: string | null;
   department?: string | null;
   team?: string | null;

@@ -575,7 +575,9 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                           <div className="text-xs text-gray-500">
                             {l.boundary.kind === "circle"
                               ? `Circle · ${l.boundary.radius}m · [${l.boundary.center[0].toFixed(4)}, ${l.boundary.center[1].toFixed(4)}]`
-                              : `Polygon · ${l.boundary.points.length} points`}
+                              : l.boundary.kind === "polygon"
+                                ? `Polygon · ${l.boundary.points.length} points`
+                                : `Multipolygon · ${l.boundary.rings.length} rings`}
                           </div>
                         </div>
                         <button
@@ -1148,11 +1150,14 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
 
                       return (
                         member.name?.toLowerCase().includes(search) ||
-                        member.email?.toLowerCase().includes(search)
+                        member.email?.toLowerCase().includes(search) ||
+                        member.role?.toLowerCase().includes(search) ||
+                        member.job_title?.toLowerCase().includes(search)
                       );
                     })
                     .map((member) => {
                       const checked = selectedEmployees.includes(member.id);
+                      const memberRole = member.job_title || member.role;
 
                       return (
                         <label
@@ -1187,15 +1192,21 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                               .toUpperCase()}
                           </div>
 
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium">
                               {member.name}
                             </div>
 
-                            <div className="text-xs text-gray-500">
-                              {member.email}
+                            <div className="text-xs text-gray-500 truncate">
+                              {member.email || "—"}
                             </div>
                           </div>
+
+                          {memberRole && (
+                            <span className="hidden sm:inline-flex text-[10px] font-semibold uppercase tracking-wide bg-blue-50 text-[#1658E5] px-2 py-1 rounded-full whitespace-nowrap">
+                              {memberRole}
+                            </span>
+                          )}
                         </label>
                       );
                     })}
@@ -1349,7 +1360,9 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     value={
                       l.boundary.kind === "circle"
                         ? `Circle · [${l.boundary.center[0].toFixed(4)}, ${l.boundary.center[1].toFixed(4)}] · r=${l.boundary.radius}m`
-                        : `Polygon · ${l.boundary.points.length} points`
+                        : l.boundary.kind === "polygon"
+                          ? `Polygon · ${l.boundary.points.length} points`
+                          : `Multipolygon · ${l.boundary.rings.length} rings`
                     }
                   />
                 ))}
