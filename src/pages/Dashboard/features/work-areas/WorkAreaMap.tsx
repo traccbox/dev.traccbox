@@ -281,7 +281,9 @@ export default function WorkAreaMap({
         const bounds = L.latLngBounds([]);
 
         const boundaries = selectedArea.locations?.length
-          ? selectedArea.locations.map((location) => location.boundary)
+          ? selectedArea.locations
+              .map((location) => location.boundary)
+              .filter((b): b is WorkAreaBoundary => !!b)
           : selectedArea.boundary
             ? [selectedArea.boundary]
             : [];
