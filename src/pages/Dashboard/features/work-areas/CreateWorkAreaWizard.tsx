@@ -1148,11 +1148,14 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
 
                       return (
                         member.name?.toLowerCase().includes(search) ||
-                        member.email?.toLowerCase().includes(search)
+                        member.email?.toLowerCase().includes(search) ||
+                        member.role?.toLowerCase().includes(search) ||
+                        member.job_title?.toLowerCase().includes(search)
                       );
                     })
                     .map((member) => {
                       const checked = selectedEmployees.includes(member.id);
+                      const memberRole = member.job_title || member.role;
 
                       return (
                         <label
