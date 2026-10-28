@@ -1190,15 +1190,21 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                               .toUpperCase()}
                           </div>
 
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium">
                               {member.name}
                             </div>
 
-                            <div className="text-xs text-gray-500">
-                              {member.email}
+                            <div className="text-xs text-gray-500 truncate">
+                              {member.email || "—"}
                             </div>
                           </div>
+
+                          {memberRole && (
+                            <span className="hidden sm:inline-flex text-[10px] font-semibold uppercase tracking-wide bg-blue-50 text-[#1658E5] px-2 py-1 rounded-full whitespace-nowrap">
+                              {memberRole}
+                            </span>
+                          )}
                         </label>
                       );
                     })}
