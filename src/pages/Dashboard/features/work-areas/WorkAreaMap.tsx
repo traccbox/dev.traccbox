@@ -10,7 +10,7 @@ export interface MapArea {
   name: string;
   type?: string;
   boundary?: WorkAreaBoundary | null;
-  locations?: { name: string; boundary: WorkAreaBoundary }[];
+  locations?: { name: string; boundary?: WorkAreaBoundary | null }[];
 }
 
 delete (L.Icon.Default.prototype as any)._getIconUrl;
