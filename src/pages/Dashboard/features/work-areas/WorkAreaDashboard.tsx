@@ -352,7 +352,11 @@ export default function WorkAreaDashboard({ id, onClose }: Props) {
                       <p className="text-[10px] text-gray-500 truncate">
                         {l.boundary?.kind === "circle"
                           ? `Circle zone · ${l.boundary.radius}m`
-                          : `Polygon zone · ${l.boundary?.points?.length ?? 0} pts`}
+                          : l.boundary?.kind === "polygon"
+                            ? `Polygon zone · ${l.boundary.points.length} pts`
+                            : l.boundary?.kind === "multipolygon"
+                              ? `Multipolygon zone · ${l.boundary.rings.length} rings`
+                              : "Zone"}
                       </p>
                       {(l.community || l.ward || l.lga || l.state || l.country) && (
                         <p className="text-[9px] text-gray-400 truncate mt-0.5">

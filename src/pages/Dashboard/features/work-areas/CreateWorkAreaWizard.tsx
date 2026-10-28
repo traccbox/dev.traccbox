@@ -1360,7 +1360,9 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     value={
                       l.boundary.kind === "circle"
                         ? `Circle · [${l.boundary.center[0].toFixed(4)}, ${l.boundary.center[1].toFixed(4)}] · r=${l.boundary.radius}m`
-                        : `Polygon · ${l.boundary.points.length} points`
+                        : l.boundary.kind === "polygon"
+                          ? `Polygon · ${l.boundary.points.length} points`
+                          : `Multipolygon · ${l.boundary.rings.length} rings`
                     }
                   />
                 ))}
