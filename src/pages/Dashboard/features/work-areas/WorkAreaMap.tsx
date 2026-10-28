@@ -210,10 +210,12 @@ export default function WorkAreaMap({
         label: string;
         boundary: BoundaryShape;
       }[] = area.locations?.length
-        ? area.locations.map((location) => ({
-            label: `${area.name} — ${location.name}`,
-            boundary: location.boundary,
-          }))
+        ? area.locations
+            .filter((location) => location.boundary)
+            .map((location) => ({
+              label: `${area.name} — ${location.name}`,
+              boundary: location.boundary as WorkAreaBoundary,
+            }))
         : area.boundary
           ? [
               {
