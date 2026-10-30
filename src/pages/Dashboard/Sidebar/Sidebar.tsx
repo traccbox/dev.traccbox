@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { activeMenus } from "./menuData";
 import SidebarMenu from "./SidebarMenu";
-import { Link, useLocation } from "react-router-dom";
-import { LogOut, Menu } from "lucide-react";
+import { useLocation } from "react-router-dom";
+import { Menu, X } from "lucide-react";
 import { useIsMobile } from "../../../hooks/use-mobile";
 import { useAuth } from "@/components/auth/AuthProvider";
 
@@ -10,6 +10,7 @@ const Sidebar: React.FC = () => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { hasPermission, isStaff } = useAuth();
+
   const menus = useMemo(() => {
     if (!isStaff) return activeMenus;
     return activeMenus
@@ -28,17 +29,15 @@ const Sidebar: React.FC = () => {
       })
       .filter(Boolean) as typeof activeMenus;
   }, [hasPermission, isStaff]);
+
   const isMobile = useIsMobile();
   const location = useLocation();
- 
-  // Toggle sideba
-  const toggleSidebar = () => {
-    setIsSidebarOpen(!isSidebarOpen);
-  };
 
-  // Determine active menu by route
-  const getActiveIndex = () => {
-    return menus.findIndex((menu) => {
+  const toggleSidebar = () => setIsSidebarOpen((v) => !v);
+  const closeSidebar = () => setIsSidebarOpen(false);
+
+  const getActiveIndex = () =>
+    menus.findIndex((menu) => {
       if (menu.to && location.pathname === menu.to) return true;
       if (menu.submenus) {
         return menu.submenus.some((submenu) =>
@@ -47,29 +46,37 @@ const Sidebar: React.FC = () => {
       }
       return false;
     });
-  };
+
   const activeIndex = getActiveIndex();
 
   return (
     <>
-      {/* Mobile Menu Button */}
+      {/* ── Mobile hamburger — sits inside the fixed topbar row ── */}
       {isMobile && (
         <button
           onClick={toggleSidebar}
-          className="fixed top-3 left-4 z-50 p-2 bg-white rounded-lg shadow-md md:hidden"
+          aria-label="Toggle navigation"
+          className="fixed top-0 left-0 z-50 flex items-center justify-center w-14 h-16 text-gray-700 hover:bg-gray-100 transition-colors"
         >
-          <Menu size={24} />
+          {isSidebarOpen ? <X size={22} /> : <Menu size={22} />}
         </button>
       )}
-      
-      <aside 
-        className={`fixed top-0  left-0 h-full bg-white shadow flex flex-col py-6 px-2 z-40 border-r transition-all duration-300
-          ${isMobile ? (isSidebarOpen ? 'w-64 translate-x-0' : 'w-64 -translate-x-full') : 'w-64'}`}
+
+      {/* ── Sidebar drawer ── */}
+      <aside
+        className={`fixed top-0 left-0 h-full bg-white shadow flex flex-col py-6 px-2 z-40 border-r transition-transform duration-300 w-64
+          ${isMobile
+            ? isSidebarOpen
+              ? "translate-x-0"
+              : "-translate-x-full"
+            : "translate-x-0"
+          }`}
       >
         {/* Logo */}
-        <div className="flex items-center gap-2 px-4 mb-8">
+        <div className="flex items-center gap-2 px-4 mb-8 mt-2">
           <img src="/assets/logo.png" alt="TraccBox Logo" className="h-8" />
         </div>
+
         {/* Menus */}
         <nav className="flex-1 flex flex-col gap-1 overflow-y-auto hide-scrollbar">
           {menus.map((menu, idx) => (
@@ -85,29 +92,17 @@ const Sidebar: React.FC = () => {
               }
               isActive={activeIndex === idx}
               comingSoon={menu.comingSoon}
+              onNavigate={isMobile ? closeSidebar : undefined}
             />
           ))}
         </nav>
-        {/* Upgrade Box */}
-        {/* <div className="mt-8 px-4">
-          <div className="bg-gradient-to-br from-[#7B2FF2] to-[#F357A8] rounded-xl p-3 flex flex-col items-center text-white shadow-lg">
-            <span className="font-semibold text-sm mb-2 text-center">
-              Upgrade to Pro
-              <br />
-              for more Features
-            </span>
-            <button className="mt-2 bg-white text-[#7B2FF2] font-bold rounded-lg px-6 py-2 shadow hover:bg-gray-100 transition text-md">
-              Upgrade
-            </button>
-          </div>
-        </div> */}
       </aside>
 
-      {/* Overlay for mobile */}
+      {/* ── Mobile overlay backdrop ── */}
       {isMobile && isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-30"
-          onClick={toggleSidebar}
+          className="fixed inset-0 bg-black/50 z-30"
+          onClick={closeSidebar}
         />
       )}
     </>

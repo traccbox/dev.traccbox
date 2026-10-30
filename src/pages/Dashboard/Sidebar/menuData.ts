@@ -42,7 +42,7 @@ export const sidebarMenus: SidebarMenuConfig[] = [
   {
     label: "Daily Attendance & Payout",
     icon: "Banknote",
-    hidden: true, // ← remove this line to show
+    // hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Payout Board",
