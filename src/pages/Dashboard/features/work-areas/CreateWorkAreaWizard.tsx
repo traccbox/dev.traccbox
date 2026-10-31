@@ -1205,8 +1205,8 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                           />
 
                           <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
-                            {member.name
-                              ?.split(" ")
+                            {memberName
+                              .split(" ")
                               .map((n) => n[0])
                               .join("")
                               .slice(0, 2)
@@ -1215,11 +1215,11 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
 
                           <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium">
-                              {member.name}
+                              {memberName}
                             </div>
 
                             <div className="text-xs text-gray-500 truncate">
-                              {member.email || "—"}
+                              {memberEmail || "—"}
                             </div>
                           </div>
 
