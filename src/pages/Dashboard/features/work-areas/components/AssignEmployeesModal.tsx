@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Loader2, Search, Users, X } from "lucide-react";
-import { useAssignableEmployees, getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
+import {
+  useAssignableEmployees,
+  getApiErrorMessage,
+} from "@/api/geoFencing/hooksGeoFencing";
+import type { AssignableEmployee } from "@/api/geoFencing/typesGeoFencing";
 import { useDebounce } from "@/hooks/useDebounce";
 import Pagination from "@/components/dashboard/Pagination";
 
@@ -125,7 +129,13 @@ export default function AssignEmployeesModal({
             )}
 
             {!isError &&
-              employees.map((e) => {
+              employees.map((raw) => {
+                const rawRecord = raw as unknown as Record<string, unknown>;
+                const e = {
+                  ...raw,
+                  name: rawRecord.full_name || raw.name || "Unnamed",
+                  email: raw.email || rawRecord.email_address || rawRecord.work_email,
+                } as AssignableEmployee;
                 const already = assignedIds.includes(e.id);
                 return (
                   <label
