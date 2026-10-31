@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Loader2, Search, Users, X } from "lucide-react";
-import { useAssignableEmployees, getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
+import {
+  useAssignableEmployees,
+  getApiErrorMessage,
+} from "@/api/geoFencing/hooksGeoFencing";
+import type { AssignableEmployee } from "@/api/geoFencing/typesGeoFencing";
 import { useDebounce } from "@/hooks/useDebounce";
 import Pagination from "@/components/dashboard/Pagination";
 
