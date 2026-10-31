@@ -125,7 +125,18 @@ export default function AssignEmployeesModal({
             )}
 
             {!isError &&
-              employees.map((e) => {
+              employees.map((raw) => {
+                const e = {
+                  ...raw,
+                  name:
+                    (raw as Record<string, unknown>).full_name ||
+                    raw.name ||
+                    "Unnamed",
+                  email:
+                    raw.email ||
+                    (raw as Record<string, unknown>).email_address ||
+                    (raw as Record<string, unknown>).work_email,
+                } as typeof raw;
                 const already = assignedIds.includes(e.id);
                 return (
                   <label

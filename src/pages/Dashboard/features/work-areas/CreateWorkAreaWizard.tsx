@@ -1147,16 +1147,37 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                   {teamMembers
                     .filter((member) => {
                       const search = empSearch.toLowerCase();
+                      const memberName = (
+                        member.full_name ||
+                        member.name ||
+                        ""
+                      ).toLowerCase();
+                      const memberEmail = (
+                        member.email ||
+                        member.email_address ||
+                        member.work_email ||
+                        ""
+                      ).toLowerCase();
+                      const memberRoleText = (
+                        member.job_title ||
+                        member.role ||
+                        ""
+                      ).toLowerCase();
 
                       return (
-                        member.name?.toLowerCase().includes(search) ||
-                        member.email?.toLowerCase().includes(search) ||
-                        member.role?.toLowerCase().includes(search) ||
-                        member.job_title?.toLowerCase().includes(search)
+                        memberName.includes(search) ||
+                        memberEmail.includes(search) ||
+                        memberRoleText.includes(search)
                       );
                     })
                     .map((member) => {
                       const checked = selectedEmployees.includes(member.id);
+                      const memberName =
+                        member.full_name || member.name || "Unnamed staff";
+                      const memberEmail =
+                        member.email ||
+                        member.email_address ||
+                        member.work_email;
                       const memberRole = member.job_title || member.role;
 
                       return (
