@@ -72,6 +72,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <GlobalAuthRedirect />
+
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/company$&-admin-signup" element={<Signup />} />
