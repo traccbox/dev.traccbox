@@ -7,16 +7,37 @@ interface BulkUploadParams {
   file: File;
 }
 
+export interface BulkUploadResponse {
+  total_rows: number;
+  created: number;
+  skipped: number;
+  skipped_details?: Array<{
+    row: number;
+    email: string;
+    reason: string;
+  }>;
+  staff: Array<{
+    id: string;
+    full_name: string;
+    email: string;
+    phone_number: string;
+    job_title: string;
+    department: string;
+    role: string;
+    qr_code?: string;
+  }>;
+}
+
 export const bulkUploadStaff = async ({
   companyId,
   managerId,
   file,
-}: BulkUploadParams) => {
+}: BulkUploadParams): Promise<BulkUploadResponse> => {
   const formData = new FormData();
 
   formData.append("file", file);
 
-  const response = await api.post(
+  const response = await api.post<BulkUploadResponse>(
     // `/api/v1/staffs/${companyId}/bulk-upload`,
     `/staffs/${companyId}/bulk-upload`,
     formData,

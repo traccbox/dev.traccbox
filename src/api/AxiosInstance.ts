@@ -86,6 +86,13 @@ api.interceptors.response.use(
               refresh_token: refreshToken,
             });
 
+            if (sessionStorage.getItem("user_logged_out") === "true") {
+              const logoutError = new Error("Session was logged out.");
+              processQueue(logoutError, null);
+              isRefreshing = false;
+              return Promise.reject(logoutError);
+            }
+
             const resData = refreshResponse.data;
             const newAccessToken = resData?.access_token;
             const newRefreshToken = resData?.refresh_token || refreshToken;

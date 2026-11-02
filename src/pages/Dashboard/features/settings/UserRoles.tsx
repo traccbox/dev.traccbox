@@ -14,10 +14,14 @@ import {
   User,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { createStaff } from "@/api/auth";
+import { createFieldWorker, createStaff } from "@/api/auth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
-import type { StaffPermissions, StaffCreateRequest } from "@/api/types";
+import type {
+  FieldWorkerCreateRequest,
+  StaffPermissions,
+  StaffCreateRequest,
+} from "@/api/types";
 import { useNavigate } from "react-router-dom";
 import PermissionsEditor from "@/components/permissions/PermissionsEditor";
 import {
@@ -508,7 +512,9 @@ const FooterActions: React.FC<{
 const UserRoles = () => {
   const formRef = useRef<UserFormHandle>(null);
   const [isFormValid, setIsFormValid] = useState(false);
-  const { user } = useAuth();
+  const { user, staff } = useAuth();
+  const companyId = staff?.company_id ?? user?.id;
+  const managerId = staff?.id ?? user?.id;
   const { toast } = useToast();
   const Navigate = useNavigate();
 
@@ -580,6 +586,14 @@ const UserRoles = () => {
       return;
     }
 
+    if (!companyId || !managerId) {
+      toast({
+        title: "Error",
+        description: "Your company or manager account could not be identified.",
+      });
+      return;
+    }
+
     /*
     if (activeTab === "standard" && !password.trim()) {
       toast({
@@ -598,7 +612,7 @@ const UserRoles = () => {
         force_change_password?: boolean;
         two_factor?: boolean;
       } = {
-        company_id: user.id,
+        company_id: companyId,
         full_name: formData.fullName,
         phone_number: formData.phoneNumber,
         job_title: formData.jobTitle,
@@ -614,15 +628,20 @@ const UserRoles = () => {
         staffReq.force_change_password = forceChange;
         staffReq.two_factor = twoFactor;
         staffReq.send_invite = sendInvite;
-      } else {
-        staffReq.email = "";
-        staffReq.password = "";
-        staffReq.force_change_password = false;
-        staffReq.two_factor = false;
-        staffReq.send_invite = false;
       }
 
-      await createStaff(staffReq as StaffCreateRequest);
+      if (activeTab === "fieldWorker") {
+        const fieldWorkerData: FieldWorkerCreateRequest = {
+          email: "",
+          full_name: formData.fullName,
+          phone_number: formData.phoneNumber,
+          job_title: formData.jobTitle,
+          department: formData.department,
+        };
+        await createFieldWorker(companyId, managerId, fieldWorkerData);
+      } else {
+        await createStaff(staffReq as StaffCreateRequest);
+      }
       toast({
         title: "Success",
         description:

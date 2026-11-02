@@ -1,12 +1,25 @@
 import React from "react";
-import { Search, Plus, MoreVertical, Clock, QrCode, FileText, Shield } from "lucide-react";
+import { Search, Plus, Trash2, Clock, QrCode, FileText, Shield, Loader2, CheckCircle2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../../components/auth/AuthProvider";
 import { useStaffData } from "../../../../api/settingsApi/hooks/useStaffData";
+import { deleteStaff } from "../../../../api/auth";
+import { useToast } from "../../../../components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { QRCodeModal } from "./components/QRCodeModal";
 import { IDCardModal } from "./components/IDCardModal";
 import { useStaffQRCode } from "../../../../api/settingsApi/hooks/useQRCode";
 import EditPermissionsDrawer from "../../../../components/permissions/EditPermissionsDrawer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../../../components/ui/alert-dialog";
 
 // Helper function to generate initials from full name
 const getInitials = (fullName) => {
@@ -52,17 +65,20 @@ const formatTime = (date) => {
 };
 
 const TeamManagement = () => {
-  const { user } = useAuth();
-  // For admins: user.id IS the company_id
-  // user.id = '17f7beb9-6d57-4152-bc98-a6e05f65030d' (company ID)
-  const companyId = user?.id;
+  const { user, staff } = useAuth();
+  const companyId = staff?.company_id ?? user?.id;
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedMember, setSelectedMember] = React.useState(null);
   const [showQRModal, setShowQRModal] = React.useState(false);
   const [showIDCardModal, setShowIDCardModal] = React.useState(false);
   const [memberQRCodeData, setMemberQRCodeData] = React.useState(null);
   const [permissionsMember, setPermissionsMember] = React.useState(null);
+  const [memberToDelete, setMemberToDelete] = React.useState(null);
+  const [deleteSuccessMessage, setDeleteSuccessMessage] = React.useState("");
+  const [deletingMemberId, setDeletingMemberId] = React.useState(null);
 
 
   // Get QR code data for the selected member
@@ -98,6 +114,67 @@ const TeamManagement = () => {
   const handleCloseIDCardModal = () => {
     setShowIDCardModal(false);
     setSelectedMember(null);
+  };
+
+  const handleDeleteMember = async () => {
+    const member = memberToDelete;
+    if (!member) return;
+
+    if (!companyId) {
+      toast({
+        title: "Could not delete staff",
+        description: "Your company account could not be identified.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDeletingMemberId(member.id);
+    try {
+      const response = await deleteStaff({
+        company_id: companyId,
+        staff_id: member.id,
+        permissions: member.permissions || {},
+      });
+      if (Array.isArray(response.remaining_staffs)) {
+        queryClient.setQueryData(
+          ["staff", companyId],
+          (previousMembers) =>
+            response.remaining_staffs
+              .filter((remainingMember) => remainingMember.id !== member.id)
+              .map((remainingMember) => {
+                const existingMember = Array.isArray(previousMembers)
+                  ? previousMembers.find(
+                      (previousMember) =>
+                        previousMember.id === remainingMember.id,
+                    )
+                  : undefined;
+                return { ...existingMember, ...remainingMember };
+              }),
+        );
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ["staff", companyId] });
+      }
+      if (permissionsMember?.id === member.id) {
+        setPermissionsMember(null);
+      }
+      setMemberToDelete(null);
+      setDeleteSuccessMessage(
+        response.message ||
+          `${member.full_name || "The staff member"} was removed from your team.`,
+      );
+    } catch (deleteError) {
+      toast({
+        title: "Could not delete staff",
+        description:
+          deleteError?.response?.data?.detail ||
+          deleteError?.message ||
+          "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingMemberId(null);
+    }
   };
   const {
     data: teamMembers = [],
@@ -386,8 +463,15 @@ const TeamManagement = () => {
                         </span>
                       )}
                     </div>
-                    <button className="text-gray-400 hover:text-gray-600 transition-colors absolute top-4 right-4">
-                      <MoreVertical className="w-5 h-5" />
+                    <button
+                      type="button"
+                      onClick={() => setMemberToDelete(member)}
+                      disabled={deletingMemberId !== null}
+                      aria-label={`Delete ${member.full_name || "staff member"}`}
+                      title="Delete staff"
+                      className="text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors absolute top-4 right-4"
+                    >
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
 
@@ -584,6 +668,71 @@ const TeamManagement = () => {
         companyId={companyId}
         staff={permissionsMember}
       />
+
+      <AlertDialog
+        open={!!memberToDelete}
+        onOpenChange={(open) => {
+          if (!open && deletingMemberId === null) {
+            setMemberToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete staff member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {memberToDelete
+                ? `This will permanently remove ${memberToDelete.full_name || "this staff member"} from your team.`
+                : "This will permanently remove this staff member from your team."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingMemberId !== null}>
+              Cancel
+            </AlertDialogCancel>
+            <button
+              type="button"
+              onClick={handleDeleteMember}
+              disabled={deletingMemberId !== null}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {deletingMemberId !== null && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              {deletingMemberId !== null ? "Deleting..." : "Delete staff"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!deleteSuccessMessage}
+        onOpenChange={(open) => {
+          if (!open) setDeleteSuccessMessage("");
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-7 w-7 text-green-600" />
+            </div>
+            <AlertDialogTitle className="text-center">
+              Staff deleted successfully
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              {deleteSuccessMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => setDeleteSuccessMessage("")}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

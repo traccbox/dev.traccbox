@@ -71,6 +71,7 @@ const AcceptInvitation = () => {
 
       // Store access token only if going to dashboard 
       if (navigationPath === "/dashboard" && response.access_token) {
+        sessionStorage.removeItem("user_logged_out");
         Cookies.set(TOKEN_KEY, response.access_token, { expires: 7 }); // 7 days
         console.log("Access token stored for dashboard user");
       }

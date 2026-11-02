@@ -1,4 +1,7 @@
-import { bulkUploadStaff } from "@/api/bulkUpload/apiBulk";
+import {
+  bulkUploadStaff,
+  type BulkUploadResponse,
+} from "@/api/bulkUpload/apiBulk";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { formSchema, FormValues } from "@/type/formSchema";
 
@@ -11,6 +14,9 @@ import { toast } from "sonner";
 
 export default function BulkUpload() {
   const [fileName, setFileName] = useState("");
+  const [uploadResult, setUploadResult] = useState<BulkUploadResponse | null>(
+    null,
+  );
   const navigate = useNavigate();
 
   const { user } = useAuth();
@@ -29,7 +35,7 @@ export default function BulkUpload() {
   });
 
   async function onSubmit(data: FormValues) {
-    console.log(data);
+    setUploadResult(null);
     try {
       const response = await bulkUploadStaff({
         companyId: user.id,
@@ -37,8 +43,17 @@ export default function BulkUpload() {
         file: data.file,
       });
 
-      console.log(response);
-      toast.success("Staff uploaded successfully");
+      setUploadResult(response);
+      const summary = `${response.created} staff member${response.created === 1 ? "" : "s"} created; ${response.skipped} skipped.`;
+      if (response.skipped > 0) {
+        toast.warning("Bulk upload completed with skipped rows", {
+          description: summary,
+        });
+      } else {
+        toast.success("Staff uploaded successfully", {
+          description: summary,
+        });
+      }
     } catch (error) {
       console.error(error);
       toast.error("Upload failed");
@@ -57,17 +72,17 @@ export default function BulkUpload() {
       <div className="mt-10 flex flex-col w-full items-center justify-start">
         {" "}
         <h1 className="text-center  text-xl">
-          Upload a CSV or Excel file with columns: <br />{" "}
+          Upload a CSV or Excel file with these columns: <br />{" "}
           <span className="font-normal">
-            full_name | email | phone_number | job_title | department
+            full_name, email, phone_number, job_title, department
           </span>{" "}
           <br />
           <a
-            href="csv/upload-template.csv"
+            href="/staff-upload-template.csv"
             className="text-traccbox-700  hover:underline underline-offset-2 text-base font-medium"
-            download="sample_file.csv"
+            download="staff-upload-template.csv"
           >
-            Click here to download sample file
+            Download sample CSV template
           </a>
         </h1>
         <form onSubmit={handleSubmit(onSubmit)} className="w-[70%] mt-10">
@@ -121,6 +136,53 @@ export default function BulkUpload() {
             {isSubmitting ? "Loading" : "Submit"}
           </button>
         </form>
+
+        {uploadResult && (
+          <section
+            aria-live="polite"
+            className={`mt-6 w-[70%] rounded-lg border p-5 ${
+              uploadResult.skipped > 0
+                ? "border-amber-300 bg-amber-50"
+                : "border-green-300 bg-green-50"
+            }`}
+          >
+            <h2
+              className={`text-lg font-semibold ${
+                uploadResult.skipped > 0 ? "text-amber-900" : "text-green-900"
+              }`}
+            >
+              {uploadResult.skipped > 0
+                ? "Upload completed with skipped rows"
+                : "Upload completed"}
+            </h2>
+            <p className="mt-1 text-sm text-gray-700">
+              {uploadResult.total_rows} rows processed: {uploadResult.created}{" "}
+              created and {uploadResult.skipped} skipped.
+            </p>
+
+            {uploadResult.skipped_details &&
+              uploadResult.skipped_details.length > 0 && (
+                <div className="mt-4">
+                  <h3 className="font-medium text-amber-900">
+                    Rows that need attention
+                  </h3>
+                  <ul className="mt-2 space-y-2">
+                    {uploadResult.skipped_details.map((detail) => (
+                      <li
+                        key={`${detail.row}-${detail.email}`}
+                        className="rounded-md border border-amber-200 bg-white px-3 py-2 text-sm"
+                      >
+                        <p className="font-medium text-gray-900">
+                          Row {detail.row}: {detail.email}
+                        </p>
+                        <p className="text-gray-600">{detail.reason}</p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+          </section>
+        )}
       </div>
     </div>
   );

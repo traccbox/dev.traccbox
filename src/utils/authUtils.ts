@@ -46,6 +46,7 @@ export const getRefreshToken = (): string | null => {
  * Set auth tokens in cookies and localStorage
  */
 export const setAuthTokens = (accessToken: string, refreshToken?: string) => {
+  sessionStorage.removeItem("user_logged_out");
   Cookies.set(TOKEN_KEY, accessToken, { expires: 7 });
   localStorage.setItem(TOKEN_KEY, accessToken);
 

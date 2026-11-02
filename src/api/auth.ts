@@ -10,11 +10,14 @@ import {
   StaffAcceptRequest,
   StaffPermissionUpdateRequest,
   StaffDeleteRequest,
+  StaffDeleteResponse,
+  FieldWorkerCreateRequest,
   StaffLoginRequest,
   StaffLoginResponse,
   StaffVerifyResponse,
 } from "./types";
 import Cookies from "js-cookie";
+import dashboardApi from "./AxiosInstance";
 
 const API_BASE = import.meta.env.VITE_API_BASE;
 
@@ -213,6 +216,19 @@ export async function createStaff(data: StaffCreateRequest) {
   }
 }
 
+export async function createFieldWorker(
+  companyId: string,
+  managerId: string,
+  data: FieldWorkerCreateRequest,
+) {
+  const res = await api.post(
+    `/staffs/${encodeURIComponent(companyId)}/create/${encodeURIComponent(managerId)}`,
+    data,
+    getAuthHeaders(),
+  );
+  return res.data;
+}
+
 // Accept staff invitation
 export async function acceptStaffInvitation(data: StaffAcceptRequest) {
   console.log("Data Going to Backend=====", data);
@@ -244,11 +260,15 @@ export async function updateStaffPermissions(
 }
 
 // Delete staff member
-export async function deleteStaff(data: StaffDeleteRequest) {
-  const res = await api.delete(`/api/v1/onboarding/staff/permissions`, {
-    ...getAuthHeaders(),
-    data: data,
-  });
+export async function deleteStaff(
+  data: StaffDeleteRequest,
+): Promise<StaffDeleteResponse> {
+  const res = await dashboardApi.delete<StaffDeleteResponse>(
+    `/onboarding/staff/permissions`,
+    {
+      data,
+    },
+  );
   console.log("Delete staff response=====", res);
   return res.data;
 }
