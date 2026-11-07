@@ -104,6 +104,7 @@ const getUserFromToken = (token: string): User | null => {
       created_at: decoded.created_at ?? null,
       phone_number: decoded.phone_number ?? null,
       profile_pic: decoded.profile_pic ?? null,
+      image_url: decoded.image_url ?? decoded.profile_pic ?? null,
       subscription: decoded.subscription ?? null,
       verified_email: decoded.verified_email ?? false,
     };

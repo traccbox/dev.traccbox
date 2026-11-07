@@ -657,6 +657,8 @@ const TeamManagement = () => {
           onClose={handleCloseIDCardModal}
           staff={selectedMember}
           company_id={companyId}
+          companyName={user?.company_name}
+          companyLogoUrl={user?.image_url || user?.profile_pic}
           qrCodeData={memberQRCodeData}
         />
       )}
