@@ -1,5 +1,15 @@
 import React from "react";
-import { Search, Plus, Trash2, Clock, QrCode, FileText, Shield, Loader2, CheckCircle2 } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Trash2,
+  Clock,
+  QrCode,
+  FileText,
+  Shield,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../../components/auth/AuthProvider";
 import { useStaffData } from "../../../../api/settingsApi/hooks/useStaffData";
@@ -37,7 +47,7 @@ const getAttendanceStatus = (attendanceRecords) => {
 
   const todayRecord = attendanceRecords.find(
     (record) =>
-      record.attendance_date === new Date().toISOString().split("T")[0]
+      record.attendance_date === new Date().toISOString().split("T")[0],
   );
 
   if (!todayRecord) return null;
@@ -80,13 +90,12 @@ const TeamManagement = () => {
   const [deleteSuccessMessage, setDeleteSuccessMessage] = React.useState("");
   const [deletingMemberId, setDeletingMemberId] = React.useState(null);
 
-
   // Get QR code data for the selected member
   const { data: qrCodeData } = useStaffQRCode(
     companyId,
     selectedMember?.id,
     "json",
-    undefined
+    undefined,
   );
 
   React.useEffect(() => {
@@ -137,20 +146,18 @@ const TeamManagement = () => {
         permissions: member.permissions || {},
       });
       if (Array.isArray(response.remaining_staffs)) {
-        queryClient.setQueryData(
-          ["staff", companyId],
-          (previousMembers) =>
-            response.remaining_staffs
-              .filter((remainingMember) => remainingMember.id !== member.id)
-              .map((remainingMember) => {
-                const existingMember = Array.isArray(previousMembers)
-                  ? previousMembers.find(
-                      (previousMember) =>
-                        previousMember.id === remainingMember.id,
-                    )
-                  : undefined;
-                return { ...existingMember, ...remainingMember };
-              }),
+        queryClient.setQueryData(["staff", companyId], (previousMembers) =>
+          response.remaining_staffs
+            .filter((remainingMember) => remainingMember.id !== member.id)
+            .map((remainingMember) => {
+              const existingMember = Array.isArray(previousMembers)
+                ? previousMembers.find(
+                    (previousMember) =>
+                      previousMember.id === remainingMember.id,
+                  )
+                : undefined;
+              return { ...existingMember, ...remainingMember };
+            }),
         );
       } else {
         await queryClient.invalidateQueries({ queryKey: ["staff", companyId] });
@@ -198,7 +205,7 @@ const TeamManagement = () => {
       ].filter(Boolean);
 
       return searchTerms.every((term) =>
-        searchableFields.some((field) => field.includes(term))
+        searchableFields.some((field) => field.includes(term)),
       );
     });
   }, [teamMembers, searchQuery]);
@@ -499,30 +506,34 @@ const TeamManagement = () => {
                     <div className="flex items-center justify-between w-full gap-2 mb-2">
                       <div className="flex items-center gap-1">
                         <div
-                          className={`w-2 h-2 ${member.is_active ? "bg-green-500" : "bg-gray-400"
-                            } rounded-full`}
+                          className={`w-2 h-2 ${
+                            member.is_active ? "bg-green-500" : "bg-gray-400"
+                          } rounded-full`}
                         ></div>
                         <span
-                          className={`text-xs ${member.is_active
+                          className={`text-xs ${
+                            member.is_active
                               ? "text-green-600"
                               : "text-gray-600"
-                            } font-medium`}
+                          } font-medium`}
                         >
                           {member.is_active ? "Active" : "Inactive"}
                         </span>
                       </div>
                       <div className="flex items-center gap-1">
                         <div
-                          className={`w-2 h-2 ${member.accept_invitation
+                          className={`w-2 h-2 ${
+                            member.accept_invitation
                               ? "bg-purple-500"
                               : "bg-gray-400"
-                            } rounded-full`}
+                          } rounded-full`}
                         ></div>
                         <span
-                          className={`text-xs ${member.accept_invitation
+                          className={`text-xs ${
+                            member.accept_invitation
                               ? "text-purple-600"
                               : "text-gray-600"
-                            } font-medium`}
+                          } font-medium`}
                         >
                           {member.accept_invitation ? "Verified" : "Pending"}
                         </span>
@@ -531,72 +542,76 @@ const TeamManagement = () => {
                   </div>
 
                   {/* Attendance Status */}
-                  {member.role.toLowerCase() === "sales_rep" && (
-                    <div className="border-t border-gray-200 pt-3 mt-2">
-                      <div className="flex flex-col items-center gap-2">
-                        <h4 className="font-medium text-sm text-gray-700">
-                          Today's Attendance
-                        </h4>
-                        {(() => {
-                          const attendance = getAttendanceStatus(
-                            member.attendance_records
-                          );
-                          if (!attendance) {
-                            return (
-                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 w-full text-center">
-                                <span className="text-sm text-yellow-700 font-medium">
-                                  No attendance record for today
-                                </span>
-                              </div>
+                  {member.role.toLowerCase() === "sales_rep" ||
+                    (member.role.toLowerCase() === "sales rep" && (
+                      <div className="border-t border-gray-200 pt-3 mt-2">
+                        <div className="flex flex-col items-center gap-2">
+                          <h4 className="font-medium text-sm text-gray-700">
+                            Today's Attendance 
+                          </h4>
+                          {(() => {
+                            const attendance = getAttendanceStatus(
+                              member.attendance_records,
                             );
-                          }
-
-                          return (
-                            <>
-                              <div className="flex items-center gap-2 w-full justify-center">
-                                <div
-                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium w-full text-center ${attendance.isCheckedIn
-                                      ? attendance.checkOutTime
-                                        ? "bg-blue-100 text-blue-800 border border-blue-200"
-                                        : "bg-green-100 text-green-800 border border-green-200"
-                                      : "bg-red-50 text-red-800 border border-red-200"
-                                    }`}
-                                >
-                                  {attendance.isCheckedIn
-                                    ? attendance.checkOutTime
-                                      ? "Shift Completed"
-                                      : "Currently Working"
-                                    : "Not Checked In"}
+                            if (!attendance) {
+                              return (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 w-full text-center">
+                                  <span className="text-sm text-yellow-700 font-medium">
+                                    No attendance record for today
+                                  </span>
                                 </div>
-                              </div>
-                              {attendance.checkInTime && (
-                                <div className="bg-gray-50 rounded-lg p-2 w-full">
-                                  <div className="flex flex-col items-center gap-1 text-sm">
-                                    <div className="flex items-center gap-2 text-green-700">
-                                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                      <span className="font-medium">
-                                        Check-in:{" "}
-                                        {formatTime(attendance.checkInTime)}
-                                      </span>
-                                    </div>
-                                    {attendance.checkOutTime && (
-                                      <div className="flex items-center gap-2 text-blue-700">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                        <span className="font-medium">
-                                          Check-out:{" "}
-                                          {formatTime(attendance.checkOutTime)}
-                                        </span>
-                                      </div>
-                                    )}
+                              );
+                            }
+
+                            return (
+                              <>
+                                <div className="flex items-center gap-2 w-full justify-center">
+                                  <div
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium w-full text-center ${
+                                      attendance.isCheckedIn
+                                        ? attendance.checkOutTime
+                                          ? "bg-blue-100 text-blue-800 border border-blue-200"
+                                          : "bg-green-100 text-green-800 border border-green-200"
+                                        : "bg-red-50 text-red-800 border border-red-200"
+                                    }`}
+                                  >
+                                    {attendance.isCheckedIn
+                                      ? attendance.checkOutTime
+                                        ? "Shift Completed"
+                                        : "Currently Working"
+                                      : "Not Checked In"}
                                   </div>
                                 </div>
-                              )}
-                            </>
-                          );
-                        })()}
+                                {attendance.checkInTime && (
+                                  <div className="bg-gray-50 rounded-lg p-2 w-full">
+                                    <div className="flex flex-col items-center gap-1 text-sm">
+                                      <div className="flex items-center gap-2 text-green-700">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className="font-medium">
+                                          Check-in:{" "}
+                                          {formatTime(attendance.checkInTime)}
+                                        </span>
+                                      </div>
+                                      {attendance.checkOutTime && (
+                                        <div className="flex items-center gap-2 text-blue-700">
+                                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                          <span className="font-medium">
+                                            Check-out:{" "}
+                                            {formatTime(
+                                              attendance.checkOutTime,
+                                            )}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ))}
 
                   {/* QR Code & ID Card Buttons */}
                   <div className="border-t border-gray-200 pt-3 mt-2">
@@ -624,7 +639,6 @@ const TeamManagement = () => {
                       Manage Permissions
                     </button>
                   </div>
-
 
                   {/* Created Date */}
                   <div className="flex items-center justify-center gap-1 text-xs text-gray-500 mt-2">
