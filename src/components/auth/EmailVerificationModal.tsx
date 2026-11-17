@@ -28,7 +28,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     if (resendCooldown > 0) {
       const timer = setTimeout(
         () => setResendCooldown(resendCooldown - 1),
-        1000
+        1000,
       );
       return () => clearTimeout(timer);
     }
@@ -49,7 +49,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
 
   const handleKeyDown = (
     index: number,
-    e: React.KeyboardEvent<HTMLInputElement>
+    e: React.KeyboardEvent<HTMLInputElement>,
   ) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       const prevInput = document.querySelector(`input[name=otp-${index - 1}]`);
@@ -67,11 +67,11 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
       const otpString = otp.join("");
       if (!id) throw new Error("Missing verification id.");
       const res = await verifyEmail({ id, token: otpString });
-      console.log("reeeeee==", res)
+      console.log("reeeeee==", res);
       toast.success("Email verified successfully!", { position: "top-center" });
       onSuccess();
     } catch (error: unknown) {
-        console.log(error)
+      console.log(error);
       let message = "Invalid verification code. Please try again.";
       if (
         error &&
@@ -99,8 +99,8 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
     setFormError("");
     try {
       await resendVerification({ email });
-      setResendCooldown(30); 
-      setOtp(["", "", "", ""]); 
+      setResendCooldown(30);
+      setOtp(["", "", "", ""]);
       toast.success("Verification code resent successfully!", {
         position: "top-center",
       });
@@ -134,7 +134,7 @@ const EmailVerificationModal: React.FC<EmailVerificationModalProps> = ({
             Verify your email
           </h2>
           <p className="text-gray-600 text-center mb-6">
-            We've sent a verification code to000{" "}
+            We've sent a verification code to{" "}
             <span className="font-medium text-traccbox-500">{email}</span>
           </p>
           <form className="space-y-6" onSubmit={handleSubmit}>
