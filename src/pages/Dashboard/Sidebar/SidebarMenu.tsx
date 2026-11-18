@@ -12,6 +12,7 @@ interface SidebarMenuProps {
     onToggle: () => void;
     isActive: boolean;
     comingSoon?: boolean;
+    onNavigate?: () => void;
 }
 
 const SidebarMenu: React.FC<SidebarMenuProps> = ({
@@ -23,6 +24,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({
     onToggle,
     isActive,
     comingSoon = false,
+    onNavigate,
 }) => {
     const location = useLocation();
     const LucideIcon = (LucideIcons)[icon] || LucideIcons["Circle"];
@@ -107,7 +109,7 @@ const SidebarMenu: React.FC<SidebarMenuProps> = ({
                             <NavLink
                                 key={submenu.to}
                                 to={isSubmenuComingSoon ? "#" : submenu.to}
-                                onClick={isSubmenuComingSoon ? (e) => e.preventDefault() : undefined}
+                                onClick={isSubmenuComingSoon ? (e) => e.preventDefault() : onNavigate}
                                 className={({ isActive: navActive }) =>
                                     `${submenuBaseClasses} ${isSubmenuComingSoon
                                         ? submenuComingSoonClasses

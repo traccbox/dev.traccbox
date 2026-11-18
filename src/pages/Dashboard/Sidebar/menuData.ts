@@ -100,6 +100,38 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     ],
   },
 
+  {
+    label: "Workforce & Supervisor",
+    icon: "ClipboardList",
+    submenus: [
+      {
+        label: "Operations Overview",
+        to: "/dashboard/workforce-supervisor",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Operational Tasks",
+        to: "/dashboard/workforce-supervisor/tasks",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Daily Reports",
+        to: "/dashboard/workforce-supervisor/reports",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Supervisor KPI",
+        to: "/dashboard/workforce-supervisor/kpi",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Supervisor Payroll",
+        to: "/dashboard/workforce-supervisor/payroll",
+        permission: ["order_task_management", "view_orders"],
+      },
+    ],
+  },
+
   // ─── NOT YET INTEGRATED ──────────────────────────────────────────────────
   {
     label: "Performance",

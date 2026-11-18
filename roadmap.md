@@ -1,3 +1,2 @@
 - [ ] Implement the unfinished Workforce & Supervisor MVP from the uploaded duplicate specifications: operational task progress/inspection, daily reports, weighted supervisor KPIs, and supervisor salary/bonus payroll, using isolated static sample data.
 - [ ] Verify KPI rules, module navigation and interactions, responsive views, and clear static-data behavior; fix the pre-existing Sidebar navigation type error.
-- [ ] Continue existing Daily Attendance & Payout work only when requested; preserve its separate feature boundary.

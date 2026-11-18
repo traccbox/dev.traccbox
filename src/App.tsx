@@ -44,6 +44,7 @@ import CallHistory from "./pages/Dashboard/features/communication/CallHistory";
 
 import PayoutFeature from "./pages/Dashboard/features/payout";
 import DashboardIndexRedirect from "@/components/auth/DashboardIndexRedirect";
+import WorkforceSupervisor from "./pages/Dashboard/features/supervisor-kpi/WorkforceSupervisor";
 
 const gate = (mod: string, act: string, element: React.ReactNode) => (
   <RequirePermission module={mod} action={act}>{element}</RequirePermission>
@@ -107,6 +108,7 @@ const App = () => (
                   element={gate("core_dashboard_report", "view_dashboard", <LocationTracking />)}
                 />
                 <Route path="work-areas" element={gate("work_area_management", "view_work_areas", <WorkAreas />)} />
+                <Route path="workforce-supervisor/*" element={gate("order_task_management", "view_orders", <WorkforceSupervisor />)} />
                 <Route path="performance/logs" element={gate("core_dashboard_report", "view_reports", <PerformanceLogs />)} />
                 <Route path="performance/reports" element={gate("core_dashboard_report", "view_reports", <Reports />)} />
                 <Route path="travel-monitoring" element={gate("core_dashboard_report", "view_dashboard", <TravelMonitoring />)} />
