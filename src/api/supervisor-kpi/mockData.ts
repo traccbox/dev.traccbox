@@ -12,6 +12,7 @@ const day = (offset: number, hour = 8) => {
   value.setDate(value.getDate() + offset);
   value.setHours(hour, 0, 0, 0);
   return value.toISOString();
+};
 const dateOnly = (offset: number) => day(offset).slice(0, 10);
 
 export const SAMPLE_SUPERVISORS: SupervisorProfile[] = [

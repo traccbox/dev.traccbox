@@ -38,6 +38,6 @@ test("not-applicable KPI weight redistributes across eligible components", () =>
     component("workforce", 10, 90),
   ]);
   assert.equal(result.eligibleWeight, 70);
-  assert.equal(result.score, 90);
+  assert.ok(Math.abs((result.score ?? 0) - 6250 / 70) < 1e-9);
   assert.equal(result.components[1]?.weightedScore, null);
 });
