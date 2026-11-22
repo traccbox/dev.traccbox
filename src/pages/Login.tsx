@@ -34,15 +34,18 @@ const Login = () => {
           <LoginForm />
           <div className="mt-6 text-center space-y-2">
             <div className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link
-                to="/company$&-admin-signup"
+              Want to get started?{" "}
+              <a
+                href="https://wa.me/2349063880674"
+                target="_blank"
+                rel="noopener noreferrer"
                 className="text-traccbox-500 font-medium hover:underline"
               >
-                Sign Up
-              </Link>
+                Request a Demo
+              </a>
             </div>
           </div>
+
         </div>
       </div>
     </div>

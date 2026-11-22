@@ -26,7 +26,8 @@ export type WorkAreaStatus = "active" | "inactive";
 
 export type BoundaryShape =
   | { kind: "circle"; center: [number, number]; radius: number }
-  | { kind: "polygon"; points: [number, number][] };
+  | { kind: "polygon"; points: [number, number][] }
+  | { kind: "multipolygon"; rings: [number, number][][] };
 
 export interface WorkAreaEmployee {
   id: string;

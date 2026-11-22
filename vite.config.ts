@@ -5,6 +5,9 @@ import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
   base: "/",
+  esbuild: {
+    pure: mode === "production" ? ["console.log"] : [],
+  },
   server: {
     host: "::",
     port: 8080,

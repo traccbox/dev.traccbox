@@ -11,7 +11,7 @@ const AcceptInvitation = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { TOKEN_KEY } = useAuth();
-  
+
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState<'pending' | 'success' | 'error'>('pending');
   const [errorMessage, setErrorMessage] = useState('');
@@ -29,13 +29,13 @@ const AcceptInvitation = () => {
   // function to determine navigation path based on role
   const getNavigationPath = (role: string): string => {
     const normalizedRole = role.toLowerCase().trim();
-    console.log("Role===",role)
-    
-    if (normalizedRole === "sales" || 
-        normalizedRole === "sales rep") {
-      return "/sales-rep-demo"; 
+    console.log("Role===", role)
+
+    if (normalizedRole === "sales_rep" ||
+      normalizedRole === "sales rep") {
+      return "/sales-rep-demo";
     }
-    
+
     // All other roles go to dashboard
     return "/dashboard";
   };
@@ -67,10 +67,11 @@ const AcceptInvitation = () => {
       // Get user role from response and determine navigation path
       const userRole = response?.staff?.role || "";
       const navigationPath = getNavigationPath(userRole);
-      
+
 
       // Store access token only if going to dashboard 
       if (navigationPath === "/dashboard" && response.access_token) {
+        sessionStorage.removeItem("user_logged_out");
         Cookies.set(TOKEN_KEY, response.access_token, { expires: 7 }); // 7 days
         console.log("Access token stored for dashboard user");
       }
@@ -118,7 +119,7 @@ const AcceptInvitation = () => {
               {errorMessage}
             </p>
           </div>
-          
+
           <button
             onClick={handleGoToLogin}
             className="w-full bg-purple-700 text-white py-3 px-6 rounded-lg font-semibold hover:bg-purple-800 transition-colors"
@@ -143,7 +144,7 @@ const AcceptInvitation = () => {
               You have successfully accepted the invitation. You will be redirected based on your role shortly.
             </p>
           </div>
-          
+
           <div className="flex items-center justify-center text-purple-700">
             <Loader2 className="w-5 h-5 animate-spin mr-2" />
             <span className="text-sm">Redirecting...</span>
@@ -195,7 +196,7 @@ const AcceptInvitation = () => {
               'Accept Invitation'
             )}
           </button>
-          
+
           <button
             onClick={handleGoToLogin}
             className="w-full border border-gray-300 text-gray-700 py-3 px-6 rounded-lg font-semibold hover:bg-gray-50 transition-colors"

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { formatDistanceToNow } from "date-fns";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useLocationTrackingContext } from "@/contexts/LocationTrackingContext";
 import { useStaffData } from "@/api/settingsApi/hooks/useStaffData";
@@ -389,6 +390,83 @@ const LocationTracking: React.FC = () => {
         selectedStaffId={selectedStaffId}
         title={true}
       />
+
+      {/* Live staff status */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Staff Status</CardTitle>
+          <CardDescription>
+            Live position details from each staff member's device
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {Object.keys(staffLocations).length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No staff are online right now.
+            </p>
+          ) : (
+            <div className="divide-y">
+              {Object.entries(staffLocations)
+                .sort(
+                  ([, a], [, b]) =>
+                    new Date(b.timestamp).getTime() -
+                    new Date(a.timestamp).getTime(),
+                )
+                .map(([staffId, loc]) => {
+                  const info = staffInfo[staffId];
+                  const moving = (loc.speed ?? 0) > 0.5;
+                  return (
+                    <button
+                      key={staffId}
+                      type="button"
+                      onClick={() => handleStaffSelect(staffId)}
+                      className="w-full text-left py-3 flex flex-col md:flex-row md:items-center gap-2 md:gap-4 hover:bg-muted/50 px-2 rounded"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium truncate">
+                          {info?.name || staffId}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {loc.address ||
+                            `${loc.latitude.toFixed(5)}, ${loc.longitude.toFixed(5)}`}
+                        </p>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 text-xs">
+                        {loc.geofence && (
+                          <Badge
+                            variant={
+                              loc.geofence.inside ? "default" : "destructive"
+                            }
+                          >
+                            {loc.geofence.inside ? "Inside" : "Outside"}
+                          </Badge>
+                        )}
+                        {loc.task_status && (
+                          <Badge variant="outline">{loc.task_status}</Badge>
+                        )}
+                        <span className="text-muted-foreground">
+                          {moving
+                            ? `${((loc.speed as number) * 3.6).toFixed(1)} km/h`
+                            : "Stationary"}
+                        </span>
+                        {loc.accuracy != null && (
+                          <span className="text-muted-foreground">
+                            ±{Math.round(loc.accuracy)} m
+                          </span>
+                        )}
+                        <span className="text-muted-foreground">
+                          {formatDistanceToNow(new Date(loc.timestamp), {
+                            addSuffix: true,
+                          })}
+                        </span>
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Loading State */}
       {staffLoading && (

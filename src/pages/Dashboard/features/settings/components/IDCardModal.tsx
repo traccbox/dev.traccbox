@@ -19,6 +19,8 @@ interface IDCardModalProps {
     is_active?: boolean;
   };
   company_id: string;
+  companyName?: string | null;
+  companyLogoUrl?: string | null;
   qrCodeData?: string;
 }
 
@@ -182,6 +184,8 @@ export const IDCardModal: React.FC<IDCardModalProps> = ({
   onClose,
   staff,
   company_id,
+  companyName,
+  companyLogoUrl,
   qrCodeData,
 }) => {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -249,6 +253,7 @@ export const IDCardModal: React.FC<IDCardModalProps> = ({
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
         backgroundColor: "#ffffff",
+        useCORS: true,
       });
       const imgData = canvas.toDataURL("image/png");
 
@@ -272,6 +277,7 @@ export const IDCardModal: React.FC<IDCardModalProps> = ({
       const canvas = await html2canvas(cardRef.current, {
         scale: 2,
         backgroundColor: "#ffffff",
+        useCORS: true,
       });
       const imgData = canvas.toDataURL("image/png");
 
@@ -390,10 +396,11 @@ export const IDCardModal: React.FC<IDCardModalProps> = ({
                     }}
                   >
                     <img
-                      src="/icon.png"
-                      alt="Traccbox Logo"
+                      src={companyLogoUrl || "/icon.png"}
+                      alt={companyLogoUrl ? `${companyName || "Company"} logo` : "Traccbox Logo"}
                       width={44}
                       height={44}
+                      crossOrigin={companyLogoUrl ? "anonymous" : undefined}
                       style={{ objectFit: "contain" }}
                     />
                   </div>
@@ -404,7 +411,7 @@ export const IDCardModal: React.FC<IDCardModalProps> = ({
                       fontWeight: 700,
                     }}
                   >
-                    TRACCBOX
+                    {companyName || "TRACCBOX"}
                   </span>
                 </div>
               </div>

@@ -573,7 +573,9 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                           <div className="text-xs text-gray-500">
                             {l.boundary.kind === "circle"
                               ? `Circle · ${l.boundary.radius}m · [${l.boundary.center[0].toFixed(4)}, ${l.boundary.center[1].toFixed(4)}]`
-                              : `Polygon · ${l.boundary.points.length} points`}
+                              : l.boundary.kind === "polygon"
+                                ? `Polygon · ${l.boundary.points.length} points`
+                                : `Multipolygon · ${l.boundary.rings.length} rings`}
                           </div>
                         </div>
                         <button
@@ -1143,14 +1145,38 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                   {teamMembers
                     .filter((member) => {
                       const search = empSearch.toLowerCase();
+                      const memberName = (
+                        member.full_name ||
+                        member.name ||
+                        ""
+                      ).toLowerCase();
+                      const memberEmail = (
+                        member.email ||
+                        member.email_address ||
+                        member.work_email ||
+                        ""
+                      ).toLowerCase();
+                      const memberRoleText = (
+                        member.job_title ||
+                        member.role ||
+                        ""
+                      ).toLowerCase();
 
                       return (
-                        member.name?.toLowerCase().includes(search) ||
-                        member.email?.toLowerCase().includes(search)
+                        memberName.includes(search) ||
+                        memberEmail.includes(search) ||
+                        memberRoleText.includes(search)
                       );
                     })
                     .map((member) => {
                       const checked = selectedEmployees.includes(member.id);
+                      const memberName =
+                        member.full_name || member.name || "Unnamed staff";
+                      const memberEmail =
+                        member.email ||
+                        member.email_address ||
+                        member.work_email;
+                      const memberRole = member.job_title || member.role;
 
                       return (
                         <label
@@ -1177,23 +1203,29 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                           />
 
                           <div className="w-9 h-9 rounded-full bg-blue-500 text-white flex items-center justify-center text-sm font-semibold">
-                            {member.name
-                              ?.split(" ")
+                            {memberName
+                              .split(" ")
                               .map((n) => n[0])
                               .join("")
                               .slice(0, 2)
                               .toUpperCase()}
                           </div>
 
-                          <div className="flex-1">
+                          <div className="flex-1 min-w-0">
                             <div className="text-sm font-medium">
-                              {member.name}
+                              {memberName}
                             </div>
 
-                            <div className="text-xs text-gray-500">
-                              {member.email}
+                            <div className="text-xs text-gray-500 truncate">
+                              {memberEmail || "—"}
                             </div>
                           </div>
+
+                          {memberRole && (
+                            <span className="hidden sm:inline-flex text-[10px] font-semibold uppercase tracking-wide bg-blue-50 text-[#1658E5] px-2 py-1 rounded-full whitespace-nowrap">
+                              {memberRole}
+                            </span>
+                          )}
                         </label>
                       );
                     })}
@@ -1347,7 +1379,9 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
                     value={
                       l.boundary.kind === "circle"
                         ? `Circle · [${l.boundary.center[0].toFixed(4)}, ${l.boundary.center[1].toFixed(4)}] · r=${l.boundary.radius}m`
-                        : `Polygon · ${l.boundary.points.length} points`
+                        : l.boundary.kind === "polygon"
+                          ? `Polygon · ${l.boundary.points.length} points`
+                          : `Multipolygon · ${l.boundary.rings.length} rings`
                     }
                   />
                 ))}

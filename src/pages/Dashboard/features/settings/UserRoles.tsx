@@ -14,16 +14,17 @@ import {
   User,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
-import { createStaff } from "@/api/auth";
+import { createFieldWorker, createStaff } from "@/api/auth";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useToast } from "@/components/ui/use-toast";
-import type { StaffPermissions, StaffCreateRequest } from "@/api/types";
+import type {
+  FieldWorkerCreateRequest,
+  StaffPermissions,
+  StaffCreateRequest,
+} from "@/api/types";
 import { useNavigate } from "react-router-dom";
 import PermissionsEditor from "@/components/permissions/PermissionsEditor";
-import {
-  usePermissionsSchema,
-  useRoleDefaults,
-} from "@/api/permissions/hooks";
+import { usePermissionsSchema, useRoleDefaults } from "@/api/permissions/hooks";
 import {
   PermissionsMap,
   emptyFromSchema,
@@ -111,8 +112,9 @@ const UserFormSection = React.forwardRef<UserFormHandle, UserFormSectionProps>(
               </label>
               <input
                 {...register("fullName")}
-                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${errors.fullName ? "border-red-500" : "border-gray-300"
-                  }`}
+                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                  errors.fullName ? "border-red-500" : "border-gray-300"
+                }`}
                 placeholder="Enter full name"
               />
               {errors.fullName && (
@@ -130,8 +132,9 @@ const UserFormSection = React.forwardRef<UserFormHandle, UserFormSectionProps>(
                 <input
                   {...register("email")}
                   type="email"
-                  className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${errors.email ? "border-red-500" : "border-gray-300"
-                    }`}
+                  className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                    errors.email ? "border-red-500" : "border-gray-300"
+                  }`}
                   placeholder="Enter email address"
                 />
                 {errors.email && (
@@ -149,8 +152,9 @@ const UserFormSection = React.forwardRef<UserFormHandle, UserFormSectionProps>(
               <input
                 {...register("phoneNumber")}
                 type="tel"
-                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${errors.phoneNumber ? "border-red-500" : "border-gray-300"
-                  }`}
+                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                  errors.phoneNumber ? "border-red-500" : "border-gray-300"
+                }`}
                 placeholder="Enter phone number"
               />
               {errors.phoneNumber && (
@@ -166,8 +170,9 @@ const UserFormSection = React.forwardRef<UserFormHandle, UserFormSectionProps>(
               </label>
               <input
                 {...register("jobTitle")}
-                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${errors.jobTitle ? "border-red-500" : "border-gray-300"
-                  }`}
+                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                  errors.jobTitle ? "border-red-500" : "border-gray-300"
+                }`}
                 placeholder="Enter job title"
               />
               {errors.jobTitle && (
@@ -183,8 +188,9 @@ const UserFormSection = React.forwardRef<UserFormHandle, UserFormSectionProps>(
               </label>
               <select
                 {...register("department")}
-                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${errors.department ? "border-red-500" : "border-gray-300"
-                  }`}
+                className={`w-full border rounded px-3 py-2 text-sm bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
+                  errors.department ? "border-red-500" : "border-gray-300"
+                }`}
               >
                 <option value="">Select department</option>
                 <option value="Sales">Sales</option>
@@ -228,7 +234,7 @@ const roleOptions = [
     icon: <UserCheck className="w-7 h-7 mx-auto mb-2 text-purple-700" />,
   },
   {
-    key: "sales_rep",
+    key: "sales rep",
     title: "Sales Rep",
     desc: "Manage sales, leads, and client interactions",
     icon: <Briefcase className="w-7 h-7 mx-auto mb-2 text-purple-700" />,
@@ -284,10 +290,11 @@ const RoleAssignmentSection: React.FC<{
           <button
             key={role.key}
             type="button"
-            className={`border rounded-lg p-4 text-left transition-all h-full flex flex-col justify-between shadow-sm hover:border-purple-700 focus:outline-none ${selectedRole === role.key
-              ? "border-purple-700 bg-purple-50"
-              : "border-gray-200 bg-white"
-              }`}
+            className={`border rounded-lg p-4 text-left transition-all h-full flex flex-col justify-between shadow-sm hover:border-purple-700 focus:outline-none ${
+              selectedRole === role.key
+                ? "border-purple-700 bg-purple-50"
+                : "border-gray-200 bg-white"
+            }`}
             onClick={() => setSelectedRole(role.key)}
           >
             <div className="flex flex-row items-start justify-start mb-2">
@@ -488,10 +495,11 @@ const FooterActions: React.FC<{
       Cancel
     </button>
     <button
-      className={`px-8 py-3 rounded-lg font-semibold text-lg transition ${loading || !isFormValid
-        ? "bg-gray-400 text-white cursor-not-allowed"
-        : "bg-purple-700 text-white hover:bg-purple-800"
-        }`}
+      className={`px-8 py-3 rounded-lg font-semibold text-lg transition ${
+        loading || !isFormValid
+          ? "bg-gray-400 text-white cursor-not-allowed"
+          : "bg-purple-700 text-white hover:bg-purple-800"
+      }`}
       onClick={onSave}
       disabled={loading || !isFormValid}
       type="button"
@@ -508,7 +516,9 @@ const FooterActions: React.FC<{
 const UserRoles = () => {
   const formRef = useRef<UserFormHandle>(null);
   const [isFormValid, setIsFormValid] = useState(false);
-  const { user } = useAuth();
+  const { user, staff } = useAuth();
+  const companyId = staff?.company_id ?? user?.id;
+  const managerId = staff?.id ?? user?.id;
   const { toast } = useToast();
   const Navigate = useNavigate();
 
@@ -528,7 +538,7 @@ const UserRoles = () => {
 
   React.useEffect(() => {
     if (activeTab === "fieldWorker") {
-      setSelectedRole("sales_rep");
+      setSelectedRole("sales rep");
       setSendInvite(false);
       setForceChange(false);
       setTwoFactor(false);
@@ -539,7 +549,6 @@ const UserRoles = () => {
     // The permissions map now mirrors the API schema exactly, so we can send it as-is.
     return permissions as unknown as StaffPermissions;
   }
-
 
   const handleSave = async () => {
     if (!formRef.current) {
@@ -580,6 +589,14 @@ const UserRoles = () => {
       return;
     }
 
+    if (!companyId || !managerId) {
+      toast({
+        title: "Error",
+        description: "Your company or manager account could not be identified.",
+      });
+      return;
+    }
+
     /*
     if (activeTab === "standard" && !password.trim()) {
       toast({
@@ -598,7 +615,7 @@ const UserRoles = () => {
         force_change_password?: boolean;
         two_factor?: boolean;
       } = {
-        company_id: user.id,
+        company_id: companyId,
         full_name: formData.fullName,
         phone_number: formData.phoneNumber,
         job_title: formData.jobTitle,
@@ -614,15 +631,20 @@ const UserRoles = () => {
         staffReq.force_change_password = forceChange;
         staffReq.two_factor = twoFactor;
         staffReq.send_invite = sendInvite;
-      } else {
-        staffReq.email = "";
-        staffReq.password = "";
-        staffReq.force_change_password = false;
-        staffReq.two_factor = false;
-        staffReq.send_invite = false;
       }
 
-      await createStaff(staffReq as StaffCreateRequest);
+      if (activeTab === "fieldWorker") {
+        const fieldWorkerData: FieldWorkerCreateRequest = {
+          email: "",
+          full_name: formData.fullName,
+          phone_number: formData.phoneNumber,
+          job_title: formData.jobTitle,
+          department: formData.department,
+        };
+        await createFieldWorker(companyId, managerId, fieldWorkerData);
+      } else {
+        await createStaff(staffReq as StaffCreateRequest);
+      }
       toast({
         title: "Success",
         description:
@@ -634,7 +656,7 @@ const UserRoles = () => {
       // Reset form
       formRef.current.reset();
       setPassword("");
-      setSelectedRole(activeTab === "fieldWorker" ? "sales_rep" : "admin");
+      setSelectedRole(activeTab === "fieldWorker" ? "sales rep" : "admin");
       setActiveTab("standard");
     } catch (e) {
       let errorMessage =
@@ -689,10 +711,8 @@ const UserRoles = () => {
     }
   };
 
-
-
   function handleBulkUpload() {
-    Navigate("bulk-upload")
+    Navigate("bulk-upload");
   }
 
   return (
@@ -710,20 +730,22 @@ const UserRoles = () => {
         <button
           type="button"
           onClick={() => setActiveTab("standard")}
-          className={`px-4 py-2 rounded-lg font-semibold ${activeTab === "standard"
-            ? "bg-purple-700 text-white"
-            : "bg-white border border-gray-300 text-gray-700"
-            }`}
+          className={`px-4 py-2 rounded-lg font-semibold ${
+            activeTab === "standard"
+              ? "bg-purple-700 text-white"
+              : "bg-white border border-gray-300 text-gray-700"
+          }`}
         >
           Standard User
         </button>
         <button
           type="button"
           onClick={() => setActiveTab("fieldWorker")}
-          className={`px-4 py-2 rounded-lg font-semibold ${activeTab === "fieldWorker"
-            ? "bg-purple-700 text-white"
-            : "bg-white border border-gray-300 text-gray-700"
-            }`}
+          className={`px-4 py-2 rounded-lg font-semibold ${
+            activeTab === "fieldWorker"
+              ? "bg-purple-700 text-white"
+              : "bg-white border border-gray-300 text-gray-700"
+          }`}
         >
           Field Worker (No Email)
         </button>
@@ -737,10 +759,11 @@ const UserRoles = () => {
             handleBulkUpload();
           }}
           // onClick={handleBulkUpload}
-          className={`px-4 py-2 rounded-lg font-semibold ${activeTab === "bulkUpload"
-            ? "bg-purple-700 text-white"
-            : "bg-white border border-gray-300 text-gray-700"
-            }`}
+          className={`px-4 py-2 rounded-lg font-semibold ${
+            activeTab === "bulkUpload"
+              ? "bg-purple-700 text-white"
+              : "bg-white border border-gray-300 text-gray-700"
+          }`}
         >
           Bulk Upload
         </button>

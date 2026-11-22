@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import ThreeDBackground from "./ThreeDBackground";
-import { Link } from "react-router-dom";
+
 
 const HeroSection = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -52,11 +52,11 @@ const HeroSection = () => {
               style={{ animationDelay: "0.4s" }}
               data-aos="fade-up"
             >
-              <Link to="/signup">
+              <a href="https://wa.me/2349063880674" target="_blank" rel="noopener noreferrer">
                 <Button className="bg-traccbox-500 hover:bg-traccbox-600 text-white px-6 py-6 text-lg rounded-full">
-                  Start Free Trial
+                  Request a Demo
                 </Button>
-              </Link>
+              </a>
               {/* <a
                 href="#waitlist"
                 className="inline-flex items-center bg-traccbox-500 hover:bg-traccbox-600 text-white px-6 py-4 text-lg rounded-full transition-colors"

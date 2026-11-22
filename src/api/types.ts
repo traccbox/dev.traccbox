@@ -156,6 +156,25 @@ export interface StaffDeleteRequest {
   permissions: Record<string, boolean>;
 }
 
+export interface StaffDeleteResponse {
+  status: string;
+  message: string;
+  remaining_staffs: Array<{
+    id: string;
+    full_name: string;
+    email: string;
+    role: string;
+  }>;
+}
+
+export interface FieldWorkerCreateRequest {
+  email: string;
+  full_name: string;
+  phone_number: string;
+  job_title: string;
+  department: string;
+}
+
 // Attendance Types
 
 export interface AttendanceCheckInRequest {

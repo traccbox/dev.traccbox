@@ -128,7 +128,7 @@ export default function TaskAssignment() {
 
   // Handle location suggestion selection
   const handleLocationSelect = async (
-    suggestion: PlaceSuggestionItem | PlaceSuggestionResponse
+    suggestion: PlaceSuggestionItem | PlaceSuggestionResponse,
   ) => {
     const desc = suggestion.description || "";
     setFormData((prev) => ({ ...prev, location: desc }));
@@ -274,7 +274,7 @@ export default function TaskAssignment() {
             </p>
           </div>
           <button className="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-purple-700 transition-colors">
-            + Add Staff
+            + Add New Staff
           </button>
         </div>
 
@@ -512,11 +512,15 @@ export default function TaskAssignment() {
                                   <span className="text-sm text-gray-700">
                                     {suggestion.description}
                                   </span>
-                                  {latVal !== undefined && lngVal !== undefined && latVal !== null && lngVal !== null && (
-                                    <div className="text-xs text-gray-500 mt-1">
-                                      📍 {Number(latVal).toFixed(4)}, {Number(lngVal).toFixed(4)}
-                                    </div>
-                                  )}
+                                  {latVal !== undefined &&
+                                    lngVal !== undefined &&
+                                    latVal !== null &&
+                                    lngVal !== null && (
+                                      <div className="text-xs text-gray-500 mt-1">
+                                        📍 {Number(latVal).toFixed(4)},{" "}
+                                        {Number(lngVal).toFixed(4)}
+                                      </div>
+                                    )}
                                 </div>
                               </div>
                             </button>
@@ -556,7 +560,7 @@ export default function TaskAssignment() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Time <span className="text-red-500">*</span>
+                    Expected Pick Up Time <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
                     <Clock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -665,7 +669,9 @@ export default function TaskAssignment() {
                     className="border border-gray-300 rounded-lg overflow-hidden bg-gray-100"
                     style={{ height: "200px" }}
                   >
-                    {selectedCoordinates && selectedCoordinates.lat && selectedCoordinates.lng ? (
+                    {selectedCoordinates &&
+                    selectedCoordinates.lat &&
+                    selectedCoordinates.lng ? (
                       <LeafletMap
                         latitude={selectedCoordinates.lat}
                         longitude={selectedCoordinates.lng}

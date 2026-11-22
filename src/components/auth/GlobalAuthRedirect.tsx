@@ -20,6 +20,8 @@ const GlobalAuthRedirect: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    if (sessionStorage.getItem("user_logged_out") === "true") return;
+
     const activeToken = token || Cookies.get("access_token") || localStorage.getItem("access_token");
     const storedStaff = localStorage.getItem("staff_data");
     const storedUser = localStorage.getItem("user_data");

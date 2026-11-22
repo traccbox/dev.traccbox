@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import TimePicker12h from "./TimePicker12h";
 import { Loader2, Save } from "lucide-react";
 import {
   useUpdateRules,
@@ -89,31 +90,27 @@ export default function RulesPanel({ workAreaId, fallback }: Props) {
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium mb-1.5">Start Time</label>
-          <input
-            type="time"
-            value={draft.working_hours?.start ?? ""}
-            onChange={(e) =>
+          <TimePicker12h
+            value={draft.working_hours?.start ?? "09:00"}
+            onChange={(v) =>
               update({
                 working_hours: {
                   ...draft.working_hours,
-                  start: e.target.value,
+                  start: v,
                 },
               })
             }
-            className="w-full px-3 py-2 border rounded-lg"
           />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1.5">End Time</label>
-          <input
-            type="time"
-            value={draft.working_hours?.end ?? ""}
-            onChange={(e) =>
+          <TimePicker12h
+            value={draft.working_hours?.end ?? "17:00"}
+            onChange={(v) =>
               update({
-                working_hours: { ...draft.working_hours, end: e.target.value },
+                working_hours: { ...draft.working_hours, end: v },
               })
             }
-            className="w-full px-3 py-2 border rounded-lg"
           />
         </div>
         <div>

@@ -144,6 +144,7 @@ const CompanyOnboardingModal: React.FC = () => {
         ) {
           try {
             const res = await getNewToken(refreshToken);
+            sessionStorage.removeItem("user_logged_out");
             Cookies.set(TOKEN_KEY, res.access_token, { expires: 7 }); // 7 days
           } catch (error) {
             console.log("newTokenError:", error);

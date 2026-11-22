@@ -1,4 +1,5 @@
 import api from "../AxiosInstance";
+import axios from "axios";
 import {
   AssignEmployeesResponse,
   CreateLocationPayload,
@@ -16,6 +17,7 @@ import {
   GeofenceCheckRequest,
   GeofenceCheckResponse,
   ToggleWorkAreaStatusPayload,
+  ToggleWorkAreaStatusResponse,
   UpdateLocationPayload,
   UpdateWorkAreaPayload,
   WorkAreaAttendance,
@@ -81,8 +83,8 @@ export async function deleteWorkAreaById(workAreaId: string): Promise<void> {
 export async function toggleWorkAreaStatusById(
   workAreaId: string,
   data: ToggleWorkAreaStatusPayload,
-): Promise<GetWorkAreaByIDResponse> {
-  const response = await api.patch<GetWorkAreaByIDResponse>(
+): Promise<ToggleWorkAreaStatusResponse> {
+  const response = await api.patch<ToggleWorkAreaStatusResponse>(
     `/work-areas/${workAreaId}/status`,
     data,
   );
@@ -278,8 +280,14 @@ export async function geoSearch(q: string): Promise<GeoSearchResult[]> {
   return unwrapList<GeoSearchResult>(response.data);
 }
 
+/**
+ * /work-areas/mine does not require an Authorization header — staff_id is a
+ * required query param and the endpoint is looked up directly.
+ */
 export async function getMyWorkAreas(staffId?: string): Promise<GetWorkAreasResponse> {
-  const response = await api.get<GetWorkAreasResponse>("/work-areas/mine", {
+  const baseUrl = api.defaults.baseURL ?? "";
+  const url = `${baseUrl}/work-areas/mine`;
+  const response = await axios.get<GetWorkAreasResponse>(url, {
     params: staffId ? { staff_id: staffId } : undefined,
   });
   return response.data;

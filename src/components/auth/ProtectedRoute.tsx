@@ -14,7 +14,10 @@ const ProtectedRoute: React.FC = () => {
   const storedUser = localStorage.getItem("user_data");
 
   const isAuthenticated = Boolean(
-    (user || storedStaff || storedUser) && activeToken && isTokenValid(activeToken)
+    sessionStorage.getItem("user_logged_out") !== "true" &&
+      (user || storedStaff || storedUser) &&
+      activeToken &&
+      isTokenValid(activeToken)
   );
 
   if (!isAuthenticated) {

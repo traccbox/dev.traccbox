@@ -94,11 +94,11 @@ const Navbar = () => {
               Sign In
             </Button>
           </Link>
-          <Link to="/company$&-admin-signup">
+          <a href="https://wa.me/2349063880674" target="_blank" rel="noopener noreferrer">
             <Button className="bg-traccbox-500 hover:bg-traccbox-600 text-white">
-              Get Started
+              Request a Demo
             </Button>
-          </Link>
+          </a>
         </div>
 
         {/* Mobile menu button */}
@@ -173,11 +173,11 @@ const Navbar = () => {
                 Sign In
               </Button>
             </Link>
-            <Link to="/signup">
+            <a href="https://wa.me/2349063880674" target="_blank" rel="noopener noreferrer" className="w-full">
               <Button className="bg-traccbox-500 hover:bg-traccbox-600 text-white justify-center w-full">
-                Get Started
+                Request a Demo
               </Button>
-            </Link>
+            </a>
           </div>
         </div>
       </div>

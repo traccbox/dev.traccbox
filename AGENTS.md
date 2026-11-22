@@ -1,0 +1,2 @@
+- Keep the daily attendance and payout feature isolated under `src/pages/Dashboard/features/payout/` with its typed API under `src/api/payout/`, so it can evolve without disturbing existing attendance and work-area flows.
+- Keep supervisor operations, KPI calculations, and payroll UI isolated under `src/pages/Dashboard/features/supervisor-kpi/` with its typed models and calculations under `src/api/supervisor-kpi/`, so it does not alter existing CRM tasks or worker payout flows.

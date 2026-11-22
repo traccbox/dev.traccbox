@@ -100,7 +100,7 @@ Response 200
   "locations": [ /* Location[] */ ],
   "rules": { /* Rules */ },
   "employees": [
-    { "id": "emp_1", "name": "Ada Obi", "role": "Sales Rep", "department": "Sales", "team": "Alpha", "avatar": null, "status": "inside" }
+    { "id": "emp_1", "name": "Ada Obi", "email": "ada.obi@traccbox.com", "role": "Sales Rep", "department": "Sales", "team": "Alpha", "avatar": null, "status": "inside" }
   ],
   "created_at": "2026-01-10T09:00:00Z",
   "updated_at": "2026-01-12T09:00:00Z"
@@ -193,7 +193,7 @@ Response 200 `{ "assigned": 2, "employees": [ /* Employee[] */ ] }`
 ```json
 {
   "data": [
-    { "id": "emp_1", "name": "Ada Obi", "role": "Sales Rep", "department": "Sales", "team": "Alpha", "avatar": null }
+    { "id": "emp_1", "name": "Ada Obi", "email": "ada.obi@traccbox.com", "role": "Sales Rep", "department": "Sales", "team": "Alpha", "avatar": null }
   ],
   "meta": { "page": 1, "limit": 50, "total": 120 }
 }

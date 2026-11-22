@@ -1,12 +1,35 @@
 import React from "react";
-import { Search, Plus, MoreVertical, Clock, QrCode, FileText, Shield } from "lucide-react";
+import {
+  Search,
+  Plus,
+  Trash2,
+  Clock,
+  QrCode,
+  FileText,
+  Shield,
+  Loader2,
+  CheckCircle2,
+} from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "../../../../components/auth/AuthProvider";
 import { useStaffData } from "../../../../api/settingsApi/hooks/useStaffData";
+import { deleteStaff } from "../../../../api/auth";
+import { useToast } from "../../../../components/ui/use-toast";
 import { useNavigate } from "react-router-dom";
 import { QRCodeModal } from "./components/QRCodeModal";
 import { IDCardModal } from "./components/IDCardModal";
 import { useStaffQRCode } from "../../../../api/settingsApi/hooks/useQRCode";
 import EditPermissionsDrawer from "../../../../components/permissions/EditPermissionsDrawer";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "../../../../components/ui/alert-dialog";
 
 // Helper function to generate initials from full name
 const getInitials = (fullName) => {
@@ -24,7 +47,7 @@ const getAttendanceStatus = (attendanceRecords) => {
 
   const todayRecord = attendanceRecords.find(
     (record) =>
-      record.attendance_date === new Date().toISOString().split("T")[0]
+      record.attendance_date === new Date().toISOString().split("T")[0],
   );
 
   if (!todayRecord) return null;
@@ -52,25 +75,27 @@ const formatTime = (date) => {
 };
 
 const TeamManagement = () => {
-  const { user } = useAuth();
-  // For admins: user.id IS the company_id
-  // user.id = '17f7beb9-6d57-4152-bc98-a6e05f65030d' (company ID)
-  const companyId = user?.id;
+  const { user, staff } = useAuth();
+  const companyId = staff?.company_id ?? user?.id;
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [searchQuery, setSearchQuery] = React.useState("");
   const [selectedMember, setSelectedMember] = React.useState(null);
   const [showQRModal, setShowQRModal] = React.useState(false);
   const [showIDCardModal, setShowIDCardModal] = React.useState(false);
   const [memberQRCodeData, setMemberQRCodeData] = React.useState(null);
   const [permissionsMember, setPermissionsMember] = React.useState(null);
-
+  const [memberToDelete, setMemberToDelete] = React.useState(null);
+  const [deleteSuccessMessage, setDeleteSuccessMessage] = React.useState("");
+  const [deletingMemberId, setDeletingMemberId] = React.useState(null);
 
   // Get QR code data for the selected member
   const { data: qrCodeData } = useStaffQRCode(
     companyId,
     selectedMember?.id,
     "json",
-    undefined
+    undefined,
   );
 
   React.useEffect(() => {
@@ -99,6 +124,65 @@ const TeamManagement = () => {
     setShowIDCardModal(false);
     setSelectedMember(null);
   };
+
+  const handleDeleteMember = async () => {
+    const member = memberToDelete;
+    if (!member) return;
+
+    if (!companyId) {
+      toast({
+        title: "Could not delete staff",
+        description: "Your company account could not be identified.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setDeletingMemberId(member.id);
+    try {
+      const response = await deleteStaff({
+        company_id: companyId,
+        staff_id: member.id,
+        permissions: member.permissions || {},
+      });
+      if (Array.isArray(response.remaining_staffs)) {
+        queryClient.setQueryData(["staff", companyId], (previousMembers) =>
+          response.remaining_staffs
+            .filter((remainingMember) => remainingMember.id !== member.id)
+            .map((remainingMember) => {
+              const existingMember = Array.isArray(previousMembers)
+                ? previousMembers.find(
+                    (previousMember) =>
+                      previousMember.id === remainingMember.id,
+                  )
+                : undefined;
+              return { ...existingMember, ...remainingMember };
+            }),
+        );
+      } else {
+        await queryClient.invalidateQueries({ queryKey: ["staff", companyId] });
+      }
+      if (permissionsMember?.id === member.id) {
+        setPermissionsMember(null);
+      }
+      setMemberToDelete(null);
+      setDeleteSuccessMessage(
+        response.message ||
+          `${member.full_name || "The staff member"} was removed from your team.`,
+      );
+    } catch (deleteError) {
+      toast({
+        title: "Could not delete staff",
+        description:
+          deleteError?.response?.data?.detail ||
+          deleteError?.message ||
+          "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingMemberId(null);
+    }
+  };
   const {
     data: teamMembers = [],
     isLoading,
@@ -121,7 +205,7 @@ const TeamManagement = () => {
       ].filter(Boolean);
 
       return searchTerms.every((term) =>
-        searchableFields.some((field) => field.includes(term))
+        searchableFields.some((field) => field.includes(term)),
       );
     });
   }, [teamMembers, searchQuery]);
@@ -386,8 +470,15 @@ const TeamManagement = () => {
                         </span>
                       )}
                     </div>
-                    <button className="text-gray-400 hover:text-gray-600 transition-colors absolute top-4 right-4">
-                      <MoreVertical className="w-5 h-5" />
+                    <button
+                      type="button"
+                      onClick={() => setMemberToDelete(member)}
+                      disabled={deletingMemberId !== null}
+                      aria-label={`Delete ${member.full_name || "staff member"}`}
+                      title="Delete staff"
+                      className="text-gray-400 hover:text-red-600 disabled:opacity-50 transition-colors absolute top-4 right-4"
+                    >
+                      <Trash2 className="w-5 h-5" />
                     </button>
                   </div>
 
@@ -451,73 +542,76 @@ const TeamManagement = () => {
                   </div>
 
                   {/* Attendance Status */}
-                  {member.role.toLowerCase() === "sales" && (
-                    <div className="border-t border-gray-200 pt-3 mt-2">
-                      <div className="flex flex-col items-center gap-2">
-                        <h4 className="font-medium text-sm text-gray-700">
-                          Today's Attendance
-                        </h4>
-                        {(() => {
-                          const attendance = getAttendanceStatus(
-                            member.attendance_records
-                          );
-                          if (!attendance) {
-                            return (
-                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 w-full text-center">
-                                <span className="text-sm text-yellow-700 font-medium">
-                                  No attendance record for today
-                                </span>
-                              </div>
+                  {member.role.toLowerCase() === "sales_rep" ||
+                    (member.role.toLowerCase() === "sales rep" && (
+                      <div className="border-t border-gray-200 pt-3 mt-2">
+                        <div className="flex flex-col items-center gap-2">
+                          <h4 className="font-medium text-sm text-gray-700">
+                            Today's Attendance 
+                          </h4>
+                          {(() => {
+                            const attendance = getAttendanceStatus(
+                              member.attendance_records,
                             );
-                          }
-
-                          return (
-                            <>
-                              <div className="flex items-center gap-2 w-full justify-center">
-                                <div
-                                  className={`px-3 py-1.5 rounded-lg text-sm font-medium w-full text-center ${
-                                    attendance.isCheckedIn
-                                      ? attendance.checkOutTime
-                                        ? "bg-blue-100 text-blue-800 border border-blue-200"
-                                        : "bg-green-100 text-green-800 border border-green-200"
-                                      : "bg-red-50 text-red-800 border border-red-200"
-                                  }`}
-                                >
-                                  {attendance.isCheckedIn
-                                    ? attendance.checkOutTime
-                                      ? "Shift Completed"
-                                      : "Currently Working"
-                                    : "Not Checked In"}
+                            if (!attendance) {
+                              return (
+                                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-2 w-full text-center">
+                                  <span className="text-sm text-yellow-700 font-medium">
+                                    No attendance record for today
+                                  </span>
                                 </div>
-                              </div>
-                              {attendance.checkInTime && (
-                                <div className="bg-gray-50 rounded-lg p-2 w-full">
-                                  <div className="flex flex-col items-center gap-1 text-sm">
-                                    <div className="flex items-center gap-2 text-green-700">
-                                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                      <span className="font-medium">
-                                        Check-in:{" "}
-                                        {formatTime(attendance.checkInTime)}
-                                      </span>
-                                    </div>
-                                    {attendance.checkOutTime && (
-                                      <div className="flex items-center gap-2 text-blue-700">
-                                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                        <span className="font-medium">
-                                          Check-out:{" "}
-                                          {formatTime(attendance.checkOutTime)}
-                                        </span>
-                                      </div>
-                                    )}
+                              );
+                            }
+
+                            return (
+                              <>
+                                <div className="flex items-center gap-2 w-full justify-center">
+                                  <div
+                                    className={`px-3 py-1.5 rounded-lg text-sm font-medium w-full text-center ${
+                                      attendance.isCheckedIn
+                                        ? attendance.checkOutTime
+                                          ? "bg-blue-100 text-blue-800 border border-blue-200"
+                                          : "bg-green-100 text-green-800 border border-green-200"
+                                        : "bg-red-50 text-red-800 border border-red-200"
+                                    }`}
+                                  >
+                                    {attendance.isCheckedIn
+                                      ? attendance.checkOutTime
+                                        ? "Shift Completed"
+                                        : "Currently Working"
+                                      : "Not Checked In"}
                                   </div>
                                 </div>
-                              )}
-                            </>
-                          );
-                        })()}
+                                {attendance.checkInTime && (
+                                  <div className="bg-gray-50 rounded-lg p-2 w-full">
+                                    <div className="flex flex-col items-center gap-1 text-sm">
+                                      <div className="flex items-center gap-2 text-green-700">
+                                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                        <span className="font-medium">
+                                          Check-in:{" "}
+                                          {formatTime(attendance.checkInTime)}
+                                        </span>
+                                      </div>
+                                      {attendance.checkOutTime && (
+                                        <div className="flex items-center gap-2 text-blue-700">
+                                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                                          <span className="font-medium">
+                                            Check-out:{" "}
+                                            {formatTime(
+                                              attendance.checkOutTime,
+                                            )}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                )}
+                              </>
+                            );
+                          })()}
+                        </div>
                       </div>
-                    </div>
-                  )}
+                    ))}
 
                   {/* QR Code & ID Card Buttons */}
                   <div className="border-t border-gray-200 pt-3 mt-2">
@@ -545,7 +639,6 @@ const TeamManagement = () => {
                       Manage Permissions
                     </button>
                   </div>
-
 
                   {/* Created Date */}
                   <div className="flex items-center justify-center gap-1 text-xs text-gray-500 mt-2">
@@ -578,6 +671,8 @@ const TeamManagement = () => {
           onClose={handleCloseIDCardModal}
           staff={selectedMember}
           company_id={companyId}
+          companyName={user?.company_name}
+          companyLogoUrl={user?.image_url || user?.profile_pic}
           qrCodeData={memberQRCodeData}
         />
       )}
@@ -589,6 +684,71 @@ const TeamManagement = () => {
         companyId={companyId}
         staff={permissionsMember}
       />
+
+      <AlertDialog
+        open={!!memberToDelete}
+        onOpenChange={(open) => {
+          if (!open && deletingMemberId === null) {
+            setMemberToDelete(null);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete staff member?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {memberToDelete
+                ? `This will permanently remove ${memberToDelete.full_name || "this staff member"} from your team.`
+                : "This will permanently remove this staff member from your team."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletingMemberId !== null}>
+              Cancel
+            </AlertDialogCancel>
+            <button
+              type="button"
+              onClick={handleDeleteMember}
+              disabled={deletingMemberId !== null}
+              className="inline-flex items-center justify-center gap-2 rounded-md bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground hover:bg-destructive/90 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {deletingMemberId !== null && (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              )}
+              {deletingMemberId !== null ? "Deleting..." : "Delete staff"}
+            </button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={!!deleteSuccessMessage}
+        onOpenChange={(open) => {
+          if (!open) setDeleteSuccessMessage("");
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-green-100">
+              <CheckCircle2 className="h-7 w-7 text-green-600" />
+            </div>
+            <AlertDialogTitle className="text-center">
+              Staff deleted successfully
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              {deleteSuccessMessage}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              onClick={() => setDeleteSuccessMessage("")}
+              className="bg-green-600 text-white hover:bg-green-700"
+            >
+              Close
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

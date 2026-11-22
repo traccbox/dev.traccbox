@@ -4,6 +4,7 @@ import React, {
   useState,
   useEffect,
   useCallback,
+  useRef,
   ReactNode,
 } from "react";
 import { login as apiLogin, staffLogin as apiStaffLogin, getNewToken } from "@/api/auth";
@@ -103,6 +104,7 @@ const getUserFromToken = (token: string): User | null => {
       created_at: decoded.created_at ?? null,
       phone_number: decoded.phone_number ?? null,
       profile_pic: decoded.profile_pic ?? null,
+      image_url: decoded.image_url ?? decoded.profile_pic ?? null,
       subscription: decoded.subscription ?? null,
       verified_email: decoded.verified_email ?? false,
     };
@@ -114,6 +116,7 @@ const getUserFromToken = (token: string): User | null => {
 const TOKEN_KEY = "access_token";
 const REFRESH_TOKEN = "refresh_token";
 const STAFF_KEY = "staff_data";
+const LOGGED_OUT_KEY = "user_logged_out";
 
 const loadStaffFromStorage = (): StaffData | null => {
   try {
@@ -128,6 +131,7 @@ const loadStaffFromStorage = (): StaffData | null => {
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const sessionVersion = useRef(0);
   const [staff, setStaff] = useState<StaffData | null>(() => loadStaffFromStorage());
   const [token, setToken] = useState<string | null>(() => {
     const storedToken = Cookies.get(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
@@ -165,6 +169,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     let isMounted = true;
 
     const checkAndRefresh = async () => {
+      const currentSessionVersion = sessionVersion.current;
+      if (sessionStorage.getItem(LOGGED_OUT_KEY) === "true") return;
+
       if (token && refreshToken) {
         if (isTokenValid(token)) {
           Cookies.set(TOKEN_KEY, token, { expires: 7 });
@@ -190,7 +197,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           try {
             console.log("🔄 Proactively refreshing expired token via AuthProvider...");
             const res = await getNewToken(refreshToken);
-            if (res?.access_token && isMounted) {
+            if (!isMounted || sessionVersion.current !== currentSessionVersion) {
+              return;
+            }
+            if (
+              res?.access_token &&
+              isMounted
+            ) {
               const newAccess = res.access_token;
               const newRefresh = res.refresh_token || refreshToken;
               setToken(newAccess);
@@ -232,7 +245,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           try {
             console.log("🔄 Restoring session using stored refresh token...");
             const res = await getNewToken(refreshToken);
-            if (res?.access_token && isMounted) {
+            if (!isMounted || sessionVersion.current !== currentSessionVersion) {
+              return;
+            }
+            if (
+              res?.access_token &&
+              isMounted
+            ) {
               const newAccess = res.access_token;
               const newRefresh = res.refresh_token || refreshToken;
               setToken(newAccess);
@@ -275,6 +294,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     const handleTokenRefreshed = (e: Event) => {
       const customEvent = e as CustomEvent<{ access_token: string; refresh_token?: string }>;
+      if (sessionStorage.getItem(LOGGED_OUT_KEY) === "true") return;
       const newAccess = customEvent.detail?.access_token || Cookies.get(TOKEN_KEY) || localStorage.getItem(TOKEN_KEY);
       const newRefresh = customEvent.detail?.refresh_token || Cookies.get(REFRESH_TOKEN) || localStorage.getItem(REFRESH_TOKEN);
 
@@ -316,6 +336,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setError(null);
     try {
       const res = await apiLogin({ email, password });
+      sessionVersion.current += 1;
+      sessionStorage.removeItem(LOGGED_OUT_KEY);
       // Clear any staff session on admin login
       setStaff(null);
       localStorage.removeItem(STAFF_KEY);
@@ -378,6 +400,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       access_token: res.access_token,
       refresh_token: res.refresh_token,
     };
+    sessionVersion.current += 1;
+    sessionStorage.removeItem(LOGGED_OUT_KEY);
     sessionStorage.removeItem("session_expired");
     localStorage.setItem(STAFF_KEY, JSON.stringify(staffData));
     setStaff(staffData);
@@ -403,6 +427,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   const logout = () => {
+    sessionVersion.current += 1;
+    sessionStorage.setItem(LOGGED_OUT_KEY, "true");
     setToken(null);
     setRefreshToke(null);
     setUser(null);
@@ -414,6 +440,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem("user_data");
     localStorage.removeItem("user_data_timestamp");
     localStorage.removeItem(STAFF_KEY);
+    localStorage.removeItem("return_url");
     sessionStorage.removeItem("session_expired");
   };
 

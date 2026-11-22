@@ -1,6 +1,10 @@
 import { useState } from "react";
 import { Loader2, Search, Users, X } from "lucide-react";
-import { useAssignableEmployees, getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
+import {
+  useAssignableEmployees,
+  getApiErrorMessage,
+} from "@/api/geoFencing/hooksGeoFencing";
+import type { AssignableEmployee } from "@/api/geoFencing/typesGeoFencing";
 import { useDebounce } from "@/hooks/useDebounce";
 import Pagination from "@/components/dashboard/Pagination";
 
@@ -125,7 +129,13 @@ export default function AssignEmployeesModal({
             )}
 
             {!isError &&
-              employees.map((e) => {
+              employees.map((raw) => {
+                const rawRecord = raw as unknown as Record<string, unknown>;
+                const e = {
+                  ...raw,
+                  name: rawRecord.full_name || raw.name || "Unnamed",
+                  email: raw.email || rawRecord.email_address || rawRecord.work_email,
+                } as AssignableEmployee;
                 const already = assignedIds.includes(e.id);
                 return (
                   <label
@@ -152,10 +162,14 @@ export default function AssignEmployeesModal({
                     <div className="flex-1 min-w-0">
                       <div className="text-sm font-medium truncate">{e.name}</div>
                       <div className="text-xs text-gray-500 truncate">
-                        {[e.role, e.department, e.team].filter(Boolean).join(" · ") ||
-                          "—"}
+                        {e.email || "—"}
                       </div>
                     </div>
+                    {(e.role || e.department || e.team) && (
+                      <span className="hidden sm:inline-flex max-w-[40%] truncate rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#1658E5]">
+                        {[e.role, e.department, e.team].filter(Boolean).join(" · ")}
+                      </span>
+                    )}
                     {already && (
                       <span className="text-[10px] font-semibold text-gray-500">
                         ASSIGNED

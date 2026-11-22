@@ -8,6 +8,8 @@ export interface SidebarSubmenu {
   to: string;
   comingSoon?: boolean;
   permission?: PermissionKey;
+  /** Set to true to hide this submenu item until its API is integrated */
+  hidden?: boolean;
 }
 
 export interface SidebarMenuConfig {
@@ -17,6 +19,8 @@ export interface SidebarMenuConfig {
   submenus?: SidebarSubmenu[];
   comingSoon?: boolean;
   permission?: PermissionKey;
+  /** Set to true to hide this menu from the sidebar until its API is integrated */
+  hidden?: boolean;
 }
 
 export const sidebarMenus: SidebarMenuConfig[] = [
@@ -32,6 +36,48 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     to: "/dashboard/work-areas",
     permission: ["work_area_management", "view_work_areas"],
   },
+
+  // ─── NOT YET INTEGRATED ──────────────────────────────────────────────────
+  // To enable a module: delete its `hidden: true` line.
+  {
+    label: "Daily Attendance & Payout",
+    icon: "Banknote",
+    hidden: true, // ← remove this line to show
+    submenus: [
+      {
+        label: "Payout Board",
+        to: "/dashboard/payout",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
+        label: "Pay Slips & Disbursal",
+        to: "/dashboard/payout/payslips",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
+        label: "Site Geofences",
+        to: "/dashboard/payout/sites",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
+        label: "Same-Day Workers",
+        to: "/dashboard/payout/workers",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
+        label: "Attendance Logs",
+        to: "/dashboard/payout/attendance",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+      {
+        label: "Worker Clock-In Portal",
+        to: "/dashboard/payout/clock-in-portal",
+        permission: ["work_area_management", "view_work_areas"],
+      },
+    ],
+  },
+  // ─────────────────────────────────────────────────────────────────────────
+
   {
     label: "Field Sales Reps",
     icon: "Users",
@@ -53,9 +99,45 @@ export const sidebarMenus: SidebarMenuConfig[] = [
       },
     ],
   },
+
+  {
+    label: "Workforce & Supervisor",
+    icon: "ClipboardList",
+    hidden: true, // ← remove this line to show
+    submenus: [
+      {
+        label: "Operations Overview",
+        to: "/dashboard/workforce-supervisor",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Operational Tasks",
+        to: "/dashboard/workforce-supervisor/tasks",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Daily Reports",
+        to: "/dashboard/workforce-supervisor/reports",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Supervisor KPI",
+        to: "/dashboard/workforce-supervisor/kpi",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Supervisor Payroll",
+        to: "/dashboard/workforce-supervisor/payroll",
+        permission: ["order_task_management", "view_orders"],
+      },
+    ],
+  },
+
+  // ─── NOT YET INTEGRATED ──────────────────────────────────────────────────
   {
     label: "Performance",
     icon: "TrendingUp",
+    hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Performance Logs",
@@ -72,12 +154,14 @@ export const sidebarMenus: SidebarMenuConfig[] = [
   {
     label: "Travel Monitoring",
     icon: "Navigation",
+    hidden: true, // ← remove this line to show
     to: "/dashboard/travel-monitoring",
     permission: ["core_dashboard_report", "view_dashboard"],
   },
   {
     label: "Communication",
     icon: "PhoneCall",
+    hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Call History",
@@ -89,6 +173,7 @@ export const sidebarMenus: SidebarMenuConfig[] = [
   {
     label: "Subscription",
     icon: "CreditCard",
+    hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Current Plan",
@@ -112,6 +197,8 @@ export const sidebarMenus: SidebarMenuConfig[] = [
       },
     ],
   },
+  // ─────────────────────────────────────────────────────────────────────────
+
   {
     label: "Settings & Integrations",
     icon: "Settings",
@@ -134,3 +221,9 @@ export const sidebarMenus: SidebarMenuConfig[] = [
     ],
   },
 ];
+
+/**
+ * Sidebar menus with hidden items filtered out.
+ * Use this export in Sidebar.tsx — swap `sidebarMenus` for `activeMenus`.
+ */
+export const activeMenus = sidebarMenus.filter((m) => !m.hidden);

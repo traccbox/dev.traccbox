@@ -1,6 +1,6 @@
 import axios, { AxiosInstance, InternalAxiosRequestConfig } from "axios";
 import Cookies from "js-cookie";
-import { getRefreshToken, isTokenValid, setAuthTokens } from "@/utils/authUtils";
+import { refreshAccessToken } from "@/utils/tokenRefresh";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "https://api.traccbox.com/api/v1";
 
@@ -11,23 +11,6 @@ const api: AxiosInstance = axios.create({
     Accept: "application/json",
   },
 });
-
-let isRefreshing = false;
-let failedQueue: Array<{
-  resolve: (token: string) => void;
-  reject: (error: any) => void;
-}> = [];
-
-const processQueue = (error: any, token: string | null = null) => {
-  failedQueue.forEach((prom) => {
-    if (error) {
-      prom.reject(error);
-    } else if (token) {
-      prom.resolve(token);
-    }
-  });
-  failedQueue = [];
-};
 
 // Add access token to every request
 api.interceptors.request.use((config) => {
@@ -63,55 +46,18 @@ api.interceptors.response.use(
         requestUrl.includes("/companies/verify_email");
 
       if (!isAuthEndpoint) {
-        const refreshToken = getRefreshToken();
+        // Shared single-flight refresh (also used by the WebSocket)
+        const newAccessToken = await refreshAccessToken();
 
-        if (refreshToken && isTokenValid(refreshToken)) {
-          if (isRefreshing) {
-            return new Promise((resolve, reject) => {
-              failedQueue.push({ resolve, reject });
-            })
-              .then((token) => {
-                originalRequest.headers.Authorization = `Bearer ${token}`;
-                return api(originalRequest);
-              })
-              .catch((err) => Promise.reject(err));
-          }
-
+        if (newAccessToken) {
           originalRequest._retry = true;
-          isRefreshing = true;
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return api(originalRequest);
+        }
 
-          try {
-            console.log("🔄 Access token expired. Attempting automatic token refresh...");
-            const refreshResponse = await axios.post(`${API_BASE}/refresh`, {
-              refresh_token: refreshToken,
-            });
-
-            const resData = refreshResponse.data;
-            const newAccessToken = resData?.access_token;
-            const newRefreshToken = resData?.refresh_token || refreshToken;
-
-            if (newAccessToken) {
-              console.log("✅ Token refreshed successfully!");
-              setAuthTokens(newAccessToken, newRefreshToken);
-
-              // Notify AuthProvider state
-              window.dispatchEvent(
-                new CustomEvent("token_refreshed", {
-                  detail: { access_token: newAccessToken, refresh_token: newRefreshToken },
-                })
-              );
-
-              originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-              processQueue(null, newAccessToken);
-              isRefreshing = false;
-
-              return api(originalRequest);
-            }
-          } catch (refreshError) {
-            console.error("❌ Automatic token refresh failed:", refreshError);
-            processQueue(refreshError, null);
-            isRefreshing = false;
-          }
+        // User explicitly logged out while the refresh was in flight
+        if (sessionStorage.getItem("user_logged_out") === "true") {
+          return Promise.reject(error);
         }
 
         // If no valid refresh_token exists or refresh failed, force logout & redirect to login
