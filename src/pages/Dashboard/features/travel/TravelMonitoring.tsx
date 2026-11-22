@@ -118,6 +118,7 @@ const TravelMonitoring: React.FC = () => {
   };
 
   console.log("tripRoute", tripRoute);
+  console.log("travelTrips", travelTrips);
 
   const exportRows = rows.map((r) => ({
     Employee: r.employee,
