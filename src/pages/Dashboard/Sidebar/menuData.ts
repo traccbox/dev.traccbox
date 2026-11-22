@@ -42,7 +42,7 @@ export const sidebarMenus: SidebarMenuConfig[] = [
   {
     label: "Daily Attendance & Payout",
     icon: "Banknote",
-    // hidden: true, // ← remove this line to show
+    hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Payout Board",
@@ -103,6 +103,7 @@ export const sidebarMenus: SidebarMenuConfig[] = [
   {
     label: "Workforce & Supervisor",
     icon: "ClipboardList",
+    hidden: true, // ← remove this line to show
     submenus: [
       {
         label: "Operations Overview",

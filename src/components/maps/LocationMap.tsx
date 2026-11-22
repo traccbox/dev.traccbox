@@ -66,6 +66,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
   const markersRef = useRef<Map<string, L.Marker>>(new Map());
   const addressesRef = useRef<Map<string, string>>(new Map()); // Cache addresses by staffId
   const [addresses, setAddresses] = useState<Record<string, string>>({});
+  const lastFitKeyRef = useRef<string>(""); // re-fit only when visible staff change
 
   // Initialize map
   useEffect(() => {
@@ -107,13 +108,13 @@ const LocationMap: React.FC<LocationMapProps> = ({
     }
 
     // Remove markers that are no longer needed
-    Object.keys(staffLocations).forEach((staffId) => {
-      if (!locationsToShow[staffId] && markers.has(staffId)) {
+    Array.from(markers.keys()).forEach((staffId) => {
+      if (!locationsToShow[staffId]) {
         const marker = markers.get(staffId);
         if (marker) {
           map.removeLayer(marker);
-          markers.delete(staffId);
         }
+        markers.delete(staffId);
       }
     });
 
@@ -130,6 +131,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
             );
             return;
           }
+
+          // Server already resolved the address: no third-party lookup needed
+          if (location.address) return;
 
           // Fetch address if not already cached
           if (!addressesRef.current.has(staffId)) {
@@ -182,6 +186,7 @@ const LocationMap: React.FC<LocationMapProps> = ({
 
       // Get address from cache or use coordinates as fallback
       const address =
+        location.address ||
         addressesRef.current.get(staffId) ||
         // addresses[staffId] ||
         addresses[staffId] ||
@@ -217,19 +222,50 @@ const LocationMap: React.FC<LocationMapProps> = ({
           <p style="margin: 6px 0; font-size: 13px; color: #374151; line-height: 1.5;">
             ${address}
           </p> 
-          <p style="margin: 4px 0; font-size: 11px; color: #6b7280;">
-          ${location.address}
-          </p>
+
           <hr style="margin: 8px 0; border: none; border-top: 1px solid #e2e8f0;" />
+          ${
+            location.geofence
+              ? `<p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Work Area:</strong> <span style="color: ${
+                  location.geofence.inside ? "#10b981" : "#ef4444"
+                }">${location.geofence.inside ? "Inside" : "Outside"}</span>${
+                  location.geofence.can_clock_in === false
+                    ? " • cannot clock in"
+                    : ""
+                }${
+                  location.geofence.reason
+                    ? `<br/><span style="color:#6b7280">${location.geofence.reason}</span>`
+                    : ""
+                }${
+                  location.geofence.violation_opened
+                    ? `<br/><span style="color:#ef4444">Violation opened</span>`
+                    : ""
+                }</p>`
+              : ""
+          }
           <p style="margin: 4px 0; font-size: 12px; color: #666;">
             <strong>Task Status:</strong> <span style="color: ${
               task_status === "completed"
                 ? "#10b981"
-                : task_status === "pending"
+                : task_status === "overdue"
+                  ? "#ef4444"
+                  : task_status === "pending"
                   ? "#f59e0b"
                   : "#6b7280"
             }">${task_status || "N/A"}</span>
           </p>
+          ${
+            location.speed != null
+              ? `<p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Speed:</strong> ${(location.speed * 3.6).toFixed(1)} km/h${
+                  location.heading != null ? ` • Heading ${Math.round(location.heading)}°` : ""
+                }</p>`
+              : ""
+          }
+          ${
+            location.accuracy != null
+              ? `<p style="margin: 4px 0; font-size: 12px; color: #666;"><strong>Accuracy:</strong> ±${Math.round(location.accuracy)} m</p>`
+              : ""
+          }
           <p style="margin: 4px 0; font-size: 12px; color: #666;">
             <strong>Last Updated:</strong> ${formattedTime}
           </p>
@@ -262,7 +298,9 @@ const LocationMap: React.FC<LocationMapProps> = ({
     const validLocations = Object.values(locationsToShow).filter(
       (loc) => loc.latitude && loc.longitude,
     );
-    if (validLocations.length > 0) {
+    const fitKey = Object.keys(locationsToShow).sort().join(",");
+    if (validLocations.length > 0 && fitKey !== lastFitKeyRef.current) {
+      lastFitKeyRef.current = fitKey;
       const bounds = L.latLngBounds(
         validLocations.map((loc) => [loc.latitude, loc.longitude]),
       );

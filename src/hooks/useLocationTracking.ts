@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { getAccessToken } from "@/utils/authUtils";
+import { getAccessToken, isTokenValid } from "@/utils/authUtils";
+import { refreshAccessToken } from "@/utils/tokenRefresh";
 
 export interface GeofenceInfo {
   inside: boolean;
@@ -15,8 +16,13 @@ export interface StaffLocation {
   latitude: number;
   longitude: number;
   timestamp: string;
-  task_status?: string;
-  address?: string;
+  accuracy?: number | null; // metres
+  altitude?: number | null; // metres
+  heading?: number | null; // degrees
+  speed?: number | null; // metres/second
+  work_area_id?: string | null;
+  task_status?: "ongoing" | "pending" | "completed" | "overdue" | null;
+  address?: string | null;
   geofence?: GeofenceInfo;
 }
 
@@ -30,6 +36,13 @@ export interface LocationTrackingResponse {
   locations: StaffLocations;
 }
 
+// Pushed by the backend when a staff socket disconnects or goes silent (15 min)
+export interface StaffOfflineEvent {
+  type: "staff_offline";
+  staff_id: string;
+  last_seen: string;
+}
+
 // Single staff location update format
 export interface SingleLocationUpdate {
   staff_id: string;
@@ -41,6 +54,20 @@ interface UseLocationTrackingOptions {
   token?: string | null;
   enabled?: boolean;
 }
+
+// Tagged logs: filter the browser console on "[WS]" to see only socket traffic.
+const maskToken = (url: string) => url.replace(/token=[^&]+/, "token=<hidden>");
+const wsLogRequest = (message: object) =>
+  console.log("[WS] ➡️ REQUEST", JSON.stringify(message, null, 2));
+const wsLogResponse = (raw: unknown) => {
+  let parsed: unknown = raw;
+  try {
+    parsed = JSON.parse(String(raw));
+  } catch {
+    /* not JSON, log as-is */
+  }
+  console.log("[WS] ⬅️ RESPONSE", parsed);
+};
 
 const getWsBaseUrl = (): string => {
   const envBase = import.meta.env.VITE_API_BASE;
@@ -68,14 +95,15 @@ export const useLocationTracking = ({
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reconnectAttemptsRef = useRef(0);
   const maxReconnectAttempts = 5;
-  const reconnectDelay = 3000; // 3 seconds
+  const reconnectDelay = 3000; // base delay, doubles each attempt (max 30s)
+  const connectSeqRef = useRef(0); // invalidates in-flight async connects
+  const authRetryRef = useRef(false); // one refresh-and-retry per auth failure
+  const connectedTokenRef = useRef<string | null>(null);
 
   const sendMessage = useCallback((message: object) => {
     if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
       const messageStr = JSON.stringify(message);
-      console.log("📤 Sending WebSocket Message:", message);
-      console.log("📤 Message String:", messageStr);
-      console.log("📤 WebSocket Ready State:", wsRef.current.readyState);
+      wsLogRequest(message);
       wsRef.current.send(messageStr);
       console.log(
         "✅ Message sent successfully (response will come via onmessage handler)",
@@ -96,10 +124,19 @@ export const useLocationTracking = ({
     sendMessage(message);
   }, [sendMessage]);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(async (overrideToken?: string) => {
     if (!companyId || !enabled) return;
 
-    const activeToken = token || getAccessToken();
+    const seq = ++connectSeqRef.current;
+    let activeToken = overrideToken || token || getAccessToken();
+
+    // Expired (or about to expire) access token: refresh before connecting
+    if (!activeToken || !isTokenValid(activeToken)) {
+      const fresh = await refreshAccessToken();
+      if (seq !== connectSeqRef.current) return; // superseded / disconnected
+      if (fresh) activeToken = fresh;
+    }
+
     if (!activeToken) {
       console.warn("⚠️ No access token available for WebSocket connection");
       setError("No access token available for location tracking connection.");
@@ -107,41 +144,67 @@ export const useLocationTracking = ({
       return;
     }
 
-    // Close existing connection if any
-    if (wsRef.current) {
-      wsRef.current.close();
+    // Already connected/connecting with this exact token: nothing to do
+    if (
+      wsRef.current &&
+      connectedTokenRef.current === activeToken &&
+      (wsRef.current.readyState === WebSocket.OPEN ||
+        wsRef.current.readyState === WebSocket.CONNECTING)
+    ) {
+      return;
     }
+
+    // Close existing connection; detach handlers so its onclose doesn't
+    // schedule a competing reconnect
+    if (wsRef.current) {
+      const old = wsRef.current;
+      old.onopen = old.onmessage = old.onerror = old.onclose = null;
+      old.close();
+    }
+    connectedTokenRef.current = activeToken;
 
     try {
       const wsBase = getWsBaseUrl();
       const wsUrl = `${wsBase}/ws/admin/${companyId}?token=${encodeURIComponent(activeToken)}`;
-      console.log("🔌 Attempting WebSocket connection to:", wsUrl);
+      console.log("[WS] 🔌 CONNECT", maskToken(wsUrl));
       const ws = new WebSocket(wsUrl);
 
       ws.onopen = () => {
         console.log("✅ WebSocket Connected Successfully");
-        console.log("📡 WebSocket URL:", wsUrl);
         console.log("🏢 Company ID:", companyId);
         setIsConnected(true);
         setError(null);
         reconnectAttemptsRef.current = 0;
+        authRetryRef.current = false;
 
         // Request all staff locations on connect
         console.log("📤 Auto-requesting all staff locations on connect");
         if (ws.readyState === WebSocket.OPEN) {
           const message = { action: "get_all" };
-          console.log("📤 Sending initial get_all request:", message);
+          wsLogRequest(message);
           ws.send(JSON.stringify(message));
         }
       };
 
       ws.onmessage = (event) => {
         try {
-          console.log("📥 WebSocket Message Received (raw):", event.data);
+          wsLogResponse(event.data);
           const rawData = JSON.parse(event.data);
 
+          // Staff went offline: stop showing the pin as live
+          if (rawData.type === "staff_offline" && rawData.staff_id) {
+            const offline = rawData as StaffOfflineEvent;
+            setStaffLocations((prev) => {
+              if (!(offline.staff_id in prev)) return prev;
+              const updated = { ...prev };
+              delete updated[offline.staff_id];
+              return updated;
+            });
+            return;
+          }
+
           // Check if it's an error frame (e.g., invalid token, unauthorized, or staff not online)
-          if (rawData.status === "error") {
+          if (rawData.status === "error" || rawData.type === "error") {
             console.warn("⚠️ WebSocket Error Frame Received:", rawData.message);
             setError(rawData.message || "Error received from location service");
             return;
@@ -182,14 +245,8 @@ export const useLocationTracking = ({
               full_response: data,
             });
 
-            setStaffLocations((prev) => {
-              const updated = { ...prev };
-              Object.keys(data.locations).forEach((staffId) => {
-                const location = data.locations[staffId];
-                updated[staffId] = location;
-              });
-              return updated;
-            });
+            // The snapshot lists only online staff, so replace the state
+            setStaffLocations({ ...data.locations });
           } else {
             console.warn("⚠️ Unknown WebSocket message format:", rawData);
           }
@@ -211,7 +268,11 @@ export const useLocationTracking = ({
       };
 
       ws.onclose = (event) => {
-        console.log("🔌 WebSocket Disconnected");
+        console.log("[WS] 🔌 CLOSED", {
+          code: event.code,
+          reason: event.reason,
+          wasClean: event.wasClean,
+        });
         console.log("🔌 Close event details:", {
           code: event.code,
           reason: event.reason,
@@ -219,13 +280,27 @@ export const useLocationTracking = ({
         });
         setIsConnected(false);
 
-        // Code 1008 indicates Policy Violation / Auth Failure
+        // Code 1008 = auth failure (usually an expired access token).
+        // Refresh the token once and reconnect; never loop.
         if (event.code === 1008) {
+          if (!authRetryRef.current) {
+            authRetryRef.current = true;
+            console.warn("🔄 WebSocket auth failed (1008). Refreshing token...");
+            refreshAccessToken().then((fresh) => {
+              if (seq !== connectSeqRef.current) return;
+              if (fresh) {
+                connect(fresh);
+              } else {
+                setError("Session expired. Please log in again.");
+              }
+            });
+            return;
+          }
           console.error(
-            "❌ WebSocket closed with code 1008 (Policy Violation / Auth Failure). Stopping reconnect attempts.",
+            "❌ WebSocket closed with 1008 again after token refresh. Stopping.",
           );
           setError(
-            "Authentication failed or unauthorized to view live locations (Close code 1008).",
+            "Not authorized to view live locations (Close code 1008).",
           );
           return;
         }
@@ -233,15 +308,19 @@ export const useLocationTracking = ({
         // Attempt to reconnect if enabled and not manually closed
         if (enabled && reconnectAttemptsRef.current < maxReconnectAttempts) {
           reconnectAttemptsRef.current += 1;
+          const delay = Math.min(
+            reconnectDelay * 2 ** (reconnectAttemptsRef.current - 1),
+            30000,
+          );
           console.log(
-            `🔄 Scheduling reconnection attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts} in ${reconnectDelay}ms`,
+            `🔄 Scheduling reconnection attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts} in ${delay}ms`,
           );
           reconnectTimeoutRef.current = setTimeout(() => {
             console.log(
               `🔄 Reconnecting... Attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts}`,
             );
             connect();
-          }, reconnectDelay);
+          }, delay);
         } else if (reconnectAttemptsRef.current >= maxReconnectAttempts) {
           console.error(
             "❌ Max reconnection attempts reached. Manual refresh required.",
@@ -260,6 +339,8 @@ export const useLocationTracking = ({
 
   const disconnect = useCallback(() => {
     console.log("🔌 Disconnecting WebSocket...");
+    connectSeqRef.current += 1; // cancel any in-flight async connect
+    connectedTokenRef.current = null;
     if (reconnectTimeoutRef.current) {
       console.log("⏹️ Clearing reconnection timeout");
       clearTimeout(reconnectTimeoutRef.current);
@@ -268,12 +349,14 @@ export const useLocationTracking = ({
 
     if (wsRef.current) {
       console.log("🔌 Closing WebSocket connection");
+      wsRef.current.onclose = null; // intentional close: no auto-reconnect
       wsRef.current.close();
       wsRef.current = null;
     }
 
     setIsConnected(false);
     reconnectAttemptsRef.current = 0;
+    authRetryRef.current = false;
     console.log("✅ WebSocket disconnected");
   }, []);
 
