@@ -15,11 +15,23 @@ import {
 import PageHeader from "@/components/dashboard/PageHeader";
 import StatCard from "@/components/dashboard/StatCard";
 import Pagination from "@/components/dashboard/Pagination";
-import { CardsSkeleton, EmptyState, ErrorState, TableSkeleton } from "@/components/dashboard/States";
+import {
+  CardsSkeleton,
+  EmptyState,
+  ErrorState,
+  TableSkeleton,
+} from "@/components/dashboard/States";
 import RouteMap from "./RouteMap";
-import { fetchTravelData, TravelFilters, TravelRow } from "@/api/mock/travel";
+import { TravelFilters } from "@/api/mock/travel";
 import { BRANCHES, EMPLOYEES, TEAMS } from "@/api/mock/orgData";
 import { exportCSV } from "@/utils/exportData";
+import {
+  getTravelSummary,
+  getTravelTrips,
+  getTripRoute,
+} from "@/api/travels/apiTravels";
+import Spinner from "@/components/ui/Spinner";
+import { TravelTrip } from "@/api/travels/types";
 
 const PAGE_SIZE = 8;
 
@@ -31,30 +43,73 @@ const TravelMonitoring: React.FC = () => {
   const [playing, setPlaying] = useState(false);
   const [playIndex, setPlayIndex] = useState(0);
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["travel", filters, search],
-    queryFn: () => fetchTravelData({ ...filters, search }),
+  const {
+    data: travelSummary,
+    isLoading: isGettingSummary,
+    isError: isSummaryError,
+    refetch,
+  } = useQuery({
+    queryKey: ["summary", filters, search],
+    queryFn: () => getTravelSummary({ ...filters }),
   });
 
-  const rows = data?.rows ?? [];
-  const selected: TravelRow | undefined = useMemo(
-    () => rows.find((r) => r.id === selectedId) ?? rows[0],
-    [rows, selectedId],
-  );
+  const {
+    data: travelTrips,
+    isLoading: isGettingTrips,
+    isError: isTripsError,
+    // refetch: refetchTrips,
+  } = useQuery({
+    queryKey: ["trips", filters, search],
+    queryFn: () => getTravelTrips({ ...filters }),
+  });
 
-  useEffect(() => {
-    if (!playing || !selected) return;
-    const t = setInterval(() => {
-      setPlayIndex((i) => {
-        if (i >= selected.route.length - 1) {
-          setPlaying(false);
-          return i;
-        }
-        return i + 1;
-      });
-    }, 700);
-    return () => clearInterval(t);
-  }, [playing, selected]);
+  const {
+    data: tripRoute,
+    isLoading: isGettingRoute,
+    isError: isRouteError,
+  } = useQuery({
+    queryKey: ["trip-route", selectedId],
+    queryFn: () => getTripRoute(selectedId),
+    enabled: Boolean(selectedId), // Only fetch when selectedId is not null
+  });
+
+  // useEffect(() => {
+  //   if (!playing || !selected) return;
+  //   const t = setInterval(() => {
+  //     setPlayIndex((i) => {
+  //       if (i >= selected.route.length - 1) {
+  //         setPlaying(false);
+  //         return i;
+  //       }
+  //       return i + 1;
+  //     });
+  //   }, 700);
+  //   return () => clearInterval(t);
+  // }, [playing, selected]);
+
+  if (isGettingSummary || isGettingTrips) {
+    return (
+      <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (isSummaryError || !travelSummary || isTripsError || !travelTrips) {
+    return (
+      <div className="p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+          <h2 className="font-semibold text-red-700">
+            Failed to load Travel Summary
+          </h2>
+        </div>
+      </div>
+    );
+  }
+
+  const rows = travelTrips?.data;
+  const selected: TravelTrip | undefined =
+    rows.find((r) => r.id === selectedId) ?? rows[0];
 
   const paged = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const set = (k: keyof TravelFilters, v: string) => {
@@ -62,19 +117,22 @@ const TravelMonitoring: React.FC = () => {
     setFilters((f) => ({ ...f, [k]: v || undefined }));
   };
 
+  console.log("tripRoute", tripRoute);
+  console.log("travelTrips", travelTrips);
+
   const exportRows = rows.map((r) => ({
     Employee: r.employee,
     Date: r.date,
-    "Distance (km)": r.distance,
-    "Time Moving": r.timeMoving,
-    "Idle Time": r.idleTime,
-    "Check-in": r.checkIn,
-    "Check-out": r.checkOut,
+    "Distance (km)": r.distance_km,
+    "Time Moving": r.time_moving_minutes,
+    "Idle Time": r.idle_time_minutes,
+    "Check-in": r.check_in,
+    "Check-out": r.check_out,
     Branch: r.branch,
     Team: r.team,
   }));
 
-  const s = data?.summary;
+  const summary = travelSummary.data;
 
   return (
     <div>
@@ -92,20 +150,65 @@ const TravelMonitoring: React.FC = () => {
         }
       />
 
-      {isError ? (
+      {isSummaryError ? (
         <ErrorState onRetry={() => refetch()} />
-      ) : isLoading || !s ? (
+      ) : isGettingSummary || !summary ? (
         <CardsSkeleton count={8} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <StatCard index={0} title="Distance Today" value={`${s.distanceToday} km`} icon={<RouteIcon className="w-4 h-4" />} percent={9} />
-          <StatCard index={1} title="Distance This Week" value={`${s.distanceWeek} km`} icon={<RouteIcon className="w-4 h-4" />} percent={4} />
-          <StatCard index={2} title="Distance This Month" value={`${s.distanceMonth} km`} icon={<RouteIcon className="w-4 h-4" />} percent={-2} />
-          <StatCard index={3} title="Total Stops" value={s.totalStops} icon={<MapPin className="w-4 h-4" />} percent={6} />
-          <StatCard index={4} title="Moving Time" value={s.movingTime} icon={<Clock className="w-4 h-4" />} />
-          <StatCard index={5} title="Idle Time" value={s.idleTime} icon={<TimerReset className="w-4 h-4" />} />
-          <StatCard index={2} title="Average Speed" value={`${s.averageSpeed} km/h`} icon={<Gauge className="w-4 h-4" />} percent={3} />
-          <StatCard index={0} title="Tracked Trips" value={rows.length} icon={<RouteIcon className="w-4 h-4" />} />
+          <StatCard
+            index={0}
+            title="Distance Today"
+            value={`${summary.distance_today_km} km`}
+            icon={<RouteIcon className="w-4 h-4" />}
+            percent={9}
+          />
+          <StatCard
+            index={1}
+            title="Distance This Week"
+            value={`${summary.distance_week_km} km`}
+            icon={<RouteIcon className="w-4 h-4" />}
+            percent={4}
+          />
+          <StatCard
+            index={2}
+            title="Distance This Month"
+            value={`${summary.distance_month_km} km`}
+            icon={<RouteIcon className="w-4 h-4" />}
+            percent={-2}
+          />
+          <StatCard
+            index={3}
+            title="Total Stops"
+            value={summary.total_stops}
+            icon={<MapPin className="w-4 h-4" />}
+            percent={6}
+          />
+          <StatCard
+            index={4}
+            title="Moving Time"
+            value={summary.moving_time_minutes}
+            icon={<Clock className="w-4 h-4" />}
+          />
+          <StatCard
+            index={5}
+            title="Idle Time"
+            value={summary.idle_time_minutes}
+            icon={<TimerReset className="w-4 h-4" />}
+          />
+          <StatCard
+            index={2}
+            title="Average Speed"
+            value={`${summary.average_speed_kmh} km/h`}
+            icon={<Gauge className="w-4 h-4" />}
+            percent={3}
+          />
+          <StatCard
+            index={0}
+            title="Tracked Trips"
+            value={rows.length}
+            icon={<RouteIcon className="w-4 h-4" />}
+          />
         </div>
       )}
 
@@ -124,7 +227,9 @@ const TravelMonitoring: React.FC = () => {
         >
           <option value="">All Employees</option>
           {EMPLOYEES.map((e) => (
-            <option key={e.id} value={e.id}>{e.name}</option>
+            <option key={e.id} value={e.id}>
+              {e.name}
+            </option>
           ))}
         </select>
         <select
@@ -134,7 +239,9 @@ const TravelMonitoring: React.FC = () => {
         >
           <option value="">All Branches</option>
           {BRANCHES.map((b) => (
-            <option key={b} value={b}>{b}</option>
+            <option key={b} value={b}>
+              {b}
+            </option>
           ))}
         </select>
         <select
@@ -144,7 +251,9 @@ const TravelMonitoring: React.FC = () => {
         >
           <option value="">All Teams</option>
           {TEAMS.map((t) => (
-            <option key={t} value={t}>{t}</option>
+            <option key={t} value={t}>
+              {t}
+            </option>
           ))}
         </select>
         <div className="relative">
@@ -165,10 +274,12 @@ const TravelMonitoring: React.FC = () => {
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 mb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
           <div>
-            <h2 className="text-sm font-semibold text-gray-900">Route Playback</h2>
+            <h2 className="text-sm font-semibold text-gray-900">
+              Route Playback
+            </h2>
             <p className="text-[11px] text-gray-500">
               {selected
-                ? `${selected.employee} • ${selected.date} • ${selected.distance} km`
+                ? `${selected.employee} • ${selected.date} • ${selected.distance_km} km`
                 : "Select a trip from the table below"}
             </p>
           </div>
@@ -178,7 +289,11 @@ const TravelMonitoring: React.FC = () => {
               disabled={!selected}
               className="inline-flex items-center gap-2 h-9 px-3 rounded-lg bg-[#1658E5] text-xs font-medium text-white disabled:opacity-40"
             >
-              {playing ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              {playing ? (
+                <Pause className="w-4 h-4" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )}
               {playing ? "Pause" : "Play"}
             </button>
             <button
@@ -195,11 +310,20 @@ const TravelMonitoring: React.FC = () => {
 
         {selected ? (
           <>
-            <RouteMap route={selected.route} playbackIndex={playIndex} />
+            {isGettingRoute || isRouteError ? (
+              <div className="text-center h-[200px] py-4">
+                <Spinner />
+              </div>
+            ) : (
+              <RouteMap
+                route={tripRoute.data.points}
+                playbackIndex={playIndex}
+              />
+            )}
             <input
               type="range"
               min={0}
-              max={selected.route.length - 1}
+              max={tripRoute.data.points.length - 1}
               value={playIndex}
               onChange={(e) => setPlayIndex(Number(e.target.value))}
               className="w-full mt-3 accent-[#1658E5]"
@@ -207,12 +331,15 @@ const TravelMonitoring: React.FC = () => {
             <div className="flex justify-between text-[11px] text-gray-500">
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-500" /> Start{" "}
-                {selected.route[0]?.time}
+                {tripRoute.data.points[0]?.time || "----"}
               </span>
-              <span>Current: {selected.route[playIndex]?.time}</span>
+              <span>
+                Current: {tripRoute.data.points[playIndex]?.time || "----"}
+              </span>
               <span className="flex items-center gap-1">
                 <span className="w-2 h-2 rounded-full bg-rose-500" /> End{" "}
-                {selected.route[selected.route.length - 1]?.time}
+                {tripRoute.data.points[tripRoute.data.points.length - 1]
+                  ?.time || "----"}
               </span>
             </div>
           </>
@@ -227,7 +354,7 @@ const TravelMonitoring: React.FC = () => {
           <h2 className="text-sm font-semibold text-gray-900">Trips</h2>
           <span className="text-xs text-gray-500">{rows.length} records</span>
         </div>
-        {isLoading ? (
+        {isGettingTrips ? (
           <TableSkeleton />
         ) : paged.length === 0 ? (
           <EmptyState title="No trips found" />
@@ -236,8 +363,21 @@ const TravelMonitoring: React.FC = () => {
             <table className="w-full text-xs">
               <thead className="bg-gray-50 text-gray-500">
                 <tr>
-                  {["Employee", "Date", "Distance", "Time Moving", "Idle Time", "Check-in", "Check-out"].map((h) => (
-                    <th key={h} className="text-left font-medium px-4 py-3 whitespace-nowrap">{h}</th>
+                  {[
+                    "Employee",
+                    "Date",
+                    "Distance",
+                    "Time Moving",
+                    "Idle Time",
+                    "Check-in",
+                    "Check-out",
+                  ].map((h) => (
+                    <th
+                      key={h}
+                      className="text-left font-medium px-4 py-3 whitespace-nowrap"
+                    >
+                      {h}
+                    </th>
                   ))}
                 </tr>
               </thead>
@@ -251,24 +391,41 @@ const TravelMonitoring: React.FC = () => {
                       setPlaying(false);
                     }}
                     className={`border-t border-gray-50 cursor-pointer transition-colors ${
-                      selected?.id === r.id ? "bg-blue-50/70" : "hover:bg-blue-50/40"
+                      selected?.id === r.id
+                        ? "bg-blue-50/70"
+                        : "hover:bg-blue-50/40"
                     }`}
                   >
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <img src={r.photo} alt={r.employee} className="w-7 h-7 rounded-full" loading="lazy" />
+                        <img
+                          src={r.photo}
+                          alt={r.employee}
+                          className="w-7 h-7 rounded-full"
+                          loading="lazy"
+                        />
                         <div>
-                          <p className="font-medium text-gray-900">{r.employee}</p>
-                          <p className="text-[10px] text-gray-400">{r.branch} • {r.team}</p>
+                          <p className="font-medium text-gray-900">
+                            {r.employee}
+                          </p>
+                          <p className="text-[10px] text-gray-400">
+                            {r.branch} • {r.team}
+                          </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-4 py-3 text-gray-700">{r.date}</td>
-                    <td className="px-4 py-3 font-semibold text-[#1658E5]">{r.distance} km</td>
-                    <td className="px-4 py-3 text-gray-700">{r.timeMoving}</td>
-                    <td className="px-4 py-3 text-gray-700">{r.idleTime}</td>
-                    <td className="px-4 py-3 text-gray-700">{r.checkIn}</td>
-                    <td className="px-4 py-3 text-gray-700">{r.checkOut}</td>
+                    <td className="px-4 py-3 font-semibold text-[#1658E5]">
+                      {r.distance_km} km
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {r.time_moving_minutes}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {r.idle_time_minutes}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">{r.check_in}</td>
+                    <td className="px-4 py-3 text-gray-700">{r.check_out}</td>
                   </tr>
                 ))}
               </tbody>
@@ -276,7 +433,12 @@ const TravelMonitoring: React.FC = () => {
           </div>
         )}
         {rows.length > 0 && (
-          <Pagination page={page} pageSize={PAGE_SIZE} total={rows.length} onPageChange={setPage} />
+          <Pagination
+            page={page}
+            pageSize={PAGE_SIZE}
+            total={rows.length}
+            onPageChange={setPage}
+          />
         )}
       </div>
     </div>

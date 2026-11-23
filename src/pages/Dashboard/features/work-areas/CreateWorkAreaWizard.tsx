@@ -28,8 +28,8 @@ import {
   // WorkAreaRules,
   // WorkAreaLocation,
 } from "./types";
-import { MOCK_EMPLOYEES } from "./mockData";
-import { ADMIN_TREE, findNode } from "./adminData";
+// import { MOCK_EMPLOYEES } from "./mockData";
+// import { ADMIN_TREE, findNode } from "./adminData";
 import { useStaffData } from "@/api/settingsApi/hooks/useStaffData";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getApiErrorMessage } from "@/api/geoFencing/hooksGeoFencing";
@@ -359,8 +359,6 @@ export default function CreateWorkAreaWizard({ open, onClose }: Props) {
           );
         }
       }
-
-      console.log("Creating work area:", currentData);
 
       try {
         const success = await createWorkArea(currentData);

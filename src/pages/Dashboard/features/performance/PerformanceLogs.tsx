@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Activity,
@@ -13,23 +13,21 @@ import {
 } from "lucide-react";
 import PageHeader from "@/components/dashboard/PageHeader";
 import Pagination from "@/components/dashboard/Pagination";
-import { EmptyState, ErrorState, TableSkeleton } from "@/components/dashboard/States";
 import {
-  ACTIVITY_TYPES,
-  fetchPerformanceLogs,
-  LogFilters,
-  PerformanceLog,
-} from "@/api/mock/performanceLogs";
+  EmptyState,
+  ErrorState,
+  TableSkeleton,
+} from "@/components/dashboard/States";
+import { LogFilters } from "@/api/mock/performanceLogs";
+import { TERRITORIES } from "@/api/mock/orgData";
 import {
-  BRANCHES,
-  DEPARTMENTS,
-  EMPLOYEES,
-  TEAMS,
-  TERRITORIES,
-} from "@/api/mock/orgData";
-import { exportCSV, exportPDF } from "@/utils/exportData";
-
-const PAGE_SIZE = 8;
+  getPerformanceFilters,
+  getPerformanceLogs,
+} from "@/api/performance-logs/apiPerformance";
+import Spinner from "@/components/ui/Spinner";
+import { PerformanceLog } from "@/api/performance-logs/types";
+import { downloadPerformanceReport } from "@/utils/performanceUtils";
+import { useDebounce } from "@/hooks/useDebounce";
 
 const statusStyles: Record<PerformanceLog["status"], string> = {
   Completed: "bg-emerald-50 text-emerald-700 border-emerald-100",
@@ -38,8 +36,10 @@ const statusStyles: Record<PerformanceLog["status"], string> = {
 };
 
 const activityColor = (a: string) => {
-  if (a.includes("Check In") || a.includes("Route Started")) return "bg-blue-500";
-  if (a.includes("Check Out") || a.includes("Route Ended")) return "bg-indigo-500";
+  if (a.includes("Check In") || a.includes("Route Started"))
+    return "bg-blue-500";
+  if (a.includes("Check Out") || a.includes("Route Ended"))
+    return "bg-indigo-500";
   if (a.includes("Order")) return "bg-emerald-500";
   if (a.includes("Task")) return "bg-teal-500";
   if (a.includes("Image")) return "bg-amber-500";
@@ -51,18 +51,24 @@ const Select: React.FC<{
   onChange: (v: string) => void;
   placeholder: string;
   options: { label: string; value: string }[];
-}> = ({ value, onChange, placeholder, options }) => (
+  isGettingEmployees?: boolean;
+  isGettingEmployeesError?: boolean;
+}> = ({ value, onChange, placeholder, options, isGettingEmployees }) => (
   <select
     value={value}
     onChange={(e) => onChange(e.target.value)}
     className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
   >
     <option value="">{placeholder}</option>
-    {options.map((o) => (
-      <option key={o.value} value={o.value}>
-        {o.label}
-      </option>
-    ))}
+    {isGettingEmployees ? (
+      <div>Loading...</div>
+    ) : (
+      options.map((o) => (
+        <option key={o.value} value={o.value}>
+          {o.label}
+        </option>
+      ))
+    )}
   </select>
 );
 
@@ -71,33 +77,52 @@ const PerformanceLogs: React.FC = () => {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
+  const debouncedSearch = useDebounce(search, 500);
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["performance-logs", filters, search],
-    queryFn: () => fetchPerformanceLogs({ ...filters, search }),
+    queryKey: ["performance-logs", filters, debouncedSearch],
+    queryFn: () =>
+      getPerformanceLogs({ ...filters, search: debouncedSearch, page }),
   });
 
-  const logs = data ?? [];
-  const paged = useMemo(
-    () => logs.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [logs, page],
-  );
+  const {
+    data: performanceFilters,
+    isLoading: isGettingFilters,
+    isError: isFilterError,
+  } = useQuery({
+    queryKey: ["performance-filters"],
+    queryFn: getPerformanceFilters,
+  });
+
+  if (isLoading || isGettingFilters) {
+    return (
+      <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
+        <Spinner />
+      </div>
+    );
+  }
+
+  if (isError || isFilterError || !data) {
+    return (
+      <div className="p-6">
+        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
+          <h2 className="font-semibold text-red-700">
+            Failed to load performance logs
+          </h2>
+        </div>
+      </div>
+    );
+  }
 
   const set = (k: keyof LogFilters, v: string) => {
     setPage(1);
     setFilters((f) => ({ ...f, [k]: v || undefined }));
   };
 
-  const exportRows = logs.map((l) => ({
-    Employee: l.employeeName,
-    Activity: l.activity,
-    Time: new Date(l.time).toLocaleString(),
-    Location: l.gps.address,
-    GPS: `${l.gps.lat.toFixed(4)}, ${l.gps.lng.toFixed(4)}`,
-    Branch: l.branch,
-    Department: l.department,
-    Status: l.status,
-    Device: l.device,
-  }));
+  const logs = data.data;
+  const filterLogs = performanceFilters.data;
+
+  const PAGE_SIZE = data.meta.per_page || 5;
 
   return (
     <div>
@@ -108,13 +133,13 @@ const PerformanceLogs: React.FC = () => {
         actions={
           <>
             <button
-              onClick={() => exportCSV(exportRows, "performance-logs.csv")}
+              onClick={() => downloadPerformanceReport(logs, "csv")}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50"
             >
               <Download className="w-4 h-4" /> Export CSV
             </button>
             <button
-              onClick={() => exportPDF("Performance Logs", exportRows)}
+              onClick={() => downloadPerformanceReport(logs, "pdf")}
               className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1658E5] text-xs font-medium text-white hover:bg-[#1249bd]"
             >
               <FileText className="w-4 h-4" /> Export PDF
@@ -139,25 +164,37 @@ const PerformanceLogs: React.FC = () => {
             value={filters.employeeId ?? ""}
             onChange={(v) => set("employeeId", v)}
             placeholder="All Employees"
-            options={EMPLOYEES.map((e) => ({ label: e.name, value: e.id }))}
+            options={filterLogs.employees.map((e) => ({
+              label: e.name,
+              value: e.id,
+            }))}
           />
           <Select
             value={filters.department ?? ""}
             onChange={(v) => set("department", v)}
             placeholder="All Departments"
-            options={DEPARTMENTS.map((d) => ({ label: d, value: d }))}
+            options={filterLogs.departments.map((e) => ({
+              label: e,
+              value: e,
+            }))}
           />
           <Select
             value={filters.branch ?? ""}
             onChange={(v) => set("branch", v)}
             placeholder="All Branches"
-            options={BRANCHES.map((d) => ({ label: d, value: d }))}
+            options={filterLogs.branches.map((e) => ({
+              label: e,
+              value: e,
+            }))}
           />
           <Select
             value={filters.team ?? ""}
             onChange={(v) => set("team", v)}
             placeholder="All Teams"
-            options={TEAMS.map((d) => ({ label: d, value: d }))}
+            options={filterLogs.teams.map((e) => ({
+              label: e,
+              value: e,
+            }))}
           />
           <Select
             value={filters.territory ?? ""}
@@ -169,7 +206,10 @@ const PerformanceLogs: React.FC = () => {
             value={filters.activity ?? ""}
             onChange={(v) => set("activity", v)}
             placeholder="All Activities"
-            options={ACTIVITY_TYPES.map((d) => ({ label: d, value: d }))}
+            options={filterLogs.activities.map((e) => ({
+              label: e,
+              value: e,
+            }))}
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-3 mt-3">
@@ -204,19 +244,21 @@ const PerformanceLogs: React.FC = () => {
           <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
             <Activity className="w-4 h-4 text-[#1658E5]" /> Activity Timeline
           </h2>
-          <span className="text-xs text-gray-500">{logs.length} activities</span>
+          <span className="text-xs text-gray-500">
+            {logs.length} activities
+          </span>
         </div>
 
         {isError ? (
           <ErrorState onRetry={() => refetch()} />
         ) : isLoading ? (
           <TableSkeleton rows={6} cols={4} />
-        ) : paged.length === 0 ? (
+        ) : logs.length === 0 ? (
           <EmptyState title="No activities found" />
         ) : (
           <div className="p-4 md:p-6">
             <ol className="relative border-l border-gray-100 ml-3 space-y-4">
-              {paged.map((log) => (
+              {logs.map((log) => (
                 <li key={log.id} className="ml-6">
                   <span
                     className={`absolute -left-[7px] mt-5 w-3.5 h-3.5 rounded-full ring-4 ring-white ${activityColor(
@@ -226,15 +268,15 @@ const PerformanceLogs: React.FC = () => {
                   <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
                     <div className="flex flex-col md:flex-row md:items-center gap-4">
                       <img
-                        src={log.employeePhoto}
-                        alt={log.employeeName}
+                        src={log.employee_photo || "/users.png"}
+                        alt={log.employee_name}
                         className="w-11 h-11 rounded-full object-cover border border-gray-100"
                         loading="lazy"
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-semibold text-gray-900 text-sm">
-                            {log.employeeName}
+                            {log.employee_name}
                           </p>
                           <span className="text-[11px] px-2 py-0.5 rounded-full bg-blue-50 text-[#1658E5] font-medium">
                             {log.activity}
@@ -250,14 +292,16 @@ const PerformanceLogs: React.FC = () => {
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-500">
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
-                            {log.gps.address} ({log.gps.lat.toFixed(4)},{" "}
-                            {log.gps.lng.toFixed(4)})
+                            {/* {logs.gps.address} ({logs.gps.lat.toFixed(4)},{" "}
+                            {log.gps.lng.toFixed(4)}) */}
                           </span>
                           <span className="flex items-center gap-1">
-                            <CheckCircle2 className="w-3.5 h-3.5" /> {log.branch}
+                            <CheckCircle2 className="w-3.5 h-3.5" />{" "}
+                            {log.branch || "---"}
                           </span>
                           <span className="flex items-center gap-1">
-                            <Smartphone className="w-3.5 h-3.5" /> {log.device}
+                            <Smartphone className="w-3.5 h-3.5" />{" "}
+                            {log.device || "---"}
                           </span>
                         </div>
                         {log.note && (
@@ -289,7 +333,7 @@ const PerformanceLogs: React.FC = () => {
           <Pagination
             page={page}
             pageSize={PAGE_SIZE}
-            total={logs.length}
+            total={data.meta.total_pages}
             onPageChange={setPage}
           />
         )}

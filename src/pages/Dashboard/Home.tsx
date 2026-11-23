@@ -29,12 +29,9 @@ export default function Home() {
   });
 
   const { staffLocations } = useLocationTrackingContext();
-  console.log(staffLocations, "Hello locations");
 
   const { data: staffData } = useStaffData(companyId || "");
-  // console.log("All company staff", staffData);
 
-  // console.log("Staff==", staffLocations);
   const ob = staffLocations || {};
   const id = Object.keys(ob)[0];
 
@@ -68,7 +65,6 @@ export default function Home() {
     }
     return info;
   }, [staffData]);
-  console.log(staffInfo, "chilling ");
 
   const {
     total_active_staffs = 0,
