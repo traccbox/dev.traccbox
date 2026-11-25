@@ -1,37 +1,55 @@
 import React from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
-import { SupervisorStoreProvider } from "./store";
+import PageHeader from "@/components/dashboard/PageHeader";
+import { WorkforceProvider, useWorkforce } from "./store";
+import { BASE, cap } from "./ui";
+import Onboarding from "./Onboarding";
 import Overview from "./Overview";
+import Supervisors from "./Supervisors";
+import SupervisorDetail from "./SupervisorDetail";
 import Tasks from "./Tasks";
 import Reports from "./Reports";
 import KpiPage from "./KpiPage";
 import Payroll from "./Payroll";
+import Setup from "./Setup";
 
-const tabs = [
-  ["", "Overview"],
-  ["tasks", "Tasks"],
-  ["reports", "Daily Reports"],
-  ["kpi", "Supervisor KPI"],
-  ["payroll", "Payroll"],
-] as const;
+const Shell: React.FC = () => {
+  const { setupDone, config } = useWorkforce();
+  const T = config.terms;
 
-const WorkforceSupervisor: React.FC = () => (
-  <SupervisorStoreProvider>
-    <div className="space-y-4 p-4">
-      <div>
-        <h1 className="text-2xl font-semibold">Workforce &amp; Supervisor</h1>
-        <p className="text-sm text-muted-foreground">
-          Sample data only — changes are kept in this browser session and are not saved to a server.
-        </p>
+  if (!setupDone) {
+    return (
+      <div className="p-4 md:p-6">
+        <Onboarding />
       </div>
-      <nav className="flex flex-wrap gap-2">
+    );
+  }
+
+  const tabs: [string, string][] = [
+    ["", "Overview"],
+    ["supervisors", cap(T.supervisors)],
+    ["tasks", cap(T.tasks)],
+    ["reports", "Daily reports"],
+    ["kpi", "Scorecards"],
+    ["payroll", "Payroll"],
+    ["setup", "Setup"],
+  ];
+
+  return (
+    <div className="p-4 md:p-6">
+      <PageHeader
+        title="Workforce & Supervisor"
+        description={`Manage ${T.supervisors.toLowerCase()}, assign ${T.tasks.toLowerCase()}, review daily reports and pay on performance.`}
+        crumbs={[{ label: "Workforce & Supervisor" }]}
+      />
+      <nav className="mb-5 flex flex-wrap gap-1 border-b border-gray-100 pb-3">
         {tabs.map(([to, label]) => (
           <NavLink
-            key={to}
-            end
-            to={to ? `/dashboard/workforce-supervisor/${to}` : "/dashboard/workforce-supervisor"}
+            key={to || "overview"}
+            end={to === ""}
+            to={to ? `${BASE}/${to}` : BASE}
             className={({ isActive }) =>
-              `rounded-md border px-3 py-1.5 text-sm ${isActive ? "bg-primary text-primary-foreground" : "hover:bg-muted"}`
+              `rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${isActive ? "bg-blue-50 text-[#1658E5]" : "text-gray-600 hover:bg-gray-50"}`
             }
           >
             {label}
@@ -40,14 +58,23 @@ const WorkforceSupervisor: React.FC = () => (
       </nav>
       <Routes>
         <Route index element={<Overview />} />
+        <Route path="supervisors" element={<Supervisors />} />
+        <Route path="supervisors/:id" element={<SupervisorDetail />} />
         <Route path="tasks" element={<Tasks />} />
         <Route path="reports" element={<Reports />} />
         <Route path="kpi" element={<KpiPage />} />
         <Route path="payroll" element={<Payroll />} />
+        <Route path="setup" element={<Setup />} />
         <Route path="*" element={<Navigate to="." replace />} />
       </Routes>
     </div>
-  </SupervisorStoreProvider>
+  );
+};
+
+const WorkforceSupervisor: React.FC = () => (
+  <WorkforceProvider>
+    <Shell />
+  </WorkforceProvider>
 );
 
 export default WorkforceSupervisor;

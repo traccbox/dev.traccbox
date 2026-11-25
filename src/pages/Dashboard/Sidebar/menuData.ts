@@ -111,7 +111,12 @@ export const sidebarMenus: SidebarMenuConfig[] = [
         permission: ["order_task_management", "view_orders"],
       },
       {
-        label: "Operational Tasks",
+        label: "Supervisors",
+        to: "/dashboard/workforce-supervisor/supervisors",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Tasks & Assignments",
         to: "/dashboard/workforce-supervisor/tasks",
         permission: ["order_task_management", "view_orders"],
       },
@@ -121,13 +126,18 @@ export const sidebarMenus: SidebarMenuConfig[] = [
         permission: ["order_task_management", "view_orders"],
       },
       {
-        label: "Supervisor KPI",
+        label: "Scorecards",
         to: "/dashboard/workforce-supervisor/kpi",
         permission: ["order_task_management", "view_orders"],
       },
       {
-        label: "Supervisor Payroll",
+        label: "Payroll",
         to: "/dashboard/workforce-supervisor/payroll",
+        permission: ["order_task_management", "view_orders"],
+      },
+      {
+        label: "Workspace Setup",
+        to: "/dashboard/workforce-supervisor/setup",
         permission: ["order_task_management", "view_orders"],
       },
     ],
