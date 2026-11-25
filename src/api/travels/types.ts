@@ -101,3 +101,98 @@ export interface GetTripRouteParams {
   from?: string; // HH:MM
   to?: string;   // HH:MM
 }
+
+// ─── Trip detail: GET /travel/trips/{trip_id} ───────────────────────────────
+
+export interface GetTripResponse {
+  status: string;
+  data: TravelTrip;
+}
+
+// ─── Trip stops: GET /travel/trips/{trip_id}/stops ──────────────────────────
+// The API docs have no response schema. These are normalised in apiTravels.ts,
+// which accepts the common alternative field names.
+
+export interface TripStop {
+  lat: number;
+  lng: number;
+  arrived_at: string | null;
+  departed_at: string | null;
+  duration_minutes: number | null;
+  label: string | null;
+}
+
+export interface TripStopsResult {
+  trip_id: string;
+  stops: TripStop[];
+}
+
+// ─── Trend: GET /travel/trend ───────────────────────────────────────────────
+
+export type TravelGranularity = "daily" | "weekly" | "monthly";
+
+export interface GetTravelTrendParams {
+  granularity?: TravelGranularity;
+  start_date?: string;
+  end_date?: string;
+  employee_id?: string;
+  branch?: string;
+  team?: string;
+  department?: string;
+}
+
+export interface TravelTrendPoint {
+  label: string;
+  distance_km: number;
+}
+
+// ─── Live positions: GET /travel/live ───────────────────────────────────────
+
+export interface GetLivePositionsParams {
+  branch?: string;
+  team?: string;
+}
+
+export interface LivePosition {
+  employee_id: string;
+  employee: string;
+  lat: number;
+  lng: number;
+  speed_kmh: number | null;
+  updated_at: string | null;
+  branch: string | null;
+  team: string | null;
+}
+
+// ─── Filters: GET /travel/filters ───────────────────────────────────────────
+
+export interface FilterOption {
+  value: string;
+  label: string;
+}
+
+export interface TravelFilterOptions {
+  employees: FilterOption[];
+  branches: FilterOption[];
+  teams: FilterOption[];
+  departments: FilterOption[];
+}
+
+/** Filter values the dashboard sends to summary / trips / trend. */
+export interface TravelFilterValues {
+  start_date?: string;
+  end_date?: string;
+  employee_id?: string;
+  branch?: string;
+  team?: string;
+  department?: string;
+}
+
+// ─── Employee trips: GET /travel/employees/{employee_id}/trips ──────────────
+
+export interface GetEmployeeTripsParams {
+  start_date?: string;
+  end_date?: string;
+  page?: number;
+  per_page?: number;
+}

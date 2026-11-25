@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import {
   Activity,
   CheckCircle2,
@@ -18,21 +18,46 @@ import {
   ErrorState,
   TableSkeleton,
 } from "@/components/dashboard/States";
-import { LogFilters } from "@/api/mock/performanceLogs";
-import { TERRITORIES } from "@/api/mock/orgData";
 import {
   getPerformanceFilters,
   getPerformanceLogs,
+  getPerformanceLogsSummary,
 } from "@/api/performance-logs/apiPerformance";
-import Spinner from "@/components/ui/Spinner";
-import { PerformanceLog } from "@/api/performance-logs/types";
+import {
+  GetPerformanceLogsParams,
+  PerformanceLog,
+} from "@/api/performance-logs/types";
 import { downloadPerformanceReport } from "@/utils/performanceUtils";
 import { useDebounce } from "@/hooks/useDebounce";
+import GenericReportView from "./GenericReportView";
+import LogDetailModal from "./LogDetailModal";
 
-const statusStyles: Record<PerformanceLog["status"], string> = {
-  Completed: "bg-emerald-50 text-emerald-700 border-emerald-100",
-  Pending: "bg-amber-50 text-amber-700 border-amber-100",
-  Flagged: "bg-rose-50 text-rose-700 border-rose-100",
+const PAGE_SIZE = 10;
+const EXPORT_LIMIT = 100; // API max per_page
+
+type LogFilterValues = Pick<
+  GetPerformanceLogsParams,
+  | "start_date"
+  | "end_date"
+  | "employee_id"
+  | "department"
+  | "branch"
+  | "team"
+  | "activity"
+  | "status"
+>;
+
+const statusStyle = (status: PerformanceLog["status"]) => {
+  switch (status?.toLowerCase()) {
+    case "completed":
+      return "bg-emerald-50 text-emerald-700 border-emerald-100";
+    case "pending":
+      return "bg-amber-50 text-amber-700 border-amber-100";
+    case "flagged":
+      return "bg-rose-50 text-rose-700 border-rose-100";
+    default:
+      return "bg-gray-50 text-gray-600 border-gray-100";
+  }
 };
 
 const activityColor = (a: string) => {
@@ -46,83 +71,100 @@ const activityColor = (a: string) => {
   return "bg-gray-400";
 };
 
+const inputClass =
+  "h-10 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100";
+
 const Select: React.FC<{
   value: string;
   onChange: (v: string) => void;
   placeholder: string;
   options: { label: string; value: string }[];
-  isGettingEmployees?: boolean;
-  isGettingEmployeesError?: boolean;
-}> = ({ value, onChange, placeholder, options, isGettingEmployees }) => (
+}> = ({ value, onChange, placeholder, options }) => (
   <select
     value={value}
     onChange={(e) => onChange(e.target.value)}
-    className="h-10 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
+    className={inputClass}
   >
     <option value="">{placeholder}</option>
-    {isGettingEmployees ? (
-      <div>Loading...</div>
-    ) : (
-      options.map((o) => (
-        <option key={o.value} value={o.value}>
-          {o.label}
-        </option>
-      ))
-    )}
+    {options.map((o) => (
+      <option key={o.value} value={o.value}>
+        {o.label}
+      </option>
+    ))}
   </select>
 );
 
+const toOptions = (list: string[] | undefined) =>
+  (list ?? []).map((v) => ({ label: v, value: v }));
+
 const PerformanceLogs: React.FC = () => {
-  const [filters, setFilters] = useState<LogFilters>({});
-  const [search, setSearch] = useState("");
+  const [filters, setFilters] = useState<LogFilterValues>({});
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(searchInput.trim(), 400);
   const [page, setPage] = useState(1);
+  const [openLogId, setOpenLogId] = useState<string | null>(null);
+  const [exporting, setExporting] = useState<"csv" | "pdf" | null>(null);
 
-  const debouncedSearch = useDebounce(search, 500);
+  const listParams: GetPerformanceLogsParams = {
+    ...filters,
+    search: search || undefined,
+  };
 
-  const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["performance-logs", filters, debouncedSearch],
-    queryFn: () =>
-      getPerformanceLogs({ ...filters, search: debouncedSearch, page }),
-  });
-
-  const {
-    data: performanceFilters,
-    isLoading: isGettingFilters,
-    isError: isFilterError,
-  } = useQuery({
+  // Filter options (GET /performance/logs/filters)
+  const { data: filterData } = useQuery({
     queryKey: ["performance-filters"],
     queryFn: getPerformanceFilters,
+    staleTime: 5 * 60 * 1000,
+  });
+  const filterLogs = filterData?.data;
+
+  // Logs (GET /performance/logs): server-side filter / search / paging
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["performance-logs", listParams, page],
+    queryFn: () =>
+      getPerformanceLogs({ ...listParams, page, per_page: PAGE_SIZE }),
+    placeholderData: keepPreviousData,
   });
 
-  if (isLoading || isGettingFilters) {
-    return (
-      <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
-        <Spinner />
-      </div>
-    );
-  }
+  // Summary for the same filters (GET /performance/logs/summary)
+  const { data: summaryData } = useQuery({
+    queryKey: ["performance-logs-summary", listParams],
+    queryFn: () => getPerformanceLogsSummary(listParams),
+    placeholderData: keepPreviousData,
+  });
+  // Tiles only: drop any raw arrays the summary might include
+  const summaryTiles = Object.fromEntries(
+    Object.entries(summaryData?.data ?? {}).filter(
+      ([, v]) => !Array.isArray(v),
+    ),
+  );
 
-  if (isError || isFilterError || !data) {
-    return (
-      <div className="p-6">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
-          <h2 className="font-semibold text-red-700">
-            Failed to load performance logs
-          </h2>
-        </div>
-      </div>
-    );
-  }
+  const logs = data?.data ?? [];
+  const total = data?.meta?.total ?? logs.length;
 
-  const set = (k: keyof LogFilters, v: string) => {
+  const set = (k: keyof LogFilterValues, v: string) => {
     setPage(1);
     setFilters((f) => ({ ...f, [k]: v || undefined }));
   };
+  const hasActiveFilters =
+    Object.values(filters).some(Boolean) || searchInput !== "";
 
-  const logs = data.data;
-  const filterLogs = performanceFilters.data;
-
-  const PAGE_SIZE = data.meta.per_page || 5;
+  // Export everything matching the filters (API max 100), not just this page
+  const handleExport = async (format: "csv" | "pdf") => {
+    setExporting(format);
+    try {
+      const res = await getPerformanceLogs({
+        ...listParams,
+        page: 1,
+        per_page: EXPORT_LIMIT,
+      });
+      downloadPerformanceReport(res.data, format);
+    } catch (err) {
+      console.error("Performance logs export failed:", err);
+    } finally {
+      setExporting(null);
+    }
+  };
 
   return (
     <div>
@@ -133,38 +175,59 @@ const PerformanceLogs: React.FC = () => {
         actions={
           <>
             <button
-              onClick={() => downloadPerformanceReport(logs, "csv")}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50"
+              onClick={() => handleExport("csv")}
+              disabled={!!exporting || total === 0}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
             >
-              <Download className="w-4 h-4" /> Export CSV
+              <Download className="w-4 h-4" />
+              {exporting === "csv" ? "Exporting…" : "Export CSV"}
             </button>
             <button
-              onClick={() => downloadPerformanceReport(logs, "pdf")}
-              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1658E5] text-xs font-medium text-white hover:bg-[#1249bd]"
+              onClick={() => handleExport("pdf")}
+              disabled={!!exporting || total === 0}
+              className="inline-flex items-center gap-2 h-10 px-4 rounded-lg bg-[#1658E5] text-xs font-medium text-white hover:bg-[#1249bd] disabled:opacity-40"
             >
-              <FileText className="w-4 h-4" /> Export PDF
+              <FileText className="w-4 h-4" />
+              {exporting === "pdf" ? "Exporting…" : "Export PDF"}
             </button>
           </>
         }
       />
+
+      {/* Summary (GET /performance/logs/summary) */}
+      {Object.keys(summaryTiles).length > 0 && (
+        <div className="mb-6">
+          <GenericReportView data={summaryTiles} />
+        </div>
+      )}
 
       {/* Filters */}
       <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 mb-6">
         <div className="flex items-center gap-2 mb-3 text-xs font-semibold text-gray-700">
           <Filter className="w-4 h-4 text-[#1658E5]" /> Filters
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <input
             type="date"
-            value={filters.date ?? ""}
-            onChange={(e) => set("date", e.target.value)}
-            className="h-10 rounded-lg border border-gray-200 px-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
+            aria-label="From date"
+            value={filters.start_date ?? ""}
+            max={filters.end_date}
+            onChange={(e) => set("start_date", e.target.value)}
+            className={inputClass}
+          />
+          <input
+            type="date"
+            aria-label="To date"
+            value={filters.end_date ?? ""}
+            min={filters.start_date}
+            onChange={(e) => set("end_date", e.target.value)}
+            className={inputClass}
           />
           <Select
-            value={filters.employeeId ?? ""}
-            onChange={(v) => set("employeeId", v)}
+            value={filters.employee_id ?? ""}
+            onChange={(v) => set("employee_id", v)}
             placeholder="All Employees"
-            options={filterLogs.employees.map((e) => ({
+            options={(filterLogs?.employees ?? []).map((e) => ({
               label: e.name,
               value: e.id,
             }))}
@@ -173,65 +236,54 @@ const PerformanceLogs: React.FC = () => {
             value={filters.department ?? ""}
             onChange={(v) => set("department", v)}
             placeholder="All Departments"
-            options={filterLogs.departments.map((e) => ({
-              label: e,
-              value: e,
-            }))}
+            options={toOptions(filterLogs?.departments)}
           />
           <Select
             value={filters.branch ?? ""}
             onChange={(v) => set("branch", v)}
             placeholder="All Branches"
-            options={filterLogs.branches.map((e) => ({
-              label: e,
-              value: e,
-            }))}
+            options={toOptions(filterLogs?.branches)}
           />
           <Select
             value={filters.team ?? ""}
             onChange={(v) => set("team", v)}
             placeholder="All Teams"
-            options={filterLogs.teams.map((e) => ({
-              label: e,
-              value: e,
-            }))}
-          />
-          <Select
-            value={filters.territory ?? ""}
-            onChange={(v) => set("territory", v)}
-            placeholder="All Territories"
-            options={TERRITORIES.map((d) => ({ label: d, value: d }))}
+            options={toOptions(filterLogs?.teams)}
           />
           <Select
             value={filters.activity ?? ""}
             onChange={(v) => set("activity", v)}
             placeholder="All Activities"
-            options={filterLogs.activities.map((e) => ({
-              label: e,
-              value: e,
-            }))}
+            options={toOptions(filterLogs?.activities)}
+          />
+          <Select
+            value={filters.status ?? ""}
+            onChange={(v) => set("status", v)}
+            placeholder="All Statuses"
+            options={toOptions(filterLogs?.statuses)}
           />
         </div>
         <div className="flex flex-col sm:flex-row gap-3 mt-3">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
             <input
-              value={search}
+              value={searchInput}
               onChange={(e) => {
-                setSearch(e.target.value);
+                setSearchInput(e.target.value);
                 setPage(1);
               }}
               placeholder="Search employee, activity or location…"
-              className="w-full h-10 rounded-lg border border-gray-200 pl-9 pr-3 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-100"
+              className={`${inputClass} w-full pl-9 pr-3`}
             />
           </div>
           <button
             onClick={() => {
               setFilters({});
-              setSearch("");
+              setSearchInput("");
               setPage(1);
             }}
-            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50"
+            disabled={!hasActiveFilters}
+            className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-40"
           >
             <RotateCw className="w-4 h-4" /> Reset
           </button>
@@ -244,9 +296,7 @@ const PerformanceLogs: React.FC = () => {
           <h2 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
             <Activity className="w-4 h-4 text-[#1658E5]" /> Activity Timeline
           </h2>
-          <span className="text-xs text-gray-500">
-            {logs.length} activities
-          </span>
+          <span className="text-xs text-gray-500">{total} activities</span>
         </div>
 
         {isError ? (
@@ -265,7 +315,11 @@ const PerformanceLogs: React.FC = () => {
                       log.activity,
                     )}`}
                   />
-                  <div className="rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setOpenLogId(log.id)}
+                    className="block w-full text-left rounded-xl border border-gray-100 bg-white p-4 shadow-sm transition-all hover:shadow-md hover:-translate-y-0.5"
+                  >
                     <div className="flex flex-col md:flex-row md:items-center gap-4">
                       <img
                         src={log.employee_photo || "/users.png"}
@@ -282,9 +336,9 @@ const PerformanceLogs: React.FC = () => {
                             {log.activity}
                           </span>
                           <span
-                            className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${
-                              statusStyles[log.status]
-                            }`}
+                            className={`text-[11px] px-2 py-0.5 rounded-full border font-medium ${statusStyle(
+                              log.status,
+                            )}`}
                           >
                             {log.status}
                           </span>
@@ -292,8 +346,7 @@ const PerformanceLogs: React.FC = () => {
                         <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-gray-500">
                           <span className="flex items-center gap-1">
                             <MapPin className="w-3.5 h-3.5" />
-                            {/* {logs.gps.address} ({logs.gps.lat.toFixed(4)},{" "}
-                            {log.gps.lng.toFixed(4)}) */}
+                            {log.gps || "---"}
                           </span>
                           <span className="flex items-center gap-1">
                             <CheckCircle2 className="w-3.5 h-3.5" />{" "}
@@ -304,6 +357,11 @@ const PerformanceLogs: React.FC = () => {
                             {log.device || "---"}
                           </span>
                         </div>
+                        {log.flag_reason && (
+                          <p className="mt-2 text-xs text-rose-700 bg-rose-50 rounded-lg px-3 py-2">
+                            Flagged: {log.flag_reason}
+                          </p>
+                        )}
                         {log.note && (
                           <p className="mt-2 text-xs text-gray-600 bg-gray-50 rounded-lg px-3 py-2">
                             {log.note}
@@ -322,22 +380,30 @@ const PerformanceLogs: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 </li>
               ))}
             </ol>
           </div>
         )}
 
-        {!isLoading && !isError && logs.length > 0 && (
+        {!isError && total > 0 && (
           <Pagination
             page={page}
-            pageSize={PAGE_SIZE}
-            total={data.meta.total_pages}
+            pageSize={data?.meta?.per_page || PAGE_SIZE}
+            total={total}
             onPageChange={setPage}
           />
         )}
       </div>
+
+      {openLogId && (
+        <LogDetailModal
+          logId={openLogId}
+          statuses={filterLogs?.statuses}
+          onClose={() => setOpenLogId(null)}
+        />
+      )}
     </div>
   );
 };

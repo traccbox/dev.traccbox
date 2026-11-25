@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import {
   Area,
   AreaChart,
@@ -48,8 +48,14 @@ import {
   printHTML,
   tableHTML,
 } from "@/utils/exportData";
-import Spinner from "@/components/ui/Spinner";
-import { getPerformanceReport } from "@/api/performance-logs/apiPerformance";
+import {
+  getPerformanceFilters,
+  getPerformanceReport,
+} from "@/api/performance-logs/apiPerformance";
+import {
+  GetPerformanceReportParams,
+  PeriodType,
+} from "@/api/performance-logs/types";
 import ReportTable from "./ReportTable";
 import { downloadMonthlyWeeklyReport } from "@/utils/performanceUtils";
 
@@ -87,38 +93,73 @@ const tooltipStyle = {
   boxShadow: "0 8px 24px rgba(16,24,40,.08)",
 };
 
-export type PeriodType = "weekly" | "monthly";
+export type { PeriodType };
+
+const PERIODS: PeriodType[] = ["daily", "weekly", "monthly", "custom"];
+
+const fieldClass =
+  "h-9 rounded-lg border border-gray-200 bg-white px-3 text-xs text-gray-700";
 
 const Reports: React.FC = () => {
   const [period, setPeriod] = useState<PeriodType>("weekly");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+  const [org, setOrg] = useState<{
+    department?: string;
+    branch?: string;
+    team?: string;
+    employee_id?: string;
+  }>({});
+
+  const { data: filterData } = useQuery({
+    queryKey: ["performance-filters"],
+    queryFn: getPerformanceFilters,
+    staleTime: 5 * 60 * 1000,
+  });
+  const filterOpts = filterData?.data;
+
+  // "custom" needs both dates before the API can be called
+  const customReady = period !== "custom" || (!!startDate && !!endDate);
+  const reportParams: GetPerformanceReportParams = {
+    period,
+    ...(period === "custom"
+      ? { start_date: startDate, end_date: endDate }
+      : {}),
+    ...org,
+  };
 
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: ["reports", period],
-    queryFn: () => getPerformanceReport({ period }),
+    queryKey: ["reports", reportParams],
+    queryFn: () => getPerformanceReport(reportParams),
+    enabled: customReady,
+    placeholderData: keepPreviousData,
   });
 
-  if (isLoading) {
-    return (
-      <div className="w-full bg-slate-200 h-screen flex justify-center items-center">
-        <Spinner />
-      </div>
-    );
-  }
+  const setOrgFilter = (k: keyof typeof org, v: string) =>
+    setOrg((o) => ({ ...o, [k]: v || undefined }));
 
-  if (isError || !data) {
-    return (
-      <div className="p-6">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
-          <h2 className="font-semibold text-red-700">
-            Failed to load performance logs
-          </h2>
-        </div>
-      </div>
-    );
-  }
+  const s = data?.data?.summary;
+  const others = data?.data;
 
-  const s = data.data?.summary;
-  const others = data.data;
+  const printSummary = () => {
+    if (!s) return;
+    printHTML(
+      "TraccBox Performance Report",
+      tableHTML([
+        {
+          "Total Employees": s.total_employees,
+          "Attendance Rate": `${s.attendance_rate}%`,
+          "Active Employees": s.active_employees,
+          "Customer Visits": s.customer_visits,
+          "Orders Created": s.orders_created,
+          "Tasks Completed": s.tasks_completed,
+          "Distance (km)": s.distance_covered_km,
+          "Working Hours": s.working_hours,
+          "Productivity Score": s.productivity_score,
+        },
+      ]),
+    );
+  };
 
   return (
     <div>
@@ -129,7 +170,7 @@ const Reports: React.FC = () => {
         actions={
           <>
             <div className="inline-flex rounded-lg border border-gray-200 bg-white p-1">
-              {(["weekly", "monthly"] as const).map((p) => (
+              {PERIODS.map((p) => (
                 <button
                   key={p}
                   onClick={() => setPeriod(p)}
@@ -144,8 +185,9 @@ const Reports: React.FC = () => {
               ))}
             </div>
             <button
+              disabled={!others}
               onClick={() =>
-                downloadMonthlyWeeklyReport(data.data, period, "pdf")
+                others && downloadMonthlyWeeklyReport(others, period, "pdf")
               }
               className="inline-flex items-center gap-2 h-10 px-3 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50"
             >
@@ -153,15 +195,17 @@ const Reports: React.FC = () => {
             </button>
 
             <button
+              disabled={!others}
               onClick={() =>
-                downloadMonthlyWeeklyReport(data.data, period, "csv")
+                others && downloadMonthlyWeeklyReport(others, period, "csv")
               }
               className="inline-flex items-center gap-2 h-10 px-3 rounded-lg border border-gray-200 bg-white text-xs font-medium text-gray-700 hover:bg-gray-50"
             >
               <Download className="w-4 h-4" /> CSV
             </button>
             <button
-              // onClick={() => printHTML("TraccBox Report", tableHTML(rows))}
+              onClick={printSummary}
+              disabled={!s}
               className="inline-flex items-center gap-2 h-10 px-3 rounded-lg bg-[#1658E5] text-xs font-medium text-white hover:bg-[#1249bd]"
             >
               <Printer className="w-4 h-4" /> Print
@@ -170,7 +214,77 @@ const Reports: React.FC = () => {
         }
       />
 
-      {isError ? (
+      {/* Filters */}
+      <div className="rounded-2xl bg-white border border-gray-100 shadow-sm p-4 mb-6 flex flex-wrap items-center gap-3">
+        {period === "custom" && (
+          <>
+            <input
+              type="date"
+              aria-label="From date"
+              value={startDate}
+              max={endDate || undefined}
+              onChange={(e) => setStartDate(e.target.value)}
+              className={fieldClass}
+            />
+            <input
+              type="date"
+              aria-label="To date"
+              value={endDate}
+              min={startDate || undefined}
+              onChange={(e) => setEndDate(e.target.value)}
+              className={fieldClass}
+            />
+          </>
+        )}
+        {(
+          [
+            ["department", "All Departments", filterOpts?.departments],
+            ["branch", "All Branches", filterOpts?.branches],
+            ["team", "All Teams", filterOpts?.teams],
+          ] as const
+        ).map(([key, label, list]) => (
+          <select
+            key={key}
+            value={org[key] ?? ""}
+            onChange={(e) => setOrgFilter(key, e.target.value)}
+            className={fieldClass}
+          >
+            <option value="">{label}</option>
+            {(list ?? []).map((v) => (
+              <option key={v} value={v}>
+                {v}
+              </option>
+            ))}
+          </select>
+        ))}
+        <select
+          value={org.employee_id ?? ""}
+          onChange={(e) => setOrgFilter("employee_id", e.target.value)}
+          className={fieldClass}
+        >
+          <option value="">All Employees</option>
+          {(filterOpts?.employees ?? []).map((e) => (
+            <option key={e.id} value={e.id}>
+              {e.name}
+            </option>
+          ))}
+        </select>
+        {Object.values(org).some(Boolean) && (
+          <button
+            onClick={() => setOrg({})}
+            className="h-9 px-3 rounded-lg border border-gray-200 text-xs text-gray-600 hover:bg-gray-50"
+          >
+            Clear
+          </button>
+        )}
+      </div>
+
+      {!customReady ? (
+        <EmptyState
+          title="Pick a date range"
+          message="Choose a start and end date to run a custom report."
+        />
+      ) : isError ? (
         <ErrorState onRetry={() => refetch()} />
       ) : isLoading || !s ? (
         <CardsSkeleton count={8} />
@@ -182,63 +296,54 @@ const Reports: React.FC = () => {
               title="Total Employees"
               value={s.total_employees}
               icon={<Users className="w-4 h-4" />}
-              percent={4}
             />
             <StatCard
               index={1}
               title="Attendance Rate"
               value={`${s.attendance_rate}%`}
               icon={<CalendarCheck className="w-4 h-4" />}
-              percent={2}
             />
             <StatCard
               index={2}
               title="Active Employees"
               value={s.active_employees}
               icon={<UserCheck className="w-4 h-4" />}
-              percent={6}
             />
             <StatCard
               index={3}
               title="Customer Visits"
               value={s.customer_visits}
               icon={<Activity className="w-4 h-4" />}
-              percent={12}
             />
             <StatCard
               index={4}
               title="Orders Created"
               value={s.orders_created}
               icon={<ShoppingCart className="w-4 h-4" />}
-              percent={-3}
             />
             <StatCard
               index={5}
               title="Tasks Completed"
               value={s.tasks_completed}
               icon={<ClipboardCheck className="w-4 h-4" />}
-              percent={8}
             />
             <StatCard
               index={2}
               title="Distance Covered"
               value={`${s.distance_covered_km} km`}
               icon={<Route className="w-4 h-4" />}
-              percent={5}
             />
             <StatCard
               index={1}
               title="Working Hours"
               value={`${s.working_hours}h`}
               icon={<Clock className="w-4 h-4" />}
-              percent={1}
             />
             <StatCard
               index={0}
               title="Productivity Score"
               value={`${s.productivity_score}/100`}
               icon={<Gauge className="w-4 h-4" />}
-              percent={7}
             />
           </div>
 
@@ -247,13 +352,13 @@ const Reports: React.FC = () => {
               title="Daily Attendance"
               subtitle="Present vs absent vs late"
             >
-              {!others.daily_attendance ? (
+              {!others?.daily_attendance?.length ? (
                 <EmptyState
                   title="No attendance data yet"
                   message="No attendance records for this period"
                 />
               ) : (
-                <BarChart data={others.daily_attendance}>
+                <BarChart data={others?.daily_attendance ?? []}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
@@ -283,13 +388,13 @@ const Reports: React.FC = () => {
               title="Weekly Performance"
               subtitle="Visits, orders and tasks per week"
             >
-              {others.weekly_performance.length === 0 ? (
+              {(others?.weekly_performance ?? []).length === 0 ? (
                 <EmptyState
                   title="No weekly performance data"
                   message="No performance data available for the selected period"
                 />
               ) : (
-                <AreaChart data={others.weekly_performance}>
+                <AreaChart data={others?.weekly_performance ?? []}>
                   <defs>
                     <linearGradient id="gv" x1="0" y1="0" x2="0" y2="1">
                       <stop offset="0%" stopColor="#1658E5" stopOpacity={0.4} />
@@ -347,13 +452,13 @@ const Reports: React.FC = () => {
               title="Monthly Performance"
               subtitle="Trend across the year"
             >
-              {others.monthly_performance.length === 0 ? (
+              {(others?.monthly_performance ?? []).length === 0 ? (
                 <EmptyState
                   title="No monthly performance data"
                   message="No monthly performance records available yet"
                 />
               ) : (
-                <LineChart data={others.monthly_performance}>
+                <LineChart data={others?.monthly_performance ?? []}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
@@ -401,14 +506,14 @@ const Reports: React.FC = () => {
               title="Employee Comparison"
               subtitle="Productivity score by rep"
             >
-              {others.employee_comparison.length === 0 ? (
+              {(others?.employee_comparison ?? []).length === 0 ? (
                 <EmptyState
                   title="No employee data yet"
                   message="No employee performance data to compare"
                 />
               ) : (
                 <BarChart
-                  data={others.employee_comparison}
+                  data={others?.employee_comparison ?? []}
                   layout="vertical"
                   margin={{ left: 20 }}
                 >
@@ -433,7 +538,7 @@ const Reports: React.FC = () => {
                   />
                   <Tooltip contentStyle={tooltipStyle} />
                   <Bar dataKey="score" radius={[0, 6, 6, 0]}>
-                    {others.employee_comparison.map((_, i) => (
+                    {(others?.employee_comparison ?? []).map((_, i) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
                     ))}
                   </Bar>
@@ -445,20 +550,20 @@ const Reports: React.FC = () => {
               title="Branch Comparison"
               subtitle="Orders and visits per branch"
             >
-              {others.branch_comparison.length === 0 ? (
+              {(others?.branch_comparison ?? []).length === 0 ? (
                 <EmptyState
                   title="No branch data yet"
                   message="No branch performance data available for this period"
                 />
               ) : (
-                <BarChart data={others.branch_comparison}>
+                <BarChart data={others?.branch_comparison ?? []}>
                   <CartesianGrid
                     strokeDasharray="3 3"
                     vertical={false}
                     stroke="#eef2f7"
                   />
                   <XAxis
-                    dataKey="label"
+                    dataKey="branch"
                     tick={{ fontSize: 10 }}
                     axisLine={false}
                     tickLine={false}
@@ -480,13 +585,13 @@ const Reports: React.FC = () => {
               title="Team Performance"
               subtitle="Composite score by team"
             >
-              {others.team_performance.length === 0 ? (
+              {(others?.team_performance ?? []).length === 0 ? (
                 <EmptyState
                   title="No team performance data"
                   message="No team performance records available yet"
                 />
               ) : (
-                <RadarChart data={others.team_performance} outerRadius="70%">
+                <RadarChart data={others?.team_performance ?? []} outerRadius="70%">
                   <PolarGrid stroke="#e5e7eb" />
                   <PolarAngleAxis dataKey="label" tick={{ fontSize: 11 }} />
                   <Tooltip contentStyle={tooltipStyle} />
@@ -502,7 +607,12 @@ const Reports: React.FC = () => {
           </div>
 
           {/* Report tables */}
-          <ReportTable period={period} />
+          <ReportTable
+            period={period}
+            startDate={period === "custom" ? startDate : undefined}
+            endDate={period === "custom" ? endDate : undefined}
+            org={org}
+          />
         </>
       )}
     </div>

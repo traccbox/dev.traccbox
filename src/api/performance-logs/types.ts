@@ -1,7 +1,6 @@
 // api/performance/typesPerformance.ts
 
-import { PeriodType } from "@/pages/Dashboard/features/performance/Reports";
-import { TableKey } from "@/pages/Dashboard/features/performance/ReportTable";
+export type PeriodType = "daily" | "weekly" | "monthly" | "custom";
 
 export interface PerformanceLog {
   id: string;
@@ -139,7 +138,7 @@ export interface GetPerformanceReportResponse {
 }
 
 export interface GetPerformanceReportParams {
-  period: "daily" | "weekly" | "monthly" | "custom";
+  period: PeriodType;
   start_date?: string;
   end_date?: string;
   branch?: string;
@@ -151,7 +150,6 @@ export interface GetPerformanceReportParams {
 export type PerformanceReportType = "employee" | "branch" | "team";
 
 export interface PerformanceReportTableParams {
-  // period: "daily" | "weekly" | "monthly" | "custom";
   period: PeriodType;
   start_date?: string;
   end_date?: string;
@@ -202,3 +200,52 @@ export type PerformanceReportRowMap = {
   branch: BranchPerformanceReportRow;
   team: TeamPerformanceReportRow;
 };
+
+// ─── Logs summary: GET /performance/logs/summary ────────────────────────────
+// Same filters as the logs list (no paging). The docs have no response schema,
+// so `data` is kept loose and rendered generically by the page.
+
+export type GetPerformanceLogsSummaryParams = Omit<
+  GetPerformanceLogsParams,
+  "page" | "per_page" | "sort"
+>;
+
+export interface GetPerformanceLogsSummaryResponse {
+  status: string;
+  data: Record<string, unknown>;
+}
+
+// ─── Log detail: GET /performance/logs/{log_id} ─────────────────────────────
+
+export interface GetPerformanceLogResponse {
+  status: string;
+  data: PerformanceLog;
+}
+
+// ─── Status update: PATCH /performance/logs/{log_id}/status ─────────────────
+// Body schema (ActivityLogStatusUpdate) isn't in the docs. Assumed from the log
+// fields: the new status plus an optional reason when flagging.
+
+export interface PerformanceLogStatusUpdate {
+  status: string;
+  flag_reason?: string | null;
+}
+
+export interface UpdatePerformanceLogStatusResponse {
+  status: string;
+  data?: PerformanceLog;
+}
+
+// ─── Employee report: GET /performance/employees/{employee_id}/report ───────
+// No response schema in the docs; rendered generically.
+
+export interface GetEmployeeReportParams {
+  period?: PeriodType;
+  start_date?: string;
+  end_date?: string;
+}
+
+export interface GetEmployeeReportResponse {
+  status: string;
+  data: Record<string, unknown>;
+}

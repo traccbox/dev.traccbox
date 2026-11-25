@@ -14,6 +14,13 @@ import {
   PerformanceReportTableResponse,
   PerformanceReportType,
   TeamPerformanceReportRow,
+  GetPerformanceLogsSummaryParams,
+  GetPerformanceLogsSummaryResponse,
+  GetPerformanceLogResponse,
+  PerformanceLogStatusUpdate,
+  UpdatePerformanceLogStatusResponse,
+  GetEmployeeReportParams,
+  GetEmployeeReportResponse,
 } from "./types";
 
 export async function getPerformanceLogs(
@@ -61,6 +68,51 @@ export async function getPerformanceReportTable<
   >(`/performance/reports/${reportType}`, {
     params,
   });
+
+  return response.data;
+}
+
+export async function getPerformanceLogsSummary(
+  params?: GetPerformanceLogsSummaryParams,
+): Promise<GetPerformanceLogsSummaryResponse> {
+  const response = await api.get<GetPerformanceLogsSummaryResponse>(
+    "/performance/logs/summary",
+    { params },
+  );
+
+  return response.data;
+}
+
+export async function getPerformanceLog(
+  logId: string,
+): Promise<GetPerformanceLogResponse> {
+  const response = await api.get<GetPerformanceLogResponse>(
+    `/performance/logs/${logId}`,
+  );
+
+  return response.data;
+}
+
+export async function updatePerformanceLogStatus(
+  logId: string,
+  body: PerformanceLogStatusUpdate,
+): Promise<UpdatePerformanceLogStatusResponse> {
+  const response = await api.patch<UpdatePerformanceLogStatusResponse>(
+    `/performance/logs/${logId}/status`,
+    body,
+  );
+
+  return response.data;
+}
+
+export async function getEmployeeReport(
+  employeeId: string,
+  params?: GetEmployeeReportParams,
+): Promise<GetEmployeeReportResponse> {
+  const response = await api.get<GetEmployeeReportResponse>(
+    `/performance/employees/${employeeId}/report`,
+    { params },
+  );
 
   return response.data;
 }

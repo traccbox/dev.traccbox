@@ -1,14 +1,18 @@
 import React, { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { RoutePoint } from "@/api/mock/travel";
+import { TripRoutePoint, TripStop } from "@/api/travels/types";
 
 interface Props {
-  route: RoutePoint[];
+  route: TripRoutePoint[];
+  /** stop markers from GET /travel/trips/{id}/stops */
+  stops?: TripStop[];
   /** index of the playback marker; -1 hides it */
   playbackIndex?: number;
   height?: number;
 }
+
+const NO_STOPS: TripStop[] = []; // stable ref so the layer effect doesn't re-run
 
 const icon = (color: string, label: string) =>
   L.divIcon({
@@ -17,7 +21,12 @@ const icon = (color: string, label: string) =>
     iconSize: [1, 1],
   });
 
-const RouteMap: React.FC<Props> = ({ route, playbackIndex = -1, height = 380 }) => {
+const RouteMap: React.FC<Props> = ({
+  route,
+  stops = NO_STOPS,
+  playbackIndex = -1,
+  height = 380,
+}) => {
   const ref = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   const layerRef = useRef<L.LayerGroup | null>(null);
@@ -50,12 +59,11 @@ const RouteMap: React.FC<Props> = ({ route, playbackIndex = -1, height = 380 }) 
     L.polyline(latlngs, { color: "#1658E5", weight: 4, opacity: 0.85 }).addTo(layer);
 
     route.forEach((p, i) => {
-      if (p.type === "start")
+      const last = route.length - 1;
+      if (i === 0)
         L.marker([p.lat, p.lng], { icon: icon("#16A34A", `Start ${p.time}`) }).addTo(layer);
-      else if (p.type === "end")
+      else if (i === last)
         L.marker([p.lat, p.lng], { icon: icon("#E11D48", `End ${p.time}`) }).addTo(layer);
-      else if (p.type === "stop")
-        L.marker([p.lat, p.lng], { icon: icon("#F59E0B", `${p.label} • ${p.time}`) }).addTo(layer);
       else
         L.circleMarker([p.lat, p.lng], {
           radius: 4,
@@ -63,13 +71,23 @@ const RouteMap: React.FC<Props> = ({ route, playbackIndex = -1, height = 380 }) 
           fillColor: "#fff",
           fillOpacity: 1,
         })
-          .bindTooltip(`Point ${i + 1} • ${p.time}`)
+          .bindTooltip(
+            `${p.time} • ${p.speed_kmh ?? 0} km/h • ±${Math.round(p.accuracy_m ?? 0)} m`,
+          )
           .addTo(layer);
+    });
+
+    stops.forEach((st, i) => {
+      const dur =
+        st.duration_minutes != null ? ` • ${Math.round(st.duration_minutes)} min` : "";
+      L.marker([st.lat, st.lng], {
+        icon: icon("#F59E0B", `${st.label || `Stop ${i + 1}`}${dur}`),
+      }).addTo(layer);
     });
 
     map.fitBounds(L.latLngBounds(latlngs).pad(0.2));
     setTimeout(() => map.invalidateSize(), 120);
-  }, [route]);
+  }, [route, stops]);
 
   useEffect(() => {
     const map = mapRef.current;

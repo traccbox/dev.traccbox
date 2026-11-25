@@ -1,5 +1,7 @@
-import { PerformanceReportData } from "@/api/performance-logs/types";
-import { PeriodType } from "@/pages/Dashboard/features/performance/Reports";
+import {
+  PerformanceReportData,
+  PeriodType,
+} from "@/api/performance-logs/types";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -8,11 +10,7 @@ export interface PerformanceLogExportItem {
   employee_id: string;
   activity: string;
   time: string;
-  //   gps: {
-  //     address?: string;
-  //     lat?: number;
-  //     lng?: number;
-  //   } | null;
+  gps?: string | null;
   branch: string | null;
   department: string | null;
   status: string;
@@ -43,10 +41,7 @@ export function downloadPerformanceReport(
     item.employee_name,
     item.activity,
     new Date(item.time).toLocaleString(),
-    // item.gps?.address ?? "-",
-    // item.gps
-    //   ? `${item.gps.lat?.toFixed(4) ?? "-"}, ${item.gps.lng?.toFixed(4) ?? "-"}`
-    //   : "-",
+    item.gps ?? "-",
     item.branch ?? "-",
     item.department ?? "-",
     item.device ?? "-",
@@ -123,12 +118,13 @@ export function downloadMonthlyWeeklyReport(
   period: PeriodType,
   format: "pdf" | "csv" = "pdf",
 ) {
-  const periodLabel = period === "weekly" ? "Weekly" : "Monthly";
+  const periodLabel = period.charAt(0).toUpperCase() + period.slice(1);
 
+  // weekly -> weekly series; everything else (monthly/custom/daily) -> monthly
   const performanceData =
-    period === "weekly"
+    (period === "weekly"
       ? report.weekly_performance
-      : report.monthly_performance;
+      : report.monthly_performance) ?? [];
 
   const performanceHeaders = ["Period", "Visits", "Orders", "Tasks"];
 
@@ -165,7 +161,7 @@ export function downloadMonthlyWeeklyReport(
 
   const attendanceHeaders = ["Day", "Present", "Absent", "Late"];
 
-  const attendanceRows = report.daily_attendance.map((item) => [
+  const attendanceRows = (report.daily_attendance ?? []).map((item) => [
     item.label,
     item.present,
     item.absent,

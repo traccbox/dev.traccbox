@@ -1,68 +1,105 @@
+import { useEffect, useState } from "react";
+import { useQuery, keepPreviousData } from "@tanstack/react-query";
 import { getPerformanceReportTable } from "@/api/performance-logs/apiPerformance";
-import { EmptyState } from "@/components/dashboard/States";
-import Spinner from "@/components/ui/Spinner";
-import { Tabs } from "@radix-ui/react-tabs";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
-import { PeriodType } from "./Reports";
+import {
+  PerformanceReportType,
+  PeriodType,
+} from "@/api/performance-logs/types";
+import {
+  EmptyState,
+  ErrorState,
+  TableSkeleton,
+} from "@/components/dashboard/States";
+import Pagination from "@/components/dashboard/Pagination";
 import { useDebounce } from "@/hooks/useDebounce";
+import EmployeeReportModal from "./EmployeeReportModal";
+import { prettyKey } from "./GenericReportView";
 
-export type TableKey = "employee" | "branch" | "team";
+export type TableKey = PerformanceReportType;
 
 const TABS: { key: TableKey; label: string }[] = [
   { key: "employee", label: "Employee Report" },
   { key: "branch", label: "Branch Report" },
   { key: "team", label: "Team Report" },
-  //   { key: "territory", label: "Territory Report" },
 ];
 
-export default function ReportTable({ period }: { period: PeriodType }) {
+const PAGE_SIZE = 10;
+
+interface Props {
+  period: PeriodType;
+  startDate?: string;
+  endDate?: string;
+  org?: {
+    department?: string;
+    branch?: string;
+    team?: string;
+    employee_id?: string;
+  };
+}
+
+type Row = Record<string, unknown>;
+
+export default function ReportTable({ period, startDate, endDate, org }: Props) {
   const [tab, setTab] = useState<TableKey>("employee");
-
+  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [openEmployee, setOpenEmployee] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const debouncedSearch = useDebounce(search.trim().toLowerCase(), 250);
 
-  const debouncedSearch = useDebounce(search, 500);
+  const params = {
+    period,
+    start_date: startDate,
+    end_date: endDate,
+    ...org,
+    page,
+    per_page: PAGE_SIZE,
+  };
 
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ["reports-table", period, tab, debouncedSearch],
-    queryFn: () =>
-      getPerformanceReportTable(tab, {
-        period: period,
-        // search: debouncedSearch,
-        page: 1,
-        per_page: 25,
-      }),
+  // Back to page 1 whenever the report itself changes
+  useEffect(() => {
+    setPage(1);
+  }, [tab, period, startDate, endDate, org?.department, org?.branch, org?.team, org?.employee_id]);
+
+  const { data, isLoading, isError, refetch } = useQuery({
+    queryKey: ["reports-table", tab, params],
+    queryFn: () => getPerformanceReportTable(tab, params),
+    placeholderData: keepPreviousData,
   });
 
-  if (isLoading) {
-    return (
-      <div className="w-full bg-slate-200 h-[40vh] mt-10 flex justify-center items-center">
-        <Spinner />
-      </div>
-    );
-  }
+  // The API returns { data: [...rows], meta }
+  const apiRows: Row[] = Array.isArray(data?.data)
+    ? (data.data as unknown as Row[])
+    : [];
+  const total = data?.meta?.total ?? apiRows.length;
 
-  if (isError || !data) {
-    return (
-      <div className="p-6">
-        <div className="rounded-xl border border-red-200 bg-red-50 p-5">
-          <h2 className="font-semibold text-red-700">
-            Failed to load performance logs
-          </h2>
-        </div>
-      </div>
-    );
-  }
+  // The report endpoints take no search param, so this filters the current page
+  const rows = debouncedSearch
+    ? apiRows.filter((r) =>
+        Object.values(r).some((v) =>
+          String(v ?? "")
+            .toLowerCase()
+            .includes(debouncedSearch),
+        ),
+      )
+    : apiRows;
 
-  const rows = (data?.[tab] ?? []).filter((r) =>
-    search
-      ? Object.values(r).some((v) =>
-          String(v).toLowerCase().includes(search.toLowerCase()),
-        )
-      : true,
-  );
+  // employee_id is only used for the drill-down, not shown as a column
+  const columns = Array.from(
+    new Set(apiRows.flatMap((r) => Object.keys(r))),
+  ).filter((c) => c !== "employee_id");
+
+  const fmt = (v: unknown) =>
+    v === null || v === undefined || v === ""
+      ? "—"
+      : typeof v === "number" && !Number.isInteger(v)
+        ? v.toFixed(2)
+        : String(v);
+
   return (
-    <div className="rounded-2xl bg-white border  border-gray-100 shadow-sm">
+    <div className="rounded-2xl bg-white border border-gray-100 shadow-sm">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 border-b border-gray-100">
         <div className="flex flex-wrap gap-1">
           {TABS.map((t) => (
@@ -82,51 +119,91 @@ export default function ReportTable({ period }: { period: PeriodType }) {
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search report…"
+          placeholder="Search this page…"
           className="h-9 w-full lg:w-64 rounded-lg border border-gray-200 px-3 text-xs focus:outline-none focus:ring-2 focus:ring-blue-100"
         />
       </div>
-      <div className="overflow-x-auto">
-        <table className="w-full text-xs">
-          <thead className="bg-gray-50 text-gray-500">
-            <tr>
-              {Object.keys(rows[0] ?? {}).map((h) => (
-                <th
-                  key={h}
-                  className="text-left font-medium px-4 py-3 whitespace-nowrap"
-                >
-                  {h}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.length === 0 ? (
+
+      {isError ? (
+        <ErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
+        <TableSkeleton rows={6} cols={4} />
+      ) : rows.length === 0 ? (
+        <EmptyState title="No report data for this period" />
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead className="bg-gray-50 text-gray-500">
               <tr>
-                <td colSpan={Tabs.length}>
-                  <EmptyState />
-                </td>
+                {columns.map((h) => (
+                  <th
+                    key={h}
+                    className="text-left font-medium px-4 py-3 whitespace-nowrap"
+                  >
+                    {prettyKey(h)}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              rows.map((r, i) => (
-                <tr
-                  key={i}
-                  className="border-t border-gray-50 hover:bg-blue-50/40 transition-colors"
-                >
-                  {Object.values(r).map((v, j) => (
-                    <td
-                      key={j}
-                      className="px-4 py-3 text-gray-700 whitespace-nowrap"
-                    >
-                      {String(v)}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((r, i) => {
+                const employeeId =
+                  tab === "employee" && typeof r.employee_id === "string"
+                    ? r.employee_id
+                    : null;
+                return (
+                  <tr
+                    key={i}
+                    onClick={() =>
+                      employeeId &&
+                      setOpenEmployee({
+                        id: employeeId,
+                        name: String(r.employee ?? "Employee"),
+                      })
+                    }
+                    className={`border-t border-gray-50 transition-colors hover:bg-blue-50/40 ${
+                      employeeId ? "cursor-pointer" : ""
+                    }`}
+                  >
+                    {columns.map((c) => (
+                      <td
+                        key={c}
+                        className="px-4 py-3 text-gray-700 whitespace-nowrap"
+                      >
+                        {fmt(r[c])}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === "employee" && rows.length > 0 && (
+        <p className="px-4 pb-2 text-[11px] text-gray-400">
+          Click an employee to open their full report.
+        </p>
+      )}
+
+      {!isError && total > 0 && (
+        <Pagination
+          page={page}
+          pageSize={data?.meta?.per_page || PAGE_SIZE}
+          total={total}
+          onPageChange={setPage}
+        />
+      )}
+
+      {openEmployee && (
+        <EmployeeReportModal
+          employeeId={openEmployee.id}
+          name={openEmployee.name}
+          params={{ period, start_date: startDate, end_date: endDate }}
+          onClose={() => setOpenEmployee(null)}
+        />
+      )}
     </div>
   );
 }
