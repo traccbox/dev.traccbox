@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import type { DailyPayout, PayoutSlip } from "@/api/payout/types";
 import { toast } from "sonner";
+import { usePayoutSlip } from "@/api/payout/hooks";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 
@@ -30,32 +31,36 @@ interface Props {
 
 export default function PayoutSlipModal({ open, payout, slip, onClose }: Props) {
   const slipRef = useRef<HTMLDivElement>(null);
+  const slipQuery = usePayoutSlip(open && payout ? payout.id : "");
 
   if (!open) return null;
 
-  const data = slip || payout;
-  const workerName = slip?.worker_name || payout?.worker_name || payout?.worker?.name || "Musa Ibrahim";
-  const workerId = slip?.worker_id || payout?.worker_id || "TB-0001";
-  const role = slip?.role || payout?.worker?.role || "Mason";
-  const siteName = slip?.site_name || payout?.site_name || "Ikeja Construction Site";
-  const dateStr = slip?.work_date || payout?.date || new Date().toISOString().split("T")[0];
-  const refCode = slip?.payout_reference || payout?.reference || `TB-PAY-${dateStr.replace(/-/g, "")}-0001`;
-  const amount = slip?.amount || payout?.amount || 0;
-  const dailyWage = slip?.daily_wage || payout?.daily_wage || 7000;
-  const hourlyRate = slip?.hourly_rate || payout?.hourly_rate || 875;
-  const hoursWorked = slip?.hours_worked || payout?.hours_worked || payout?.attendance?.hours_worked || 0;
-  const status = slip?.status || payout?.status || "pending";
-  const paymentRef = slip?.payment_reference || payout?.payment_reference;
-  const clockInStatus = slip?.clock_in?.status || payout?.attendance?.clock_in_status || "verified";
-  const clockOutStatus = slip?.clock_out?.status || payout?.attendance?.clock_out_status || "verified";
-  const clockInTime = payout?.attendance?.clock_in_time || "07:55 AM";
-  const clockOutTime = payout?.attendance?.clock_out_time || "03:30 PM";
+  const serverSlip = slip || slipQuery.data;
+  const data = serverSlip || payout;
+  if (slipQuery.isLoading && payout) return <div className="fixed inset-0 z-[110] grid place-items-center bg-black/50 text-white">Loading payout slip…</div>;
+  if (slipQuery.isError && payout && !slip) return <div className="fixed inset-0 z-[110] grid place-items-center bg-black/50"><div className="bg-white p-6 rounded-xl"><p className="text-red-600">Could not load payout slip.</p><button onClick={onClose} className="mt-3 underline">Close</button></div></div>;
+  const workerName = serverSlip?.worker_name || payout?.worker_name || payout?.worker?.name || "—";
+  const workerId = serverSlip?.worker_id || payout?.worker_id || "—";
+  const role = serverSlip?.role || payout?.worker?.role || "—";
+  const siteName = serverSlip?.site_name || payout?.site_name || "—";
+  const dateStr = serverSlip?.work_date || payout?.date || "—";
+  const refCode = serverSlip?.payout_reference || payout?.reference || "—";
+  const amount = serverSlip?.amount ?? payout?.amount ?? 0;
+  const dailyWage = serverSlip?.daily_wage ?? payout?.daily_wage ?? 0;
+  const hourlyRate = serverSlip?.hourly_rate ?? payout?.hourly_rate ?? 0;
+  const hoursWorked = serverSlip?.hours_worked ?? payout?.hours_worked ?? payout?.attendance?.hours_worked ?? 0;
+  const status = serverSlip?.status || payout?.status || "pending";
+  const paymentRef = serverSlip?.payment_reference || payout?.payment_reference;
+  const clockInStatus = serverSlip?.clock_in?.status || payout?.attendance?.clock_in_status || "—";
+  const clockOutStatus = serverSlip?.clock_out?.status || payout?.attendance?.clock_out_status || "—";
+  const clockInTime = payout?.attendance?.clock_in_time || (serverSlip?.clock_in?.timestamp ? new Date(serverSlip.clock_in.timestamp).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) : "—");
+  const clockOutTime = payout?.attendance?.clock_out_time || (serverSlip?.clock_out?.timestamp ? new Date(serverSlip.clock_out.timestamp).toLocaleTimeString([], {hour:"2-digit",minute:"2-digit"}) : "—");
 
   // Payment Method details
-  const method = payout?.payment_method || payout?.worker?.payment_method || (slip as any)?.payment_method || "transfer";
-  const bankName = payout?.bank_name || payout?.worker?.bank_name || (slip as any)?.bank_name;
-  const accountNumber = payout?.account_number || payout?.worker?.account_number || (slip as any)?.account_number;
-  const accountName = payout?.account_name || payout?.worker?.account_name || (slip as any)?.account_name || workerName;
+  const method = payout?.payment_method || payout?.worker?.payment_method || serverSlip?.payment_method || "—";
+  const bankName = payout?.bank_name || payout?.worker?.bank_name || serverSlip?.bank_name;
+  const accountNumber = payout?.account_number || payout?.worker?.account_number || serverSlip?.account_number;
+  const accountName = payout?.account_name || payout?.worker?.account_name || serverSlip?.account_name || workerName;
 
   const hoursInt = Math.floor(hoursWorked);
   const minutesInt = Math.round((hoursWorked - hoursInt) * 60);

@@ -18,7 +18,7 @@ import {
   useApprovePayout,
   useCalculatePayout,
   usePayouts,
-  useSites,
+  usePayoutSummary,
   useWorkers,
 } from "@/api/payout/hooks";
 import type { DailyPayout } from "@/api/payout/types";
@@ -26,6 +26,7 @@ import PayoutSlipModal from "./PayoutSlipModal";
 import MarkPaidModal from "./MarkPaidModal";
 import RegisterWorkerModal from "./RegisterWorkerModal";
 import { toast } from "sonner";
+import SitePicker from "./SitePicker";
 
 export default function DailyPayoutBoard() {
   const [selectedSiteId, setSelectedSiteId] = useState("");
@@ -39,12 +40,11 @@ export default function DailyPayoutBoard() {
   const [markPaidPayout, setMarkPaidPayout] = useState<DailyPayout | null>(null);
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
 
-  const { data: sitesData } = useSites();
-  const sites = sitesData?.data || [];
 
   const {
     data: payoutsData,
     isLoading,
+    isError,
     refetch,
   } = usePayouts({
     site_id: selectedSiteId || undefined,
@@ -54,14 +54,15 @@ export default function DailyPayoutBoard() {
   });
 
   const payouts = payoutsData?.data || [];
+  const { data: summary } = usePayoutSummary({ date: dateFilter, site_id: selectedSiteId || undefined });
   const approvePayoutMutation = useApprovePayout();
   const calculatePayoutMutation = useCalculatePayout();
 
   // Summary Metrics
-  const totalPayable = payouts.reduce((acc, p) => acc + (p.amount || 0), 0);
-  const pendingCount = payouts.filter((p) => p.status === "pending").length;
-  const approvedCount = payouts.filter((p) => p.status === "approved").length;
-  const paidCount = payouts.filter((p) => p.status === "paid").length;
+  const totalPayable = summary?.total?.amount ?? payouts.reduce((acc, p) => acc + (p.amount || 0), 0);
+  const pendingCount = summary?.pending?.count ?? 0;
+  const approvedCount = summary?.approved?.count ?? 0;
+  const paidCount = summary?.paid?.count ?? 0;
 
   return (
     <div className="space-y-6">
@@ -153,18 +154,7 @@ export default function DailyPayoutBoard() {
             </div>
 
             {/* Site Filter */}
-            <select
-              value={selectedSiteId}
-              onChange={(e) => setSelectedSiteId(e.target.value)}
-              className="px-3 py-2 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">All Sites</option>
-              {sites.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <SitePicker value={selectedSiteId} onChange={setSelectedSiteId} className="px-3 py-2 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800" />
 
             {/* Date Filter */}
             <input
@@ -217,6 +207,8 @@ export default function DailyPayoutBoard() {
           <div className="p-12 text-center text-slate-500 text-xs font-medium">
             Loading payout transactions...
           </div>
+        ) : isError ? (
+          <div className="p-12 text-center text-red-600">Unable to load payout records. Refresh or check your access.</div>
         ) : payouts.length === 0 ? (
           <div className="p-12 text-center text-slate-500 space-y-3">
             <Banknote className="w-10 h-10 text-slate-300 mx-auto" />
@@ -275,16 +267,16 @@ export default function DailyPayoutBoard() {
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-1.5 text-[11px]">
                             <span className="font-semibold text-slate-700">In:</span>
-                            <span>{p.attendance?.clock_in_time || "07:55 AM"}</span>
+                            <span>{p.attendance?.clock_in_time || (p.attendance?.clock_in?.timestamp ? new Date(p.attendance.clock_in.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—")}</span>
                             <span className="text-[9px] px-1.5 py-0.2 bg-emerald-50 text-emerald-700 rounded border border-emerald-200">
-                              Verified
+                              {p.attendance?.clock_in_status || p.attendance?.clock_in?.status || "—"}
                             </span>
                           </div>
                           <div className="flex items-center gap-1.5 text-[11px]">
                             <span className="font-semibold text-slate-700">Out:</span>
-                            <span>{p.attendance?.clock_out_time || "03:30 PM"}</span>
+                            <span>{p.attendance?.clock_out_time || (p.attendance?.clock_out?.timestamp ? new Date(p.attendance.clock_out.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—")}</span>
                             <span className="text-[9px] px-1.5 py-0.2 bg-emerald-50 text-emerald-700 rounded border border-emerald-200">
-                              Verified
+                              {p.attendance?.clock_out_status || p.attendance?.clock_out?.status || "—"}
                             </span>
                           </div>
                         </div>
@@ -293,7 +285,7 @@ export default function DailyPayoutBoard() {
                       <td className="py-3.5 px-4">
                         <div className="font-bold text-slate-900 flex items-center gap-1">
                           <Clock className="w-3.5 h-3.5 text-blue-600" />
-                          {hoursInt}h {minutesInt}m
+                          {p.hours_worked == null ? "—" : `${hoursInt}h ${minutesInt}m`}
                         </div>
                         <div className="text-[10px] text-slate-500">
                           ₦{p.daily_wage?.toLocaleString()} / 8h
@@ -305,7 +297,7 @@ export default function DailyPayoutBoard() {
                           ₦{p.amount?.toLocaleString()}
                         </div>
                         <div className="text-[10px] text-blue-600 font-medium">
-                          {hours >= (p.worker?.standard_hours || 8) ? "Full-Day Rate" : "Prorated Hourly"}
+                          {p.payable_hours == null ? "—" : `${p.payable_hours} payable hours`}
                         </div>
                       </td>
 

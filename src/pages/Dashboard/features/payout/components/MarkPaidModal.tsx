@@ -20,7 +20,7 @@ export default function MarkPaidModal({ open, payout, onClose }: Props) {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     markPaidMutation.mutate(
-      { payoutId: payout.id, paymentReference: paymentRef },
+      { payoutId: payout.id, paymentReference: paymentRef, paymentMethod: payout.payment_method || payout.worker?.payment_method || "cash" },
       { onSuccess: onClose }
     );
   };

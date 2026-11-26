@@ -9,16 +9,16 @@ import {
   Clock,
   UserCheck,
 } from "lucide-react";
-import { useSites, useWorkers } from "@/api/payout/hooks";
+import { useInfiniteSites, useWorkers } from "@/api/payout/hooks";
 import RegisterWorkerModal from "./RegisterWorkerModal";
+import SitePicker from "./SitePicker";
 
 export default function WorkerRegistration() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSiteId, setSelectedSiteId] = useState("");
   const [registerModalOpen, setRegisterModalOpen] = useState(false);
-
-  const { data: sitesData } = useSites();
-  const sites = sitesData?.data || [];
+  const sitesQuery = useInfiniteSites();
+  const sites = sitesQuery.data?.pages.flatMap(page => page.data) || [];
 
   const { data: workersData, isLoading } = useWorkers({
     search: searchQuery || undefined,
@@ -63,18 +63,7 @@ export default function WorkerRegistration() {
           />
         </div>
 
-        <select
-          value={selectedSiteId}
-          onChange={(e) => setSelectedSiteId(e.target.value)}
-          className="px-3.5 py-2 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none w-full sm:w-auto"
-        >
-          <option value="">All Assigned Sites</option>
-          {sites.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
+        <SitePicker value={selectedSiteId} onChange={setSelectedSiteId} allLabel="All Assigned Sites" className="px-3.5 py-2 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 w-full sm:w-auto" />
       </div>
 
       {/* Workers Table */}
