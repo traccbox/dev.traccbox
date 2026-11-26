@@ -3,6 +3,9 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { Supervisor } from "@/api/supervisor-kpi/types";
 import { useWorkforce } from "./store";
+import { useLocationOptions } from "./useWorkAreas";
+import LocationPicker from "./LocationPicker";
+import CreateWorkArea from "./CreateWorkArea";
 import { Field, areaCls, btnGhost, btnPrimary, inputCls, lower, useMoney, useTerms, cap } from "./ui";
 
 const blank = { name: "", phone: "", email: "", employeeCode: "", title: "", locationIds: [] as string[], fixedPay: "", maxBonus: "", notes: "" };
@@ -14,7 +17,10 @@ const SupervisorSheet: React.FC<{
   supervisor?: Supervisor;
   onCreated?: (s: Supervisor) => void;
 }> = ({ open, onClose, supervisor, onCreated }) => {
-  const { locations, supervisors, addSupervisor, updateSupervisor, config } = useWorkforce();
+  const { supervisors, addSupervisor, updateSupervisor, linkLocations, config } = useWorkforce();
+  const { toLink } = useLocationOptions();
+  // The work-area wizard replaces the panel while open; the form keeps its values.
+  const [creating, setCreating] = useState(false);
   const T = useTerms();
   const money = useMoney();
   const [f, setF] = useState(blank);
@@ -45,9 +51,6 @@ const SupervisorSheet: React.FC<{
   };
   const valid = !Object.values(errors).some(Boolean);
 
-  const toggleLoc = (id: string) =>
-    setF({ ...f, locationIds: f.locationIds.includes(id) ? f.locationIds.filter((x) => x !== id) : [...f.locationIds, id] });
-
   const submit = () => {
     setTouched(true);
     if (!valid) return;
@@ -56,6 +59,7 @@ const SupervisorSheet: React.FC<{
       title: f.title.trim() || undefined, locationIds: f.locationIds, fixedPay: Number(f.fixedPay) || 0, maxBonus: Number(f.maxBonus) || 0,
       notes: f.notes.trim() || undefined,
     };
+    linkLocations(toLink(f.locationIds));
     if (supervisor) {
       updateSupervisor(supervisor.id, base);
       toast.success("Changes saved");
@@ -70,7 +74,8 @@ const SupervisorSheet: React.FC<{
   const err = (k: keyof typeof errors) => (touched && errors[k] ? <span className="block text-[11px] text-red-600">{errors[k]}</span> : null);
 
   return (
-    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+    <>
+    <Sheet open={open && !creating} onOpenChange={(o) => !o && onClose()}>
       <SheetContent className="w-full overflow-y-auto sm:max-w-lg">
         <SheetHeader>
           <SheetTitle>{supervisor ? `Edit ${lower(T.supervisor)}` : `Add ${lower(T.supervisor)}`}</SheetTitle>
@@ -90,23 +95,14 @@ const SupervisorSheet: React.FC<{
             <Field label="Employee code"><input className={inputCls} value={f.employeeCode} onChange={set("employeeCode")} /></Field>
           </div>
 
-          <Field label={`${cap(T.locations)} they oversee`}>
-            {locations.filter((l) => l.status === "active").length === 0 ? (
-              <p className="text-xs text-gray-500">No {lower(T.locations)} yet — add them in Setup, then assign here.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {locations.filter((l) => l.status === "active").map((l) => {
-                  const on = f.locationIds.includes(l.id);
-                  return (
-                    <button key={l.id} type="button" onClick={() => toggleLoc(l.id)}
-                      className={`rounded-full border px-3 py-1 text-xs font-medium ${on ? "border-[#1658E5] bg-blue-50 text-[#1658E5]" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>
-                      {l.name}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </Field>
+          {/* Not a <label>: the picker has several controls of its own. */}
+          <div className="space-y-1">
+            <span className="text-xs font-medium text-gray-700">{cap(T.locations)} they oversee</span>
+            <LocationPicker selected={f.locationIds} onChange={(locationIds) => setF({ ...f, locationIds })} onCreate={() => setCreating(true)} />
+            <span className="block text-[11px] text-gray-400">
+              {f.locationIds.length ? `${f.locationIds.length} selected` : `${cap(T.locations)} come from your Work Areas.`}
+            </span>
+          </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label={`Fixed pay (${config.currency.code}/month)`}><input type="number" min={0} className={inputCls} value={f.fixedPay} onChange={set("fixedPay")} /></Field>
@@ -121,6 +117,15 @@ const SupervisorSheet: React.FC<{
         </div>
       </SheetContent>
     </Sheet>
+    {creating && (
+      <CreateWorkArea
+        onDone={(created) => {
+          setF((cur) => ({ ...cur, locationIds: Array.from(new Set([...cur.locationIds, ...created.map((c) => c.id)])) }));
+          setCreating(false);
+        }}
+      />
+    )}
+    </>
   );
 };
 

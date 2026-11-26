@@ -128,11 +128,17 @@ export interface WorkspaceConfig {
 
 // ─── Core records ───────────────────────────────────────────────────────────
 
+/**
+ * A place work happens. The source of truth is the Work Areas module: a linked
+ * location carries the work area's id and a cached copy of its details.
+ * "local" locations only exist in sample data / older drafts.
+ */
 export interface WorkLocation {
-  id: string;
+  id: string; // work area id when source === "work_area"
+  source: "work_area" | "local";
   name: string;
-  code?: string;
   address?: string;
+  type?: string;
   latitude?: number;
   longitude?: number;
   geofenceRadius?: number; // metres
@@ -305,10 +311,10 @@ export interface SupervisorPayrollRecord {
   paymentReference?: string;
 }
 
-// ─── Persisted workspace ────────────────────────────────────────────────────
+// ─── Persisted workspaces ───────────────────────────────────────────────────
 
+/** Everything that belongs to one workspace. Nothing is shared between them. */
 export interface WorkspaceData {
-  setupDone: boolean;
   config: WorkspaceConfig;
   locations: WorkLocation[];
   supervisors: Supervisor[];
@@ -318,4 +324,16 @@ export interface WorkspaceData {
   reports: DailyReport[];
   manualScores: ManualScore[];
   payroll: SupervisorPayrollRecord[];
+}
+
+/** One business line / industry the company runs, e.g. "Acme Construction". */
+export interface Workspace extends WorkspaceData {
+  id: string;
+  name: string;
+  createdAt: string;
+}
+
+export interface WorkspaceRoot {
+  activeId: string | null;
+  workspaces: Workspace[];
 }

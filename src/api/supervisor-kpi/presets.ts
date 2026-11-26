@@ -346,8 +346,8 @@ export function buildSampleData(
   templates: TaskTemplate[],
 ): Pick<WorkspaceData, "locations" | "supervisors" | "workers" | "tasks" | "reports"> {
   const p = getPreset(key);
-  const locations: WorkLocation[] = p.sample.locations.map((name, i) => ({
-    id: uid("loc"), name, code: `L${String(i + 1).padStart(2, "0")}`, status: "active",
+  const locations: WorkLocation[] = p.sample.locations.map((name) => ({
+    id: uid("loc"), source: "local", name, status: "active",
   }));
 
   const supervisors: Supervisor[] = p.sample.supervisors.map((s, i) => ({
@@ -459,10 +459,10 @@ export function buildSampleData(
   return { locations, supervisors, workers, tasks, reports };
 }
 
-export function emptyWorkspace(): WorkspaceData {
+export function emptyWorkspaceData(): WorkspaceData {
   const { config, templates } = buildIndustryConfig("custom");
   return {
-    setupDone: false, config, templates, locations: [], supervisors: [], workers: [],
+    config, templates, locations: [], supervisors: [], workers: [],
     tasks: [], reports: [], manualScores: [], payroll: [],
   };
 }

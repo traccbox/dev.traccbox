@@ -22,7 +22,7 @@ const KpiPage: React.FC = () => {
     return <Panel bodyClassName="p-0"><Empty title={`No active ${lower(T.supervisors)} to score`} action={{ label: `Add ${lower(T.supervisor)}`, to: `${BASE}/supervisors?new=1` }} /></Panel>;
   }
   if (metrics.length === 0) {
-    return <Panel bodyClassName="p-0"><Empty title="The scorecard has no metrics" message="Choose what performance means for your business." action={{ label: "Configure scorecard", to: `${BASE}/setup` }} /></Panel>;
+    return <Panel bodyClassName="p-0"><Empty title="The scorecard has no metrics" message="Choose what performance means for your business." action={{ label: "Configure scorecard", to: `${BASE}/setup?tab=scorecard` }} /></Panel>;
   }
 
   return (
@@ -31,7 +31,7 @@ const KpiPage: React.FC = () => {
         <p className="text-sm text-gray-500">Scores for <strong className="text-gray-800">{periodLabel(w.period)}</strong> · metrics without evidence are skipped, never counted as zero.</p>
         <div className="flex items-center gap-2">
           <PeriodPicker value={w.period} onChange={w.setPeriod} />
-          <Link to={`${BASE}/setup`} className="text-xs font-medium text-[#1658E5]">Edit scorecard</Link>
+          <Link to={`${BASE}/setup?tab=scorecard`} className="text-xs font-medium text-[#1658E5]">Edit scorecard</Link>
         </div>
       </div>
 

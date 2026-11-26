@@ -4,6 +4,7 @@ import { enabledWeightTotal, calculateWeightedKpi, getSupervisorKpi, normalizeWe
 import { calculateBonus, netPay } from "./payroll";
 import { buildIndustryConfig, buildSampleData, INDUSTRY_PRESETS } from "./presets";
 import { currentPeriod } from "./dates";
+import { addWorkspace, createWorkspace, isNameTaken, loadRoot, locationInUse, removeWorkspace, syncWorkAreaLocations } from "./workspaces";
 import type { KpiComponent, KpiMetricConfig, OperationalTask } from "./types";
 
 const comp = (metricId: string, weight: number, achievement: number | null): KpiComponent => ({
@@ -95,4 +96,66 @@ test("sample data works for every industry and produces a real KPI", () => {
     const r = getSupervisorKpi({ supervisorId: d.supervisors[0].id, period: currentPeriod(), tasks: d.tasks, reports: d.reports, manualScores: [], metrics: config.kpi, reportTemplate: config.report });
     assert.ok(r.components.length > 0, p.key);
   }
+});
+
+const make = (name: string, withSample = true) => createWorkspace({ name, industry: "logistics", currency: "NGN", withSample });
+
+test("workspaces are independent and creating one activates it", () => {
+  const a = make("A");
+  const b = createWorkspace({ name: "B", industry: "healthcare", currency: "USD", withSample: false });
+  const root = addWorkspace(addWorkspace({ activeId: null, workspaces: [] }, a), b);
+  assert.equal(root.activeId, b.id);
+  assert.equal(root.workspaces.length, 2);
+  assert.ok(root.workspaces[0].supervisors.length > 0);
+  assert.equal(root.workspaces[1].supervisors.length, 0);
+  assert.notEqual(root.workspaces[0].config.terms.location, root.workspaces[1].config.terms.location);
+});
+
+test("deleting the active workspace falls back to another, then to none", () => {
+  const a = make("A"), b = make("B");
+  let root = addWorkspace(addWorkspace({ activeId: null, workspaces: [] }, a), b);
+  root = removeWorkspace(root, b.id);
+  assert.equal(root.activeId, a.id);
+  assert.deepEqual(removeWorkspace(root, a.id), { activeId: null, workspaces: [] });
+});
+
+test("workspace names are unique, ignoring case and spaces", () => {
+  const a = make("Acme");
+  assert.equal(isNameTaken(" acme ", [a]), true);
+  assert.equal(isNameTaken("Acme", [a], a.id), false);
+});
+
+test("the earlier single-workspace save is migrated without losing data", () => {
+  const { id: _i, name: _n, createdAt: _c, ...data } = make("old");
+  const legacy = JSON.stringify({ ...data, setupDone: true, locations: data.locations.map(({ source: _s, ...l }) => l) });
+  const root = loadRoot(null, legacy);
+  assert.equal(root.workspaces.length, 1);
+  assert.equal(root.activeId, root.workspaces[0].id);
+  assert.equal(root.workspaces[0].supervisors.length, data.supervisors.length);
+  assert.ok(root.workspaces[0].locations.every((l) => l.source === "local"));
+});
+
+test("once saved in the new format, deleted workspaces don't come back from the old save", () => {
+  const legacy = JSON.stringify({ ...make("old"), setupDone: true });
+  assert.equal(loadRoot(JSON.stringify({ activeId: null, workspaces: [] }), legacy).workspaces.length, 0);
+});
+
+test("corrupt storage starts clean", () => {
+  assert.deepEqual(loadRoot("{not json", "also bad"), { activeId: null, workspaces: [] });
+});
+
+test("linked work areas refresh, archive when gone, and keep identity when unchanged", () => {
+  const ws = { ...make("A", false), locations: [{ id: "wa1", source: "work_area" as const, name: "Old name", status: "active" as const }] };
+  const root = { activeId: ws.id, workspaces: [ws] };
+  const renamed = syncWorkAreaLocations(root, [{ id: "wa1", source: "work_area", name: "New name", status: "active" }], true);
+  assert.equal(renamed.workspaces[0].locations[0].name, "New name");
+  assert.equal(syncWorkAreaLocations(renamed, [{ id: "wa1", source: "work_area", name: "New name", status: "active" }], true), renamed);
+  assert.equal(syncWorkAreaLocations(root, [], true).workspaces[0].locations[0].status, "archived");
+  assert.equal(syncWorkAreaLocations(root, [], false), root); // partial list proves nothing
+});
+
+test("a location with assigned people or open work can't be removed", () => {
+  const ws = make("A");
+  assert.ok(locationInUse(ws, ws.supervisors[0].locationIds[0]));
+  assert.equal(locationInUse(ws, "unused"), null);
 });

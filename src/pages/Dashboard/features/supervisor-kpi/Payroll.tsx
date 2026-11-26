@@ -6,6 +6,7 @@ import { periodLabel } from "@/api/supervisor-kpi/dates";
 import { calculateBonus, netPay, totalAllowances, totalDeductions } from "@/api/supervisor-kpi/payroll";
 import type { SupervisorPayrollRecord } from "@/api/supervisor-kpi/types";
 import { useWorkforce } from "./store";
+import { useConfirm } from "./Confirm";
 import { Avatar, BASE, Empty, Field, PayPill, Panel, PeriodPicker, ScoreBadge, StatTile, btnDanger, btnGhost, btnPrimary, cap, inputCls, lower, useMoney, useTerms } from "./ui";
 import { Link } from "react-router-dom";
 
@@ -34,6 +35,7 @@ const Payroll: React.FC = () => {
   const w = useWorkforce();
   const T = useTerms();
   const money = useMoney();
+  const confirm = useConfirm();
   const [open, setOpen] = useState<string | null>(null);
   const [slip, setSlip] = useState<string | null>(null);
   const [ref, setRef] = useState<Record<string, string>>({});
@@ -45,6 +47,35 @@ const Payroll: React.FC = () => {
   const pending = rows.filter((r) => r.status === "pending");
   const missingCount = w.supervisors.filter((s) => s.status === "active" && !rows.some((r) => r.supervisorId === s.id)).length;
   const slipRec = rows.find((r) => r.id === slip);
+
+  const approveAll = async () => {
+    const ok = await confirm({
+      title: `Approve ${pending.length} payroll record${pending.length > 1 ? "s" : ""}?`,
+      message: <>Total <strong>{money(sum("pending"))}</strong> for {periodLabel(w.period)}. KPI bonuses are locked at approval.</>,
+      confirmLabel: "Approve all",
+    });
+    if (!ok) return;
+    w.approvePayroll(pending.map((p) => p.id));
+    toast.success(`${pending.length} approved`);
+  };
+
+  const pay = async (r: SupervisorPayrollRecord, reference: string) => {
+    const ok = await confirm({
+      title: "Record this payment?",
+      message: <><strong>{money(net(r))}</strong> to {sup(r.supervisorId)?.name}, reference “{reference}”. A paid record can’t be edited.</>,
+      confirmLabel: "Record payment",
+    });
+    if (ok) w.markPaid(r.id, reference);
+  };
+
+  const revert = async (r: SupervisorPayrollRecord) => {
+    const ok = await confirm({
+      title: "Revert to pending?",
+      message: "The approval is removed. The KPI bonus follows live scores again until you re-approve.",
+      confirmLabel: "Revert",
+    });
+    if (ok) w.updatePayroll(r.id, { status: "pending", approvedAt: undefined });
+  };
 
   const exportCsv = () => {
     const head = ["Supervisor", "Period", "Fixed pay", "KPI score", "Bonus", "Allowances", "Deductions", "Net pay", "Status", "Payment reference"];
@@ -62,7 +93,7 @@ const Payroll: React.FC = () => {
         <PeriodPicker value={w.period} onChange={w.setPeriod} />
         <div className="flex flex-wrap gap-2">
           {rows.length > 0 && <button className={btnGhost} onClick={exportCsv}><Download className="h-4 w-4" /> Export CSV</button>}
-          {pending.length > 0 && <button className={btnGhost} onClick={() => { w.approvePayroll(pending.map((p) => p.id)); toast.success(`${pending.length} approved`); }}>Approve all pending ({pending.length})</button>}
+          {pending.length > 0 && <button className={btnGhost} onClick={approveAll}>Approve all pending ({pending.length})</button>}
           <button className={btnPrimary} disabled={missingCount === 0} onClick={() => { const n = w.generatePayroll(w.period); toast.success(n ? `${n} payroll record${n > 1 ? "s" : ""} generated` : "Nothing to generate"); }}>
             Generate {periodLabel(w.period)}{missingCount ? ` (${missingCount})` : ""}
           </button>
@@ -110,8 +141,8 @@ const Payroll: React.FC = () => {
                         {r.status === "approved" && (
                           <>
                             <input className={`${inputCls} max-w-xs`} placeholder="Payment reference" value={ref[r.id] ?? ""} onChange={(e) => setRef({ ...ref, [r.id]: e.target.value })} />
-                            <button className={btnPrimary} disabled={!(ref[r.id] ?? "").trim()} onClick={() => w.markPaid(r.id, ref[r.id].trim())}>Record payment</button>
-                            <button className={btnDanger} onClick={() => w.updatePayroll(r.id, { status: "pending", approvedAt: undefined })}>Revert to pending</button>
+                            <button className={btnPrimary} disabled={!(ref[r.id] ?? "").trim()} onClick={() => pay(r, ref[r.id].trim())}>Record payment</button>
+                            <button className={btnDanger} onClick={() => revert(r)}>Revert to pending</button>
                           </>
                         )}
                         {frozen && <span className="text-xs text-gray-500">Paid {r.paidAt ? new Date(r.paidAt).toLocaleDateString() : ""} · ref {r.paymentReference}</span>}
@@ -125,7 +156,7 @@ const Payroll: React.FC = () => {
         )}
       </Panel>
 
-      <p className="text-xs text-gray-500">Bonus rules, tiers and the minimum score are set in <Link to={`${BASE}/setup`} className="font-medium text-[#1658E5]">Setup → Pay &amp; access</Link>. Current mode: <strong>{w.config.pay.bonusMode}</strong>{w.config.pay.bonusMode !== "none" && `, minimum KPI ${w.config.pay.minScoreForBonus}`}. {cap(T.supervisors)}’ fixed pay and maximum bonus are on each profile.</p>
+      <p className="text-xs text-gray-500">Bonus rules, tiers and the minimum score are set in <Link to={`${BASE}/setup?tab=pay`} className="font-medium text-[#1658E5]">Setup → Pay &amp; access</Link>. Current mode: <strong>{w.config.pay.bonusMode}</strong>{w.config.pay.bonusMode !== "none" && `, minimum KPI ${w.config.pay.minScoreForBonus}`}. {cap(T.supervisors)}’ fixed pay and maximum bonus are on each profile.</p>
 
       <Dialog open={!!slipRec} onOpenChange={(o) => !o && setSlip(null)}>
         <DialogContent className="max-w-md">

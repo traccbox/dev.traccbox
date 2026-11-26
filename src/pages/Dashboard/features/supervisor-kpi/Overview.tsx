@@ -148,7 +148,7 @@ const Overview: React.FC = () => {
 
         <Panel title={cap(T.locations)} bodyClassName="p-0">
           {m.byLocation.length === 0 ? (
-            <Empty title={`No ${lower(T.locations)} yet`} action={{ label: "Add in Setup", to: `${BASE}/setup` }} />
+            <Empty title={`No ${lower(T.locations)} yet`} action={{ label: "Add in Setup", to: `${BASE}/setup?tab=locations` }} />
           ) : (
             <table className="w-full text-xs">
               <thead className="bg-gray-50 text-gray-500">

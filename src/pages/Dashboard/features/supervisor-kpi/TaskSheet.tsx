@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import type { TaskPriority } from "@/api/supervisor-kpi/types";
 import { useWorkforce } from "./store";
+import { useLocationOptions } from "./useWorkAreas";
 import { Field, Toggle, areaCls, btnGhost, btnPrimary, cap, inputCls, lower, toLocalInput, useTerms } from "./ui";
 
 const iso = (d: Date) => toLocalInput(d.toISOString());
@@ -17,7 +18,8 @@ const initial = () => {
 
 /** Assign a new task to a supervisor. Task types pre-fill unit, target, review rules and checklist. */
 const TaskSheet: React.FC<{ open: boolean; onClose: () => void; presetSupervisor?: string }> = ({ open, onClose, presetSupervisor }) => {
-  const { supervisors, locations, workers, templates, config, addTask } = useWorkforce();
+  const { supervisors, workers, templates, config, addTask, linkLocations } = useWorkforce();
+  const { mine, others, toLink } = useLocationOptions();
   const T = useTerms();
   const [f, setF] = useState(initial);
   const [touched, setTouched] = useState(false);
@@ -52,6 +54,7 @@ const TaskSheet: React.FC<{ open: boolean; onClose: () => void; presetSupervisor
   const submit = () => {
     setTouched(true);
     if (!valid) return;
+    linkLocations(toLink([f.locationId]));
     const t = addTask({
       title: f.title.trim(), description: f.description.trim(), templateId: f.templateId || undefined, locationId: f.locationId,
       supervisorId: f.supervisorId, workerIds: f.workerIds, unit: f.unit.trim(), targetQuantity: Number(f.target), priority: f.priority,
@@ -91,8 +94,10 @@ const TaskSheet: React.FC<{ open: boolean; onClose: () => void; presetSupervisor
             <Field label={cap(T.location)} required>
               <select className={`${inputCls} ${bad("location") || ""}`} value={f.locationId} onChange={set("locationId")}>
                 <option value="">Select…</option>
-                {locations.filter((l) => l.status === "active").map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
+                {mine.length > 0 && <optgroup label="In this workspace">{mine.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>}
+                {others.length > 0 && <optgroup label="Other work areas">{others.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</optgroup>}
               </select>
+              {mine.length + others.length === 0 && <span className="text-[11px] text-amber-600">No {lower(T.locations)} yet. Add one in Setup → {cap(T.locations)}.</span>}
             </Field>
             <Field label="Target quantity" required><input type="number" min={0} className={`${inputCls} ${bad("target") || ""}`} value={f.target} onChange={set("target")} /></Field>
             <Field label="Unit of measure" required hint="Output is compared per unit, never mixed across units">

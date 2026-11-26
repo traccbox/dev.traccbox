@@ -4,6 +4,7 @@ import { enabledWeightTotal, normalizeWeights } from "@/api/supervisor-kpi/kpi";
 import { uid } from "@/api/supervisor-kpi/presets";
 import type { KpiMetricConfig, ReportAnswer, ReportField, ReportFieldType } from "@/api/supervisor-kpi/types";
 import { useWorkforce } from "./store";
+import { useConfirm } from "./Confirm";
 import { FieldInput } from "./ReportForm";
 import { Field, Panel, Pill, Toggle, WEEKDAY_NAMES, btnGhost, btnPrimary, inputCls, lower, useTerms } from "./ui";
 
@@ -15,6 +16,7 @@ const FIELD_TYPES: [ReportFieldType, string][] = [
 export const ReportBuilder: React.FC = () => {
   const { config, updateConfig } = useWorkforce();
   const T = useTerms();
+  const confirm = useConfirm();
   const r = config.report;
   const [preview, setPreview] = useState<Record<string, ReportAnswer | undefined>>({});
   const setReport = (patch: Partial<typeof r>) => updateConfig((c) => ({ ...c, report: { ...c.report, ...patch } }));
@@ -26,9 +28,17 @@ export const ReportBuilder: React.FC = () => {
     [next[i], next[j]] = [next[j], next[i]];
     setReport({ fields: next });
   };
-  const remove = (f: ReportField) => {
-    const linked = config.kpi.filter((m) => m.fieldId === f.id);
-    if (linked.length && !window.confirm(`“${f.label}” feeds the scorecard metric “${linked[0].label}”. Removing the question removes that metric too. Continue?`)) return;
+  const remove = async (f: ReportField) => {
+    const linked = config.kpi.find((m) => m.fieldId === f.id);
+    const ok = await confirm({
+      title: `Remove “${f.label}”?`,
+      message: linked
+        ? `This question feeds the scorecard metric “${linked.label}”. That metric is removed too, and your weights will need rebalancing.`
+        : "It will no longer be asked, and past answers to it will not be listed.",
+      confirmLabel: "Remove question",
+      tone: "danger",
+    });
+    if (!ok) return;
     updateConfig((c) => ({ ...c, report: { ...c.report, fields: c.report.fields.filter((x) => x.id !== f.id) }, kpi: c.kpi.filter((m) => m.fieldId !== f.id) }));
   };
 
@@ -93,6 +103,7 @@ export const ReportBuilder: React.FC = () => {
 
 export const ScorecardBuilder: React.FC = () => {
   const { config, updateConfig } = useWorkforce();
+  const confirm = useConfirm();
   const metrics = config.kpi;
   const total = enabledWeightTotal(metrics);
   const linkable = config.report.fields.filter((f) => (f.type === "rating" || f.type === "yesno") && !metrics.some((m) => m.fieldId === f.id));
@@ -135,7 +146,7 @@ export const ScorecardBuilder: React.FC = () => {
                 <p className="text-xs text-gray-500">{m.description}</p>
               </div>
               <div className="relative"><input type="number" min={0} max={100} disabled={!m.enabled} className={`${inputCls} pr-6`} value={m.weight} onChange={(e) => patch(m.id, { weight: Math.max(0, Math.min(100, Number(e.target.value))) })} /><span className="pointer-events-none absolute right-2.5 top-2 text-xs text-gray-400">%</span></div>
-              {m.source !== "system" ? <button className={btnGhost} onClick={() => setMetrics((ms) => ms.filter((x) => x.id !== m.id))}><Trash2 className="h-4 w-4 text-red-500" /></button> : <span />}
+              {m.source !== "system" ? <button className={btnGhost} onClick={async () => (await confirm({ title: `Delete the metric “${m.label}”?`, message: "It stops counting toward scores. Rebalance the remaining weights afterwards.", confirmLabel: "Delete metric", tone: "danger" })) && setMetrics((ms) => ms.filter((x) => x.id !== m.id))}><Trash2 className="h-4 w-4 text-red-500" /></button> : <span />}
             </li>
           ))}
         </ul>

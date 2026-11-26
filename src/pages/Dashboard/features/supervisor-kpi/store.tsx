@@ -2,15 +2,17 @@ import React, { createContext, useCallback, useContext, useEffect, useMemo, useS
 import { currentPeriod } from "@/api/supervisor-kpi/dates";
 import { getSupervisorKpi } from "@/api/supervisor-kpi/kpi";
 import { calculateBonus } from "@/api/supervisor-kpi/payroll";
+import { buildSampleData, emptyWorkspaceData, uid } from "@/api/supervisor-kpi/presets";
 import {
-  buildIndustryConfig,
-  buildSampleData,
-  emptyWorkspace,
-  uid,
-} from "@/api/supervisor-kpi/presets";
+  addWorkspace,
+  createWorkspace as buildWorkspace,
+  loadRoot,
+  removeWorkspace,
+  syncWorkAreaLocations,
+  type NewWorkspaceInput,
+} from "@/api/supervisor-kpi/workspaces";
 import type {
   DailyReport,
-  IndustryKey,
   OperationalTask,
   PayItem,
   Supervisor,
@@ -21,31 +23,31 @@ import type {
   TaskTemplate,
   WorkLocation,
   Worker,
+  Workspace,
   WorkspaceConfig,
-  WorkspaceData,
+  WorkspaceRoot,
 } from "@/api/supervisor-kpi/types";
 
 /**
- * Workspace store.
+ * Workspace store. A company can run several independent workspaces (one per
+ * business line / industry); every action below applies to the active one.
  *
- * Until the backend exists this persists to localStorage. Every action maps to
- * one API call documented in docs/workforce-supervisor-api.md, so swapping the
- * persistence layer for HTTP does not change any screen.
+ * Until the backend exists this persists to localStorage. Each action maps to
+ * one future API call, so swapping persistence for HTTP changes no screen.
  */
-const STORAGE_KEY = "workforce-supervisor:v2";
+const STORAGE_KEY = "workforce-supervisor:v3";
+const LEGACY_KEY = "workforce-supervisor:v2";
 
-const load = (): WorkspaceData => {
+const load = (): WorkspaceRoot => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw) as WorkspaceData;
-      if (parsed?.config?.terms && Array.isArray(parsed.supervisors)) return parsed;
-    }
+    return loadRoot(localStorage.getItem(STORAGE_KEY), localStorage.getItem(LEGACY_KEY));
   } catch {
-    /* corrupt or unavailable storage → start fresh */
+    return { activeId: null, workspaces: [] };
   }
-  return emptyWorkspace();
 };
+
+/** Stand-in while no workspace exists (only the onboarding screen renders then). */
+const NONE: Workspace = { ...emptyWorkspaceData(), id: "", name: "", createdAt: "" };
 
 export interface NewSupervisorInput {
   name: string;
@@ -78,17 +80,22 @@ export interface NewTaskInput {
 
 type NewReportInput = Omit<DailyReport, "id" | "submittedAt" | "reviewStatus" | "source">;
 
-interface Store extends WorkspaceData {
+interface Store extends Workspace {
+  workspaces: Workspace[];
   period: string;
   setPeriod: (p: string) => void;
   kpiFor: (supervisorId: string, period?: string) => SupervisorKpiResult;
 
-  completeSetup: (o: { industry: IndustryKey; currency: string; withSample: boolean }) => void;
-  applyIndustry: (key: IndustryKey, scope: "wording" | "everything") => void;
+  createWorkspace: (input: NewWorkspaceInput) => void;
+  switchWorkspace: (id: string) => void;
+  renameWorkspace: (id: string, name: string) => void;
+  deleteWorkspace: (id: string) => void;
+  reloadSampleData: () => void;
   updateConfig: (fn: (c: WorkspaceConfig) => WorkspaceConfig) => void;
-  resetWorkspace: () => void;
 
-  saveLocation: (l: Partial<WorkLocation> & { name: string }) => void;
+  linkLocations: (locations: WorkLocation[]) => void;
+  unlinkLocation: (id: string) => void;
+  syncWorkAreas: (fresh: WorkLocation[], complete: boolean) => void;
   saveTemplate: (t: Partial<TaskTemplate> & { name: string; unit: string }) => void;
   removeTemplate: (id: string) => void;
 
@@ -124,23 +131,37 @@ interface Store extends WorkspaceData {
 const Ctx = createContext<Store | null>(null);
 
 export const WorkforceProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [data, setData] = useState<WorkspaceData>(load);
+  const [root, setRoot] = useState<WorkspaceRoot>(load);
+  const data = root.workspaces.find((w) => w.id === root.activeId) ?? NONE;
   const [period, setPeriod] = useState(currentPeriod());
 
   useEffect(() => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(root));
     } catch {
       /* storage full / blocked — the session still works */
     }
-  }, [data]);
+  }, [root]);
 
-  const patch = useCallback((fn: (d: WorkspaceData) => Partial<WorkspaceData>) => setData((d) => ({ ...d, ...fn(d) })), []);
+  /** Apply a change to the active workspace only. */
+  const patch = useCallback(
+    (fn: (d: Workspace) => Partial<Workspace>) =>
+      setRoot((r) => ({
+        ...r,
+        workspaces: r.workspaces.map((w) => (w.id === r.activeId ? { ...w, ...fn(w) } : w)),
+      })),
+    [],
+  );
+  // Stable identity: it is used inside an effect that watches the work-area query.
+  const syncWorkAreas = useCallback(
+    (fresh: WorkLocation[], complete: boolean) => setRoot((r) => syncWorkAreaLocations(r, fresh, complete)),
+    [],
+  );
   const mapTask = (id: string, fn: (t: OperationalTask) => OperationalTask) =>
     patch((d) => ({ tasks: d.tasks.map((t) => (t.id === id ? fn(t) : t)) }));
 
   const kpiWith = useCallback(
-    (d: WorkspaceData, supervisorId: string, p: string) =>
+    (d: Workspace, supervisorId: string, p: string) =>
       getSupervisorKpi({
         supervisorId, period: p, tasks: d.tasks, reports: d.reports, manualScores: d.manualScores,
         metrics: d.config.kpi, reportTemplate: d.config.report,
@@ -151,42 +172,42 @@ export const WorkforceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
   const store = useMemo<Store>(() => {
     const kpiFor = (supervisorId: string, p = period) => kpiWith(data, supervisorId, p);
 
-    const pricePayroll = (d: WorkspaceData, rec: SupervisorPayrollRecord) => {
+    const pricePayroll = (d: Workspace, rec: SupervisorPayrollRecord) => {
       const score = kpiWith(d, rec.supervisorId, rec.period).score;
       return { kpiScore: score, bonus: calculateBonus(score, rec.maxBonus, d.config.pay) };
     };
 
     return {
       ...data,
+      workspaces: root.workspaces,
       period,
       setPeriod,
       kpiFor,
 
-      completeSetup: ({ industry, currency, withSample }) => {
-        const { config, templates } = buildIndustryConfig(industry, currency);
-        const sample = withSample ? buildSampleData(industry, config, templates) : null;
-        setData({ ...emptyWorkspace(), setupDone: true, config, templates, ...(sample ?? {}) });
+      createWorkspace: (input) => {
+        const ws = buildWorkspace(input);
+        setRoot((r) => addWorkspace(r, ws));
       },
-      applyIndustry: (key, scope) =>
-        patch((d) => {
-          const { config, templates } = buildIndustryConfig(key, d.config.currency.code);
-          if (scope === "wording") {
-            return { config: { ...d.config, industry: key, terms: config.terms, units: config.units } };
-          }
-          return {
-            config: { ...config, permissions: d.config.permissions, pay: d.config.pay },
-            templates,
-          };
-        }),
+      switchWorkspace: (id) => setRoot((r) => ({ ...r, activeId: id })),
+      renameWorkspace: (id, name) =>
+        setRoot((r) => ({ ...r, workspaces: r.workspaces.map((w) => (w.id === id ? { ...w, name } : w)) })),
+      deleteWorkspace: (id) => setRoot((r) => removeWorkspace(r, id)),
+      reloadSampleData: () =>
+        patch((d) => ({
+          ...buildSampleData(d.config.industry, d.config, d.templates),
+          manualScores: [],
+          payroll: [],
+        })),
       updateConfig: (fn) => patch((d) => ({ config: fn(d.config) })),
-      resetWorkspace: () => setData(emptyWorkspace()),
 
-      saveLocation: (l) =>
-        patch((d) =>
-          l.id
-            ? { locations: d.locations.map((x) => (x.id === l.id ? { ...x, ...l } : x)) }
-            : { locations: [...d.locations, { id: uid("loc"), status: "active", ...l } as WorkLocation] },
-        ),
+      linkLocations: (incoming) =>
+        patch((d) => {
+          const fresh = incoming.filter((l) => !d.locations.some((x) => x.id === l.id));
+          return fresh.length ? { locations: [...d.locations, ...fresh] } : {};
+        }),
+      unlinkLocation: (id) =>
+        patch((d) => ({ locations: d.locations.filter((l) => l.id !== id) })),
+      syncWorkAreas,
       saveTemplate: (tpl) =>
         patch((d) =>
           tpl.id
@@ -345,7 +366,7 @@ export const WorkforceProvider: React.FC<{ children: React.ReactNode }> = ({ chi
           ),
         })),
     };
-  }, [data, period, patch, kpiWith]);
+  }, [data, root.workspaces, period, patch, kpiWith, syncWorkAreas]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 };

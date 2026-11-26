@@ -3,10 +3,12 @@ import { toast } from "sonner";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { planningScore } from "@/api/supervisor-kpi/kpi";
 import { useWorkforce } from "./store";
+import { useConfirm } from "./Confirm";
 import { Field, Panel, PriorityPill, Pill, ProgressBar, TaskStatusPill, areaCls, btnDanger, btnGhost, btnPrimary, fmtDateTime, inputCls, lower, useTerms } from "./ui";
 
 const TaskDetail: React.FC<{ taskId: string | null; onClose: () => void }> = ({ taskId, onClose }) => {
   const w = useWorkforce();
+  const confirm = useConfirm();
   const T = useTerms();
   const task = w.tasks.find((t) => t.id === taskId);
   const [inc, setInc] = useState("");
@@ -105,7 +107,7 @@ const TaskDetail: React.FC<{ taskId: string | null; onClose: () => void }> = ({ 
             {working && <button className={btnGhost} onClick={() => w.setTaskStatus(task.id, "on_hold")}>Put on hold</button>}
             {task.status === "on_hold" && <button className={btnPrimary} onClick={() => w.setTaskStatus(task.id, "in_progress")}>Resume</button>}
             {["completed", "cancelled"].includes(task.status) && <button className={btnGhost} onClick={() => w.setTaskStatus(task.id, "in_progress")}>Reopen</button>}
-            {!["completed", "cancelled"].includes(task.status) && <button className={btnDanger} onClick={() => window.confirm("Cancel this task? It will no longer count toward KPIs.") && w.setTaskStatus(task.id, "cancelled")}>Cancel {lower(T.task)}</button>}
+            {!["completed", "cancelled"].includes(task.status) && <button className={btnDanger} onClick={async () => (await confirm({ title: `Cancel ${task.code}?`, message: "It stays in the history but no longer counts toward KPIs. You can reopen it later.", confirmLabel: `Cancel ${lower(T.task)}`, tone: "danger" })) && w.setTaskStatus(task.id, "cancelled")}>Cancel {lower(T.task)}</button>}
           </div>
 
           <Panel title={`History (${task.progress.length})`} bodyClassName="p-0">

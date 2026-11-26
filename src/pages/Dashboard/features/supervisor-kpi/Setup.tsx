@@ -1,25 +1,34 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { Plus, Trash2, X } from "lucide-react";
-import { INDUSTRY_PRESETS } from "@/api/supervisor-kpi/presets";
-import type { BonusMode, IndustryKey, Terminology, WorkLocation, TaskTemplate } from "@/api/supervisor-kpi/types";
+import { getPreset } from "@/api/supervisor-kpi/presets";
+import { isNameTaken, locationInUse } from "@/api/supervisor-kpi/workspaces";
+import type { BonusMode, Terminology, WorkLocation, TaskTemplate } from "@/api/supervisor-kpi/types";
 import { useWorkforce } from "./store";
+import { useConfirm } from "./Confirm";
+import { useLocationOptions } from "./useWorkAreas";
+import LocationPicker from "./LocationPicker";
+import CreateWorkArea from "./CreateWorkArea";
 import { CURRENCIES } from "./Onboarding";
 import { ReportBuilder, ScorecardBuilder } from "./SetupBuilders";
-import { Empty, Field, Panel, Pill, Toggle, areaCls, btnDanger, btnGhost, btnPrimary, cap, inputCls, lower, useTerms } from "./ui";
+import { BASE, Empty, Field, Panel, Pill, Toggle, areaCls, btnDanger, btnGhost, btnPrimary, cap, inputCls, lower, useTerms } from "./ui";
 
 const TABS = [
-  ["business", "Business & wording"], ["locations", "Locations"], ["types", "Task types"],
+  ["business", "Workspace & wording"], ["locations", "Locations"], ["types", "Task types"],
   ["report", "Daily report form"], ["scorecard", "Scorecard"], ["pay", "Pay & access"], ["data", "Data"],
 ] as const;
 
 const Setup: React.FC = () => {
-  const [tab, setTab] = useState<(typeof TABS)[number][0]>("business");
+  const [params, setParams] = useSearchParams();
+  const T = useTerms();
+  const tab = TABS.find(([k]) => k === params.get("tab"))?.[0] ?? "business";
+  const setTab = (k: string) => setParams({ tab: k }, { replace: true });
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-1">
         {TABS.map(([k, l]) => (
-          <button key={k} onClick={() => setTab(k)} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${tab === k ? "bg-blue-50 text-[#1658E5]" : "text-gray-600 hover:bg-gray-50"}`}>{l}</button>
+          <button key={k} onClick={() => setTab(k)} className={`rounded-lg px-3 py-1.5 text-sm font-medium ${tab === k ? "bg-blue-50 text-[#1658E5]" : "text-gray-600 hover:bg-gray-50"}`}>{k === "locations" ? cap(T.locations) : l}</button>
         ))}
       </div>
       {tab === "business" && <Business />}
@@ -39,29 +48,32 @@ const TERM_ROWS: [keyof Terminology, keyof Terminology, string][] = [
 ];
 
 const Business: React.FC = () => {
-  const { config, updateConfig, applyIndustry } = useWorkforce();
-  const [pick, setPick] = useState<IndustryKey | null>(null);
+  const { id, name, workspaces, config, updateConfig, renameWorkspace } = useWorkforce();
+  const nav = useNavigate();
   const [unit, setUnit] = useState("");
+  const [draft, setDraft] = useState(name);
+  useEffect(() => setDraft(name), [name, id]);
   const setTerm = (k: keyof Terminology, v: string) => updateConfig((c) => ({ ...c, terms: { ...c.terms, [k]: v } }));
+  const nameError = !draft.trim() ? "Name can’t be empty" : isNameTaken(draft, workspaces, id) ? "Another workspace uses this name" : "";
 
   return (
     <div className="space-y-5">
-      <Panel title="Industry template" subtitle={`Currently: ${INDUSTRY_PRESETS.find((p) => p.key === config.industry)?.label}`}>
-        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {INDUSTRY_PRESETS.map((p) => (
-            <button key={p.key} onClick={() => setPick(p.key === pick ? null : p.key)} className={`rounded-xl border p-3 text-left text-sm ${pick === p.key ? "border-[#1658E5] bg-blue-50/50" : "border-gray-200 hover:bg-gray-50"}`}>
-              <div className="font-medium text-gray-900">{p.label}{p.key === config.industry && <span className="ml-2 text-xs text-[#1658E5]">current</span>}</div>
-              <div className="text-xs text-gray-500">{p.blurb}</div>
-            </button>
-          ))}
+      <Panel
+        title="This workspace"
+        subtitle={`Industry: ${getPreset(config.industry).label}`}
+        actions={<button className={btnPrimary} onClick={() => nav(`${BASE}/workspaces/new`)}><Plus className="h-4 w-4" /> Add another industry</button>}
+      >
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label="Workspace name" className="w-full max-w-sm">
+            <input className={`${inputCls} ${nameError ? "border-red-300" : ""}`} value={draft} onChange={(e) => setDraft(e.target.value)} />
+          </Field>
+          <button className={btnGhost} disabled={!!nameError || draft.trim() === name} onClick={() => { renameWorkspace(id, draft.trim()); toast.success("Workspace renamed"); }}>Rename</button>
         </div>
-        {pick && (
-          <div className="mt-4 flex flex-wrap items-center gap-2 rounded-xl bg-amber-50 p-3 text-xs text-amber-900">
-            <span className="flex-1">Existing {lower(config.terms.tasks)}, reports and people are never deleted.</span>
-            <button className={btnGhost} onClick={() => { applyIndustry(pick, "wording"); setPick(null); toast.success("Wording and units updated"); }}>Wording &amp; units only</button>
-            <button className={btnPrimary} onClick={() => { if (window.confirm("Replace the report form, scorecard and task types with this template? Old report answers will no longer be listed.")) { applyIndustry(pick, "everything"); setPick(null); toast.success("Template applied"); } }}>Replace everything</button>
-          </div>
-        )}
+        {nameError && <p className="mt-1 text-[11px] text-red-600">{nameError}</p>}
+        <p className="mt-3 text-xs text-gray-500">
+          Running another line of business? Add it as a separate workspace — this one stays as it is.{" "}
+          <Link to={`${BASE}/workspaces`} className="font-medium text-[#1658E5]">See all workspaces ({workspaces.length})</Link>
+        </p>
       </Panel>
 
       <Panel title="Your wording" subtitle="Used across the dashboard and the mobile app">
@@ -99,43 +111,83 @@ const Business: React.FC = () => {
 };
 
 const Locations: React.FC = () => {
-  const { locations, saveLocation } = useWorkforce();
+  const ws = useWorkforce();
   const T = useTerms();
-  const [edit, setEdit] = useState<Partial<WorkLocation> | null>(null);
-  const radius = edit?.geofenceRadius;
+  const confirm = useConfirm();
+  const { toLink, isError, retry, canCreate } = useLocationOptions();
+  const [adding, setAdding] = useState(false);
+  const [picked, setPicked] = useState<string[]>([]);
+  const [creating, setCreating] = useState(false);
+
+  const remove = async (l: WorkLocation) => {
+    const use = locationInUse(ws, l.id);
+    if (use) {
+      await confirm({
+        tone: "info",
+        title: `${l.name} is still in use`,
+        message: `It has ${use.supervisors} ${lower(use.supervisors === 1 ? T.supervisor : T.supervisors)} assigned and ${use.tasks} open ${lower(use.tasks === 1 ? T.task : T.tasks)}. Move or finish those first.`,
+      });
+      return;
+    }
+    const ok = await confirm({
+      title: `Remove ${l.name} from this workspace?`,
+      message: l.source === "work_area" ? "The work area itself is not deleted. It stays in the Work Areas module." : "This sample entry will be removed.",
+      confirmLabel: "Remove",
+      tone: "danger",
+    });
+    if (ok) ws.unlinkLocation(l.id);
+  };
 
   return (
-    <Panel title={cap(T.locations)} subtitle={`Where ${lower(T.supervisors)} operate. An optional geofence supports GPS-verified attendance later.`} actions={<button className={btnPrimary} onClick={() => setEdit({ name: "" })}><Plus className="h-4 w-4" /> Add {lower(T.location)}</button>} bodyClassName="p-0">
-      {edit && (
-        <div className="grid gap-3 border-b border-gray-100 bg-gray-50/60 p-4 sm:grid-cols-4">
-          <Field label="Name" required className="sm:col-span-2"><input className={inputCls} value={edit.name ?? ""} onChange={(e) => setEdit({ ...edit, name: e.target.value })} /></Field>
-          <Field label="Code"><input className={inputCls} value={edit.code ?? ""} onChange={(e) => setEdit({ ...edit, code: e.target.value })} /></Field>
-          <Field label="Geofence radius (m)"><input type="number" min={0} className={inputCls} value={radius ?? ""} onChange={(e) => setEdit({ ...edit, geofenceRadius: e.target.value ? Number(e.target.value) : undefined })} /></Field>
-          <Field label="Address" className="sm:col-span-2"><input className={inputCls} value={edit.address ?? ""} onChange={(e) => setEdit({ ...edit, address: e.target.value })} /></Field>
-          <Field label="Latitude"><input type="number" step="any" className={inputCls} value={edit.latitude ?? ""} onChange={(e) => setEdit({ ...edit, latitude: e.target.value ? Number(e.target.value) : undefined })} /></Field>
-          <Field label="Longitude"><input type="number" step="any" className={inputCls} value={edit.longitude ?? ""} onChange={(e) => setEdit({ ...edit, longitude: e.target.value ? Number(e.target.value) : undefined })} /></Field>
-          <div className="flex gap-2 sm:col-span-4"><button className={btnPrimary} disabled={!edit.name?.trim()} onClick={() => { saveLocation({ ...edit, name: edit.name!.trim() }); setEdit(null); }}>Save</button><button className={btnGhost} onClick={() => setEdit(null)}>Cancel</button></div>
-        </div>
-      )}
-      {locations.length === 0 ? <Empty title={`No ${lower(T.locations)} yet`} /> : (
-        <ul className="divide-y divide-gray-50">
-          {locations.map((l) => (
-            <li key={l.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
-              <div><span className={`font-medium ${l.status === "archived" ? "text-gray-400" : "text-gray-900"}`}>{l.name}</span> {l.code && <span className="text-xs text-gray-400">{l.code}</span>} {l.status === "archived" && <Pill>Archived</Pill>}
-                <div className="text-xs text-gray-500">{[l.address, l.geofenceRadius ? `${l.geofenceRadius} m geofence` : ""].filter(Boolean).join(" · ")}</div></div>
-              <div className="flex gap-2"><button className="text-xs font-medium text-[#1658E5]" onClick={() => setEdit(l)}>Edit</button>
-                <button className="text-xs font-medium text-gray-500" onClick={() => saveLocation({ id: l.id, name: l.name, status: l.status === "active" ? "archived" : "active" })}>{l.status === "active" ? "Archive" : "Restore"}</button></div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </Panel>
+    <>
+      <Panel
+        title={cap(T.locations)}
+        subtitle={`Taken from your Work Areas, so geofences and attendance stay in one place.`}
+        actions={
+          <>
+            <Link to="/dashboard/work-areas" className="text-xs font-medium text-[#1658E5]">Manage in Work Areas</Link>
+            <button className={btnGhost} onClick={() => { setAdding((a) => !a); setPicked([]); }}>Add existing</button>
+            {canCreate && <button className={btnPrimary} onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> New {lower(T.location)}</button>}
+          </>
+        }
+        bodyClassName="p-0"
+      >
+        {adding && (
+          <div className="space-y-3 border-b border-gray-100 bg-gray-50/60 p-4">
+            <div className="max-w-xl bg-white"><LocationPicker othersOnly selected={picked} onChange={setPicked} onCreate={() => setCreating(true)} /></div>
+            <div className="flex gap-2">
+              <button className={btnPrimary} disabled={!picked.length} onClick={() => { ws.linkLocations(toLink(picked)); toast.success(`${picked.length} added`); setPicked([]); setAdding(false); }}>Add selected{picked.length ? ` (${picked.length})` : ""}</button>
+              <button className={btnGhost} onClick={() => setAdding(false)}>Cancel</button>
+            </div>
+          </div>
+        )}
+        {isError && <p className="border-b border-gray-100 bg-red-50 px-4 py-2 text-xs text-red-700">Couldn’t reach Work Areas, so details may be out of date. <button className="font-semibold underline" onClick={retry}>Try again</button></p>}
+        {ws.locations.length === 0 ? (
+          <Empty title={`No ${lower(T.locations)} yet`} message="Add an existing work area, or create a new one." action={canCreate ? { label: `New ${lower(T.location)}`, onClick: () => setCreating(true) } : undefined} />
+        ) : (
+          <ul className="divide-y divide-gray-50">
+            {ws.locations.map((l) => (
+              <li key={l.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
+                <div>
+                  <span className={`font-medium ${l.status === "archived" ? "text-gray-400" : "text-gray-900"}`}>{l.name}</span>{" "}
+                  {l.source === "work_area" ? <Pill tone="blue">Work area</Pill> : <Pill>Sample</Pill>} {l.status === "archived" && <Pill tone="amber">Inactive</Pill>}
+                  <div className="text-xs text-gray-500">{[l.address, l.geofenceRadius ? `${Math.round(l.geofenceRadius)} m geofence` : ""].filter(Boolean).join(" · ")}</div>
+                </div>
+                <button className="text-xs font-medium text-red-500" onClick={() => remove(l)}>Remove</button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+      {creating && <CreateWorkArea onDone={() => { setCreating(false); setAdding(false); }} />}
+    </>
   );
 };
 
 const TaskTypes: React.FC = () => {
   const { templates, saveTemplate, removeTemplate, config } = useWorkforce();
   const T = useTerms();
+  const confirm = useConfirm();
   const [edit, setEdit] = useState<(Partial<TaskTemplate> & { checklistText?: string; target?: string }) | null>(null);
   const open = (t?: TaskTemplate) => setEdit(t ? { ...t, checklistText: t.checklist.join("\n"), target: t.defaultTarget ? String(t.defaultTarget) : "" } : { name: "", unit: config.units[0] ?? "", requiresReview: true, requiresEvidence: false, checklistText: "", target: "" });
 
@@ -159,7 +211,7 @@ const TaskTypes: React.FC = () => {
           {templates.map((t) => (
             <li key={t.id} className="flex items-center justify-between gap-3 px-4 py-3 text-sm">
               <div><div className="font-medium text-gray-900">{t.name}</div><div className="text-xs text-gray-500">{t.defaultTarget ? `${t.defaultTarget} ` : ""}{t.unit} · {t.requiresReview ? "reviewed" : "no review"}{t.requiresEvidence ? " · photo evidence" : ""}{t.checklist.length ? ` · ${t.checklist.length} checklist items` : ""}</div></div>
-              <div className="flex gap-3"><button className="text-xs font-medium text-[#1658E5]" onClick={() => open(t)}>Edit</button><button className="text-xs font-medium text-red-500" onClick={() => window.confirm(`Delete “${t.name}”? Existing ${lower(T.tasks)} keep their details.`) && removeTemplate(t.id)}>Delete</button></div>
+              <div className="flex gap-3"><button className="text-xs font-medium text-[#1658E5]" onClick={() => open(t)}>Edit</button><button className="text-xs font-medium text-red-500" onClick={async () => (await confirm({ title: `Delete “${t.name}”?`, message: `Existing ${lower(T.tasks)} keep their details.`, confirmLabel: "Delete", tone: "danger" })) && removeTemplate(t.id)}>Delete</button></div>
             </li>
           ))}
         </ul>
@@ -213,12 +265,35 @@ const PayAccess: React.FC = () => {
 };
 
 const DataTab: React.FC = () => {
-  const { config, completeSetup, resetWorkspace } = useWorkforce();
+  const { id, name, reloadSampleData, deleteWorkspace } = useWorkforce();
+  const confirm = useConfirm();
+  const nav = useNavigate();
+
+  const reload = async () => {
+    const ok = await confirm({
+      title: "Replace this workspace with sample data?",
+      message: <>Supervisors, teams, {" "}tasks, reports, scores and payroll in <strong>{name}</strong> are replaced. Your setup and other workspaces are not touched.</>,
+      confirmLabel: "Replace data",
+      tone: "danger",
+    });
+    if (ok) { reloadSampleData(); toast.success("Sample data loaded"); }
+  };
+  const remove = async () => {
+    const ok = await confirm({
+      title: `Delete ${name}?`,
+      message: "This permanently deletes the workspace with its setup, people, tasks, reports and payroll. Other workspaces and your Work Areas are not affected.",
+      confirmLabel: "Delete workspace",
+      tone: "danger",
+      requireText: name,
+    });
+    if (ok) { nav(BASE, { replace: true }); deleteWorkspace(id); toast.success(`${name} deleted`); }
+  };
+
   return (
     <Panel title="Workspace data" subtitle="Until the backend is connected, data is stored in this browser only." bodyClassName="space-y-3 p-4">
       <div className="flex flex-wrap gap-2">
-        <button className={btnGhost} onClick={() => window.confirm("Replace everything with fresh sample data for your industry?") && completeSetup({ industry: config.industry, currency: config.currency.code, withSample: true })}>Reload sample data</button>
-        <button className={btnDanger} onClick={() => window.confirm("Delete all supervisors, tasks, reports and payroll and return to setup?") && resetWorkspace()}>Erase everything &amp; start over</button>
+        <button className={btnGhost} onClick={reload}>Load sample data</button>
+        <button className={btnDanger} onClick={remove}>Delete this workspace</button>
       </div>
     </Panel>
   );

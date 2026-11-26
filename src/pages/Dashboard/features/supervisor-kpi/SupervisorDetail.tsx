@@ -5,6 +5,7 @@ import { ArrowLeft, Mail, MapPin, Phone } from "lucide-react";
 import { periodLabel } from "@/api/supervisor-kpi/dates";
 import { netPay } from "@/api/supervisor-kpi/payroll";
 import { useWorkforce } from "./store";
+import { useConfirm } from "./Confirm";
 import KpiBreakdown from "./KpiBreakdown";
 import SupervisorSheet from "./SupervisorSheet";
 import {
@@ -19,6 +20,7 @@ const SupervisorDetail: React.FC = () => {
   const w = useWorkforce();
   const T = useTerms();
   const money = useMoney();
+  const confirm = useConfirm();
   const [tab, setTab] = useState<(typeof TABS)[number]>("performance");
   const [editing, setEditing] = useState(false);
   const [wName, setWName] = useState("");
@@ -71,7 +73,7 @@ const SupervisorDetail: React.FC = () => {
                 <button className={btnGhost} onClick={() => setStatus("active")} title="Demo helper until the backend activates accounts">Mark as joined</button>
               </>
             )}
-            {sup.status === "active" && <button className={btnDanger} onClick={() => window.confirm(`Suspend ${sup.name}? They will lose mobile app access.`) && setStatus("suspended")}>Suspend</button>}
+            {sup.status === "active" && <button className={btnDanger} onClick={async () => (await confirm({ title: `Suspend ${sup.name}?`, message: "They lose access to the mobile app until you restore it. Their records are kept.", confirmLabel: "Suspend", tone: "danger" })) && setStatus("suspended")}>Suspend</button>}
             {sup.status === "suspended" && <button className={btnPrimary} onClick={() => setStatus("active")}>Restore access</button>}
           </div>
         </div>
