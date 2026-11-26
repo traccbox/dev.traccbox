@@ -6,9 +6,10 @@ export interface PayoutSite {
   id: string;
   name: string;
   project?: string;
-  latitude: number;
-  longitude: number;
-  geofence_radius: number;
+  latitude?: number;
+  longitude?: number;
+  geofence_radius?: number;
+  locations?: Array<{ id?: string; name?: string; boundary?: { kind: "circle" | "polygon" | "multipolygon"; center?: [number, number]; radius?: number; points?: [number, number][]; rings?: [number, number][][] } }>;
   status?: string;
   address?: string;
 }
@@ -43,6 +44,9 @@ export interface GeoEvidence {
 export interface DailyAttendance {
   id?: string;
   worker_id: string;
+  worker_name?: string;
+  worker?: DailyWorker;
+  site_name?: string;
   site_id: string;
   date: string;
   clock_in?: GeoEvidence;
@@ -103,6 +107,16 @@ export interface ListOptions {
   payment_method?: string;
 }
 
+export interface PayoutSummary {
+  pending?: { count?: number; amount?: number };
+  approved?: { count?: number; amount?: number };
+  paid?: { count?: number; amount?: number };
+  total?: { count?: number; amount?: number };
+  by_payment_method?: Record<string, { count?: number; amount?: number }>;
+  monthly?: Array<{ month: string; count?: number; amount?: number }>;
+  [key: string]: unknown;
+}
+
 export interface LocationInput {
   latitude: number;
   longitude: number;
@@ -110,10 +124,10 @@ export interface LocationInput {
 }
 
 export interface RegisterWorkerInput {
-  staff_id?: string;
-  name: string;
-  phone: string;
-  role: string;
+  staff_id: string;
+  name?: string;
+  phone?: string;
+  role?: string;
   site_id: string;
   daily_wage: number;
   standard_hours: number;

@@ -17,13 +17,14 @@ import {
   RefreshCw,
   Eye,
 } from "lucide-react";
-import { usePayouts, useSites, useMarkPayoutPaid } from "@/api/payout/hooks";
+import { usePayouts, useMarkPayoutPaid, usePayoutSummary, useExportPayouts } from "@/api/payout/hooks";
 import type { DailyPayout } from "@/api/payout/types";
 import PayoutSlipModal from "./PayoutSlipModal";
 import MarkPaidModal from "./MarkPaidModal";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
+import SitePicker from "./SitePicker";
 
 export default function PaySlipDashboard() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -40,103 +41,44 @@ export default function PaySlipDashboard() {
   const [markPaidPayout, setMarkPaidPayout] = useState<DailyPayout | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
-  const { data: sitesData } = useSites();
-  const sites = sitesData?.data || [];
 
-  const { data: payoutsData, isLoading, refetch } = usePayouts({
+  const dateRange = (() => {
+    if (customDate) return { from: customDate, to: customDate };
+    if (fromDate || toDate) return { from: fromDate || undefined, to: toDate || undefined };
+    if (quickDatePreset === "all") return {};
+    const since = new Date();
+    since.setMonth(since.getMonth() - Number(quickDatePreset));
+    return { from: since.toISOString().slice(0, 10), to: new Date().toISOString().slice(0, 10) };
+  })();
+
+  const { data: payoutsData, isLoading, isError, refetch } = usePayouts({
     search: searchQuery || undefined,
     site_id: selectedSiteId || undefined,
     status: statusFilter === "all" ? undefined : statusFilter,
+    ...dateRange,
   });
+  const { data: summary, isError: summaryError } = usePayoutSummary({ site_id: selectedSiteId || undefined, status: statusFilter === "all" ? undefined : statusFilter, ...dateRange });
+  const exportMutation = useExportPayouts();
 
   const rawPayouts = payoutsData?.data || [];
 
-  // Filter payouts by quick date preset or custom date / date range
-  const payouts = rawPayouts.filter((p) => {
-    if (!p.date) return true;
-    const pDate = new Date(p.date);
-    const now = new Date();
-
-    if (customDate) {
-      return p.date === customDate;
-    }
-    if (fromDate && toDate) {
-      return p.date >= fromDate && p.date <= toDate;
-    }
-
-    if (quickDatePreset !== "all") {
-      const monthsBack = parseInt(quickDatePreset, 10);
-      if (!isNaN(monthsBack)) {
-        const cutoff = new Date();
-        cutoff.setMonth(now.getMonth() - monthsBack);
-        return pDate >= cutoff;
-      }
-    }
-    return true;
-  });
+  const payouts = rawPayouts;
 
   // Calculate Metrics
-  const totalRecords = payouts.length;
-  const totalAmountPaid = payouts
-    .filter((p) => p.status === "paid")
-    .reduce((acc, p) => acc + (p.amount || 0), 0);
-  const totalAmountApproved = payouts
-    .filter((p) => p.status === "approved" || p.status === "paid")
-    .reduce((acc, p) => acc + (p.amount || 0), 0);
-  const pendingDisbursalCount = payouts.filter((p) => p.status === "approved").length;
-  const paidCount = payouts.filter((p) => p.status === "paid").length;
+  const totalRecords = summary?.total?.count ?? payoutsData?.total ?? payouts.length;
+  const totalAmountPaid = summary?.paid?.amount ?? 0;
+  const totalAmountApproved = (summary?.approved?.amount ?? 0) + totalAmountPaid;
+  const pendingDisbursalCount = summary?.approved?.count ?? 0;
+  const paidCount = summary?.paid?.count ?? 0;
 
   // Export Batch Release CSV / Excel
-  const handleExportCSV = () => {
-    if (payouts.length === 0) {
-      toast.error("No payout records available to export");
-      return;
-    }
-
-    const headers = [
-      "Payout Reference",
-      "Worker Name",
-      "Worker ID",
-      "Site",
-      "Work Date",
-      "Hours Worked",
-      "Daily Wage (NGN)",
-      "Payable Amount (NGN)",
-      "Payment Method",
-      "Bank Name",
-      "Account Number",
-      "Account Name",
-      "Payout Status",
-      "Payment Ref",
-    ];
-
-    const rows = payouts.map((p) => [
-      `"${p.reference}"`,
-      `"${p.worker_name || p.worker?.name || ""}"`,
-      `"${p.worker_id}"`,
-      `"${p.site_name || ""}"`,
-      `"${p.date}"`,
-      `"${p.hours_worked || 0}"`,
-      `"${p.daily_wage || 0}"`,
-      `"${p.amount || 0}"`,
-      `"${(p.payment_method || p.worker?.payment_method || "transfer").toUpperCase()}"`,
-      `"${p.bank_name || p.worker?.bank_name || ""}"`,
-      `"${p.account_number || p.worker?.account_number || ""}"`,
-      `"${p.account_name || p.worker?.account_name || p.worker_name || ""}"`,
-      `"${p.status.toUpperCase()}"`,
-      `"${p.payment_reference || ""}"`,
-    ]);
-
-    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `TraccBOX_Batch_Payslips_${new Date().toISOString().split("T")[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    toast.success("Batch payslip CSV exported successfully!");
+  const handleExportCSV = async () => {
+    try {
+      const blob = await exportMutation.mutateAsync({ ...dateRange, status: statusFilter === "all" ? undefined : statusFilter, site_id: selectedSiteId || undefined });
+      const url = URL.createObjectURL(blob); const link = document.createElement("a");
+      link.href = url; link.download = `TraccBOX_Payouts_${new Date().toISOString().slice(0,10)}.csv`; link.click(); URL.revokeObjectURL(url);
+      toast.success("Payout CSV exported.");
+    } catch { toast.error("Payout CSV export failed."); }
   };
 
   // Export Batch PDF Summary
@@ -247,18 +189,7 @@ export default function PaySlipDashboard() {
               />
             </div>
 
-            <select
-              value={selectedSiteId}
-              onChange={(e) => setSelectedSiteId(e.target.value)}
-              className="px-3.5 py-2 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
-            >
-              <option value="">All Work Areas</option>
-              {sites.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
+            <SitePicker value={selectedSiteId} onChange={setSelectedSiteId} allLabel="All Work Areas" className="px-3.5 py-2 bg-slate-50 border rounded-xl text-xs font-semibold text-slate-800" />
           </div>
 
           {/* Export Action Buttons */}
@@ -268,7 +199,7 @@ export default function PaySlipDashboard() {
               className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer border border-slate-200"
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-              <span>Export Excel / CSV</span>
+              <span>{exportMutation.isPending ? "Exporting…" : "Export CSV"}</span>
             </button>
 
             <button
@@ -349,7 +280,7 @@ export default function PaySlipDashboard() {
       <div ref={tableRef} className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="p-12 text-center text-xs text-slate-400">Loading payslip records...</div>
-        ) : payouts.length === 0 ? (
+        ) : isError || summaryError ? <div className="p-12 text-center text-red-600">Unable to load payout records or summary. Check access and refresh.</div> : payouts.length === 0 ? (
           <div className="p-12 text-center text-slate-400 space-y-2">
             <FileText className="w-10 h-10 text-slate-300 mx-auto" />
             <p className="text-sm font-semibold text-slate-700">No payslips found</p>
@@ -466,7 +397,7 @@ export default function PaySlipDashboard() {
 
                       <td className="py-3.5 px-4 text-right">
                         <div className="flex items-center justify-end gap-1.5">
-                          {p.status !== "paid" && (
+                          {p.status === "approved" && (
                             <button
                               onClick={() => setMarkPaidPayout(p)}
                               className="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg text-[11px] flex items-center gap-1 shadow-sm cursor-pointer"

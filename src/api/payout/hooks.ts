@@ -1,13 +1,20 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  useInfiniteQuery,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   approvePayout,
   calculateHaversineDistance,
   calculatePayout,
   clockIn,
   clockOut,
-  createSite,
   getAttendance,
+  getAttendanceList,
   getPayouts,
+  getPayoutSummary,
+  exportPayouts,
   getPayoutSlip,
   getSites,
   getWorker,
@@ -15,22 +22,56 @@ import {
   markPayoutPaid,
   registerWorker,
 } from "./api";
-import type {
-  CreateSiteInput,
-  ListOptions,
-  LocationInput,
-  RegisterWorkerInput,
-} from "./types";
+import api from "@/api/AxiosInstance";
+import type { ListOptions, LocationInput, RegisterWorkerInput } from "./types";
 import { toast } from "sonner";
 
 export { calculateHaversineDistance };
+
+export function useCreateSite() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: import("./types").CreateSiteInput) => {
+      const response = await api.post("/work-areas", {
+        name: payload.name,
+        description: payload.project,
+        type: "construction_site",
+        status: "active",
+        locations: [
+          {
+            name: payload.name,
+            method: "manual",
+            boundary: {
+              kind: "circle",
+              center: [payload.latitude, payload.longitude],
+              radius: payload.geofence_radius,
+            },
+            address: payload.address,
+          },
+        ],
+      });
+      return response.data?.data ?? response.data;
+    },
+    onSuccess: () => {
+      toast.success("Construction site registered");
+      queryClient.invalidateQueries({ queryKey: ["payout-sites"] });
+      queryClient.invalidateQueries({ queryKey: ["payout-sites-infinite"] });
+    },
+    onError: (err: any) =>
+      toast.error(err?.message || "Failed to create construction site"),
+  });
+}
 
 export const PAYOUT_QUERY_KEYS = {
   sites: (options?: ListOptions) => ["payout-sites", options] as const,
   workers: (options?: ListOptions) => ["payout-workers", options] as const,
   worker: (id: string) => ["payout-worker", id] as const,
-  attendance: (workerId: string, date: string) => ["payout-attendance", workerId, date] as const,
+  attendance: (workerId: string, date: string) =>
+    ["payout-attendance", workerId, date] as const,
+  attendanceList: (options?: ListOptions) =>
+    ["payout-attendance-list", options] as const,
   payouts: (options?: ListOptions) => ["payouts", options] as const,
+  summary: (options?: ListOptions) => ["payout-summary", options] as const,
   slip: (payoutId: string) => ["payout-slip", payoutId] as const,
 };
 
@@ -41,17 +82,15 @@ export function useSites(options: ListOptions = {}) {
   });
 }
 
-export function useCreateSite() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (payload: CreateSiteInput) => createSite(payload),
-    onSuccess: () => {
-      toast.success("Construction site registered successfully");
-      queryClient.invalidateQueries({ queryKey: ["payout-sites"] });
-    },
-    onError: (err: any) => {
-      toast.error(err?.message || "Failed to create construction site");
-    },
+export function useInfiniteSites() {
+  return useInfiniteQuery({
+    queryKey: ["payout-sites-infinite"],
+    initialPageParam: 1,
+    queryFn: ({ pageParam }) => getSites({ page: pageParam, limit: 25 }),
+    getNextPageParam: (lastPage) =>
+      lastPage.page * lastPage.limit < lastPage.total
+        ? lastPage.page + 1
+        : undefined,
   });
 }
 
@@ -92,6 +131,24 @@ export function useDailyAttendance(workerId: string, date: string) {
   });
 }
 
+export function useAttendanceList(options: ListOptions = {}) {
+  return useQuery({
+    queryKey: PAYOUT_QUERY_KEYS.attendanceList(options),
+    queryFn: () => getAttendanceList(options),
+  });
+}
+
+export function usePayoutSummary(options: ListOptions = {}) {
+  return useQuery({
+    queryKey: PAYOUT_QUERY_KEYS.summary(options),
+    queryFn: () => getPayoutSummary(options),
+  });
+}
+
+export function useExportPayouts() {
+  return useMutation({ mutationFn: exportPayouts });
+}
+
 export function useClockIn() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -112,6 +169,8 @@ export function useClockIn() {
       }
       queryClient.invalidateQueries({ queryKey: ["payout-attendance"] });
       queryClient.invalidateQueries({ queryKey: ["payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["payout-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["payout-attendance-list"] });
     },
     onError: (err: any) => {
       toast.error(err?.message || "Clock-in failed");
@@ -132,9 +191,12 @@ export function useClockOut() {
       location: LocationInput;
     }) => clockOut(workerId, siteId, location),
     onSuccess: (data) => {
-      toast.success(`Clock-Out recorded! Hours worked: ${data.hours_worked || 0}h`);
+      toast.success(
+        `Clock-Out recorded! Hours worked: ${data.hours_worked || 0}h`,
+      );
       queryClient.invalidateQueries({ queryKey: ["payout-attendance"] });
       queryClient.invalidateQueries({ queryKey: ["payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["payout-summary"] });
     },
     onError: (err: any) => {
       toast.error(err?.message || "Clock-out failed");
@@ -145,11 +207,20 @@ export function useClockOut() {
 export function useCalculatePayout() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ workerId, attendanceId }: { workerId: string; attendanceId: string }) =>
-      calculatePayout(workerId, attendanceId),
+    mutationFn: ({
+      workerId,
+      attendanceId,
+    }: {
+      workerId: string;
+      attendanceId: string;
+    }) => calculatePayout(workerId, attendanceId),
     onSuccess: (data) => {
-      toast.success(`Payout calculated: ₦${data.amount.toLocaleString()} (Ref: ${data.reference})`);
+      toast.success(
+        `Payout calculated: ₦${data.amount.toLocaleString()} (Ref: ${data.reference})`,
+      );
       queryClient.invalidateQueries({ queryKey: ["payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["payout-summary"] });
+      queryClient.invalidateQueries({ queryKey: ["payout-attendance-list"] });
     },
     onError: (err: any) => {
       toast.error(err?.message || "Failed to calculate payout");
@@ -171,6 +242,7 @@ export function useApprovePayout() {
     onSuccess: () => {
       toast.success("Payout approved!");
       queryClient.invalidateQueries({ queryKey: ["payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["payout-summary"] });
     },
     onError: (err: any) => {
       toast.error(err?.message || "Failed to approve payout");
@@ -181,11 +253,21 @@ export function useApprovePayout() {
 export function useMarkPayoutPaid() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ payoutId, paymentReference }: { payoutId: string; paymentReference: string }) =>
-      markPayoutPaid(payoutId, paymentReference),
+    mutationFn: ({
+      payoutId,
+      paymentReference,
+      paymentMethod,
+      note,
+    }: {
+      payoutId: string;
+      paymentReference: string;
+      paymentMethod: "cash" | "transfer";
+      note?: string;
+    }) => markPayoutPaid(payoutId, paymentMethod, paymentReference, note),
     onSuccess: (data) => {
       toast.success(`Payment confirmed! Ref: ${data.payment_reference}`);
       queryClient.invalidateQueries({ queryKey: ["payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["payout-summary"] });
     },
     onError: (err: any) => {
       toast.error(err?.message || "Failed to mark payout as paid");

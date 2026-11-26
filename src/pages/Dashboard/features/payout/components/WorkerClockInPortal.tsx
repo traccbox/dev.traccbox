@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Smartphone,
   MapPin,
@@ -18,23 +18,28 @@ import {
   calculateHaversineDistance,
   useClockIn,
   useClockOut,
+  useCalculatePayout,
   useDailyAttendance,
-  useSites,
+  useInfiniteSites,
   useWorkers,
 } from "@/api/payout/hooks";
 import { toast } from "sonner";
 import PayoutSlipModal from "./PayoutSlipModal";
 import type { DailyAttendance, DailyPayout } from "@/api/payout/types";
+import SitePicker from "./SitePicker";
 
 export default function WorkerClockInPortal() {
   const { data: workersData } = useWorkers();
-  const { data: sitesData } = useSites();
+  const sitesQuery = useInfiniteSites();
 
   const workers = workersData?.data || [];
-  const sites = sitesData?.data || [];
+  const sites = sitesQuery.data?.pages.flatMap(page => page.data) || [];
 
   const [selectedWorkerId, setSelectedWorkerId] = useState(workers[0]?.id || "TB-0001");
-  const [selectedSiteId, setSelectedSiteId] = useState(sites[0]?.id || "site-001");
+  const [selectedSiteId, setSelectedSiteId] = useState("");
+  useEffect(() => {
+    if (sites.length && !sites.some(site => site.id === selectedSiteId)) setSelectedSiteId(sites[0].id);
+  }, [sites, selectedSiteId]);
 
   const todayStr = new Date().toISOString().split("T")[0];
   const { data: attData, refetch: refetchAttendance } = useDailyAttendance(
@@ -44,6 +49,7 @@ export default function WorkerClockInPortal() {
 
   const clockInMutation = useClockIn();
   const clockOutMutation = useClockOut();
+  const calculatePayoutMutation = useCalculatePayout();
 
   // GPS state
   const [userLat, setUserLat] = useState<number>(6.6018);
@@ -117,28 +123,11 @@ export default function WorkerClockInPortal() {
       {
         onSuccess: (data) => {
           refetchAttendance();
-          // Generate quick preview payout slip
-          const hours = data.hours_worked || 7.58;
-          const wage = currentWorker.daily_wage || 7000;
-          const rate = Math.round((wage / (currentWorker.standard_hours || 8)) * 100) / 100;
-          const amount = hours >= 8 ? wage : Math.round(rate * hours);
-
-          setPreviewSlipPayout({
-            id: `pay-${Date.now()}`,
-            worker_id: currentWorker.id,
-            worker_name: currentWorker.name,
-            worker: currentWorker,
-            site_id: currentSite.id,
-            site_name: currentSite.name,
-            date: todayStr,
-            daily_wage: wage,
-            hourly_rate: rate,
-            hours_worked: hours,
-            amount,
-            status: "pending",
-            reference: `TB-PAY-${todayStr.replace(/-/g, "")}-9921`,
-            attendance: data,
-          });
+          if (data.id && data.clock_in && data.clock_out && data.clock_in.status !== "rejected" && data.clock_out.status !== "rejected") {
+            calculatePayoutMutation.mutate({ workerId: currentWorker.id, attendanceId: data.id }, { onSuccess: setPreviewSlipPayout });
+          } else {
+            toast.error("Payout requires completed attendance with verified geofence events.");
+          }
         },
       }
     );
@@ -211,24 +200,20 @@ export default function WorkerClockInPortal() {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
                 Assigned Construction Site
               </label>
-              <select
+              <SitePicker
+                includeAll={false}
                 value={selectedSiteId}
-                onChange={(e) => {
-                  setSelectedSiteId(e.target.value);
-                  const s = sites.find((st) => st.id === e.target.value);
+                onChange={(siteId) => {
+                  setSelectedSiteId(siteId);
+                  const s = sites.find((st) => st.id === siteId);
                   if (s) {
-                    setUserLat(s.latitude);
-                    setUserLng(s.longitude);
+                    if (s.latitude != null) setUserLat(s.latitude);
+                    if (s.longitude != null) setUserLng(s.longitude);
                   }
                 }}
                 className="w-full px-3 py-2 bg-slate-800 border border-slate-700 rounded-xl text-xs font-bold text-white outline-none focus:border-blue-500"
-              >
-                {sites.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.geofence_radius}m radius)
-                  </option>
-                ))}
-              </select>
+                optionSuffix={s => s.geofence_radius == null ? "Geofence boundary" : `${s.geofence_radius}m radius`}
+              />
             </div>
 
             {/* Geofence Status Badge */}
@@ -414,11 +399,11 @@ export default function WorkerClockInPortal() {
                   <div className="text-3xl font-black text-white">
                     ₦
                     {hasClockedOut
-                      ? previewSlipPayout?.amount.toLocaleString() || "6,632"
+                      ? previewSlipPayout?.amount.toLocaleString() || "—"
                       : "0"}
                   </div>
                   <span className="text-xs text-slate-400 font-medium">
-                    Calculated for {attData?.hours_worked || 7.58} approved hours worked today
+                    Calculated for {attData?.hours_worked == null ? "—" : `${attData.hours_worked} approved hours`} worked today
                   </span>
                 </div>
 

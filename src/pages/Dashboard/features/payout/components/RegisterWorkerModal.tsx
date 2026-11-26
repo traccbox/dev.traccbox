@@ -11,12 +11,13 @@ import {
   Plus,
   Landmark,
 } from "lucide-react";
-import { useRegisterWorker, useSites } from "@/api/payout/hooks";
+import { useInfiniteSites, useRegisterWorker } from "@/api/payout/hooks";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { useStaffData } from "@/api/settingsApi/hooks/useStaffData";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { PaymentMethod } from "@/api/payout/types";
+import SitePicker from "./SitePicker";
 
 interface Props {
   open: boolean;
@@ -47,8 +48,8 @@ export default function RegisterWorkerModal({ open, onClose }: Props) {
     : staffResponse?.data || staffResponse?.staffs || staffResponse?.all_staffs || [];
 
   // Fetch sites (integrated work areas)
-  const { data: sitesData } = useSites();
-  const sites = sitesData?.data || [];
+  const sitesQuery = useInfiniteSites();
+  const sites = sitesQuery.data?.pages.flatMap(page => page.data) || [];
 
   const registerWorkerMutation = useRegisterWorker();
 
@@ -100,8 +101,8 @@ export default function RegisterWorkerModal({ open, onClose }: Props) {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) {
-      toast.error("Please select a staff member or enter worker details");
+    if (!selectedStaffId) {
+      toast.error("Select an existing staff member to register for today.");
       return;
     }
 
@@ -118,7 +119,7 @@ export default function RegisterWorkerModal({ open, onClose }: Props) {
 
     registerWorkerMutation.mutate(
       {
-        staff_id: selectedStaffId || undefined,
+        staff_id: selectedStaffId,
         name,
         phone: phone || "+234 800 000 0000",
         role,
@@ -270,17 +271,7 @@ export default function RegisterWorkerModal({ open, onClose }: Props) {
                 </button>
               </div>
 
-              <select
-                value={siteId || sites[0]?.id || ""}
-                onChange={(e) => setSiteId(e.target.value)}
-                className="w-full px-3.5 py-2.5 border rounded-xl bg-slate-50 text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none text-xs font-semibold"
-              >
-                {sites.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name} ({s.geofence_radius || 100}m radius)
-                  </option>
-                ))}
-              </select>
+              <SitePicker value={siteId || sites[0]?.id || ""} onChange={setSiteId} includeAll={false} className="w-full px-3.5 py-2.5 border rounded-xl bg-slate-50 text-slate-900 text-xs font-semibold" optionSuffix={s => s.geofence_radius == null ? "Geofence radius varies by boundary" : `${s.geofence_radius}m radius`} />
             </div>
           </div>
 
